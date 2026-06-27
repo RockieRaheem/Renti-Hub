@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Financial Reports - RentiHub Enterprise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#b7c4ff",
+                    "outline": "#747686",
+                    "tertiary-fixed-dim": "#62df7d",
+                    "on-error": "#ffffff",
+                    "status-partial": "#F97316",
+                    "primary-fixed": "#dce1ff",
+                    "tertiary-container": "#006b2c",
+                    "secondary": "#575e70",
+                    "surface-dim": "#d9dadb",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-variant": "#e1e3e4",
+                    "primary-fixed-dim": "#b7c4ff",
+                    "surface-tint": "#2151da",
+                    "border-strong": "#9CA3AF",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed": "#001551",
+                    "inverse-surface": "#2e3132",
+                    "on-tertiary-fixed-variant": "#005320",
+                    "on-tertiary-container": "#71ee8a",
+                    "on-surface": "#191c1d",
+                    "status-unpaid": "#DC2626",
+                    "on-tertiary-fixed": "#002109",
+                    "surface-container-high": "#e7e8e9",
+                    "on-background": "#191c1d",
+                    "surface": "#f8f9fa",
+                    "primary-container": "#1d4ed8",
+                    "on-primary-fixed-variant": "#0039b5",
+                    "error": "#ba1a1a",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed-dim": "#c0c6db",
+                    "tertiary": "#00501f",
+                    "tertiary-fixed": "#7ffc97",
+                    "secondary-fixed": "#dce2f7",
+                    "on-primary-container": "#cad3ff",
+                    "surface-container": "#edeeef",
+                    "surface-container-low": "#f3f4f5",
+                    "background": "#f8f9fa",
+                    "surface-container-highest": "#e1e3e4",
+                    "error-container": "#ffdad6",
+                    "on-secondary-container": "#5c6274",
+                    "primary": "#0037b0",
+                    "on-secondary-fixed-variant": "#404758",
+                    "surface-bright": "#f8f9fa",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "secondary-container": "#d9dff5",
+                    "on-surface-variant": "#434655",
+                    "status-paid": "#16A34A",
+                    "outline-variant": "#c4c5d7",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-secondary-fixed": "#141b2b",
+                    "border-subtle": "#E5E7EB"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "component-gap": "1rem",
+                    "section-gap": "2rem",
+                    "gutter": "1.5rem",
+                    "container-margin": "2rem",
+                    "touch-target": "3rem"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "body-md": ["Inter"],
+                    "status-badge": ["Inter"],
+                    "headline-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "status-badge": ["12px", {"lineHeight": "16px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chart-bar { transition: height 1s cubic-bezier(0.4, 0, 0.2, 1); }
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); }
+        body { background-color: #f8f9fa; font-family: 'Inter', sans-serif; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .grid-dots { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-surface-container-lowest border-r border-subtle flex flex-col py-6 px-4 z-50">
+<div class="mb-8 px-2 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-md shadow-primary/20">
+<span class="material-symbols-outlined text-on-primary" data-icon="domain">domain</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-primary leading-tight tracking-tight">RentiHub</h1>
+<p class="text-xs text-outline font-label-md">Enterprise Edition</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg font-label-md text-label-md active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Executive Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg font-label-md text-label-md active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="domain">domain</span>
+                Properties &amp; Shops
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg font-label-md text-label-md active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+                Tenant Directory
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg font-label-md text-label-md active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                Rent Collection
+            </a>
+<!-- Active Tab -->
+<a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary font-bold rounded-lg font-label-md text-label-md active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
+                Financial Reports
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg font-label-md text-label-md active:scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+                Maintenance
+            </a>
+</nav>
+<div class="mt-auto pt-6 border-t border-subtle space-y-1">
+<button class="w-full mb-4 bg-primary text-on-primary py-2.5 rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                Add Property
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg font-label-md text-label-md transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg font-label-md text-label-md transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                Log Out
+            </a>
+</div>
+</aside>
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-gutter w-[calc(100%-16rem)] ml-64 bg-surface/80 backdrop-blur-md h-16 sticky top-0 z-40 border-b border-subtle">
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container rounded-lg border-none focus:ring-2 focus:ring-primary w-72 text-sm transition-all" placeholder="Search financials, buildings..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2.5 rounded-full transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2.5 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<div class="h-8 w-[1px] bg-subtle mx-2"></div>
+<div class="flex items-center gap-3 pl-2 cursor-pointer group">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">M. Kalungi</p>
+<p class="text-[10px] text-outline uppercase font-bold tracking-tighter">Estate Manager</p>
+</div>
+<img class="w-10 h-10 rounded-full ring-2 ring-primary-fixed-dim object-cover shadow-sm group-hover:ring-primary transition-all" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAedRNsu3XycCPRxLNjRun-WzyRNoPcBiaKZNh_LeM7Ddc_17fn0nPnlQURkNvAHQS80wsJ_Ui7VTD6U1Z7oFWbpVkOClFLnnOkHVQNYiRS70NSw5C8_vb5hIQRI6c5T5Tf4oa3gpwOKqyfmH7F9FScK7I-wb-D2_MigQmbgDkvubzUZcWoWam5GMjeD8K1-kJiWfCQ_h_3kfbqPj7Z5jjd7oW0qYCIeFw_mDbUqkfSmV86ar8OesvIGDAMwerE0q_Cfl9gQ57Ivusa"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-gutter pt-8 max-w-[1600px]">
+<!-- Page Header & Actions -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-bold text-primary uppercase tracking-[0.2em] font-label-md">Financial intelligence</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Financial Performance</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">High-fidelity revenue monitoring and occupancy analytics across the Ugandan portfolio.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 px-4 py-2.5 border border-outline-variant bg-white text-on-surface rounded-lg font-label-md text-label-md hover:bg-surface-container-low transition-all shadow-sm">
+<span class="material-symbols-outlined text-lg" data-icon="calendar_month">calendar_month</span>
+                    Current Quarter (Q3)
+                    <span class="material-symbols-outlined text-lg" data-icon="expand_more">expand_more</span>
+</button>
+<div class="flex items-center gap-2 ml-2">
+<button class="p-2.5 bg-white text-on-surface-variant border border-outline-variant rounded-lg hover:text-primary hover:border-primary transition-all shadow-sm">
+<span class="material-symbols-outlined text-xl" data-icon="ios_share">ios_share</span>
+</button>
+<button class="p-2.5 bg-primary text-on-primary rounded-lg hover:bg-primary-container transition-all shadow-md shadow-primary/20">
+<span class="material-symbols-outlined text-xl" data-icon="download">download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- High-Level KPIs -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-section-gap">
+<div class="bg-white p-6 rounded-xl border border-subtle shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-4xl" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div class="flex items-center gap-2 mb-3">
+<div class="w-2 h-2 bg-status-paid rounded-full"></div>
+<span class="text-outline font-label-md text-xs uppercase tracking-wider">Gross Revenue (UGX)</span>
+</div>
+<div class="font-headline-lg text-3xl text-on-surface mb-2 tracking-tight">142,840,000</div>
+<div class="flex items-center gap-1 text-status-paid text-xs font-bold bg-green-50 px-2 py-0.5 rounded w-fit">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span>
+<span>12.4%</span>
+<span class="font-normal text-on-surface-variant ml-1">vs target</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl border border-subtle shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-4">
+<span class="text-outline font-label-md text-xs uppercase tracking-wider">Collection Rate</span>
+<span class="text-primary font-bold text-sm">94.2%</span>
+</div>
+<div class="flex flex-col gap-3">
+<div class="flex items-end justify-between">
+<div class="text-2xl font-bold">134.5M <span class="text-xs font-normal text-outline">Collected</span></div>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-full rounded-full transition-all duration-1000" style="width: 94.2%"></div>
+</div>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl border border-subtle shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-status-unpaid">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-status-unpaid text-xl" data-icon="warning">warning</span>
+<span class="text-outline font-label-md text-xs uppercase tracking-wider">Arrears Balance</span>
+</div>
+<div class="font-headline-lg text-3xl text-status-unpaid mb-2 tracking-tight">18,500,000</div>
+<div class="flex items-center gap-1 text-on-surface-variant text-xs font-medium">
+<span class="font-bold text-status-unpaid">8.2%</span>
+<span>of total billing at risk</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl border border-subtle shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between mb-3">
+<span class="text-outline font-label-md text-xs uppercase tracking-wider">Portfolio Occupancy</span>
+<span class="material-symbols-outlined text-tertiary" data-icon="home_work">home_work</span>
+</div>
+<div class="font-headline-lg text-3xl text-on-surface mb-2 tracking-tight">96.8%</div>
+<div class="text-xs text-on-surface-variant font-medium flex items-center gap-1">
+<span class="text-tertiary-container bg-tertiary-fixed px-1.5 py-0.5 rounded font-bold">14 Vacant</span>
+<span>Units across 24 assets</span>
+</div>
+</div>
+</div>
+<!-- Visualizations Bento Grid -->
+<div class="grid grid-cols-12 gap-gutter mb-section-gap">
+<!-- Monthly Revenue Trend (Main) -->
+<div class="col-span-12 lg:col-span-8 bg-white rounded-xl border border-subtle shadow-sm h-[480px] flex flex-col overflow-hidden">
+<div class="p-8 border-b border-subtle flex items-center justify-between bg-surface-container-lowest/50">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Portfolio Cash Flow</h3>
+<p class="text-sm text-on-surface-variant">Net revenue vs Operating expenses (Monthly)</p>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-primary rounded-full shadow-sm"></span>
+<span class="text-[10px] text-on-surface font-bold uppercase tracking-widest">Revenue</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-secondary rounded-full shadow-sm"></span>
+<span class="text-[10px] text-on-surface font-bold uppercase tracking-widest">Expense</span>
+</div>
+<select class="text-xs border-none bg-surface-container-high rounded-md py-1 pr-8 focus:ring-0 font-medium">
+<option>FY 2024</option>
+<option>FY 2023</option>
+</select>
+</div>
+</div>
+<div class="flex-1 p-8 grid-dots flex items-end justify-between gap-4">
+<!-- Realized Bar Chart Visual with Tooltips -->
+<div class="flex-1 flex flex-col items-center gap-4 group cursor-pointer">
+<div class="w-full max-w-[40px] flex items-end gap-1 h-[280px]">
+<div class="w-full bg-secondary/20 rounded-t-sm h-[40%] transition-all group-hover:bg-secondary/40"></div>
+<div class="w-full bg-primary rounded-t-sm h-[75%] transition-all group-hover:scale-y-105 origin-bottom shadow-lg shadow-primary/10"></div>
+</div>
+<span class="text-[10px] text-outline font-bold tracking-tighter">JAN</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4 group cursor-pointer">
+<div class="w-full max-w-[40px] flex items-end gap-1 h-[280px]">
+<div class="w-full bg-secondary/20 rounded-t-sm h-[42%]"></div>
+<div class="w-full bg-primary rounded-t-sm h-[82%] shadow-lg shadow-primary/10"></div>
+</div>
+<span class="text-[10px] text-outline font-bold tracking-tighter">FEB</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4 group cursor-pointer">
+<div class="w-full max-w-[40px] flex items-end gap-1 h-[280px]">
+<div class="w-full bg-secondary/20 rounded-t-sm h-[38%]"></div>
+<div class="w-full bg-primary rounded-t-sm h-[90%] shadow-lg shadow-primary/10"></div>
+</div>
+<span class="text-[10px] text-outline font-bold tracking-tighter">MAR</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4 group cursor-pointer">
+<div class="w-full max-w-[40px] flex items-end gap-1 h-[280px]">
+<div class="w-full bg-secondary/20 rounded-t-sm h-[45%]"></div>
+<div class="w-full bg-primary rounded-t-sm h-[85%] shadow-lg shadow-primary/10"></div>
+</div>
+<span class="text-[10px] text-outline font-bold tracking-tighter">APR</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4 group cursor-pointer">
+<div class="w-full max-w-[40px] flex items-end gap-1 h-[280px]">
+<div class="w-full bg-secondary/20 rounded-t-sm h-[35%]"></div>
+<div class="w-full bg-primary rounded-t-sm h-[92%] shadow-lg shadow-primary/10"></div>
+</div>
+<span class="text-[10px] text-outline font-bold tracking-tighter">MAY</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-4 group cursor-pointer">
+<div class="w-full max-w-[40px] flex items-end gap-1 h-[280px]">
+<div class="w-full bg-secondary/20 rounded-t-sm h-[30%]"></div>
+<div class="w-full bg-primary rounded-t-sm h-[98%] shadow-lg shadow-primary/10"></div>
+</div>
+<span class="text-[10px] text-outline font-bold tracking-tighter text-primary">JUN</span>
+</div>
+</div>
+</div>
+<!-- Portfolio Mix (Side) -->
+<div class="col-span-12 lg:col-span-4 bg-white rounded-xl border border-subtle shadow-sm h-[480px] flex flex-col overflow-hidden">
+<div class="p-8 border-b border-subtle bg-surface-container-lowest/50">
+<h3 class="font-headline-md text-headline-md text-on-surface">Revenue Mix</h3>
+<p class="text-sm text-on-surface-variant">Contribution by asset type</p>
+</div>
+<div class="flex-1 p-8 flex flex-col items-center justify-center">
+<div class="relative w-48 h-48 mb-8">
+<svg class="w-full h-full -rotate-90 transform" viewbox="0 0 100 100">
+<!-- Background circle -->
+<circle class="text-surface-container" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-width="12"></circle>
+<!-- Retail Segment (78%) -->
+<circle class="text-primary transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="55" stroke-width="12"></circle>
+<!-- Office Segment (15%) -->
+<circle class="text-secondary transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="213.5" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-3xl font-bold text-on-surface tracking-tighter">142.8M</span>
+<span class="text-[10px] text-outline font-bold uppercase tracking-wider">Total UGX</span>
+</div>
+</div>
+<div class="w-full space-y-4">
+<div class="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors cursor-default border border-transparent hover:border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 rounded-sm bg-primary"></span>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface">Retail Shops</span>
+<span class="text-[10px] text-outline uppercase font-bold">78% Portfolio</span>
+</div>
+</div>
+<span class="text-sm font-bold text-primary">111.4M</span>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors cursor-default border border-transparent hover:border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 rounded-sm bg-secondary"></span>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface">Office Spaces</span>
+<span class="text-[10px] text-outline uppercase font-bold">16% Portfolio</span>
+</div>
+</div>
+<span class="text-sm font-bold text-secondary">22.1M</span>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg hover:bg-surface-container transition-colors cursor-default border border-transparent hover:border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 rounded-sm bg-tertiary-fixed-dim"></span>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface">Storage</span>
+<span class="text-[10px] text-outline uppercase font-bold">6% Portfolio</span>
+</div>
+</div>
+<span class="text-sm font-bold text-tertiary-container">9.3M</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Tables Section -->
+<div class="space-y-gutter">
+<!-- Revenue by Building -->
+<div class="bg-white rounded-xl border border-subtle shadow-sm overflow-hidden">
+<div class="px-8 py-6 border-b border-subtle flex justify-between items-center bg-surface-container-lowest">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Detailed Revenue by Property</h3>
+<p class="text-sm text-on-surface-variant font-body-md">Granular breakdown of commercial performance metrics.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 text-xs font-bold border border-outline-variant rounded hover:bg-surface-container transition-all">Filter Assets</button>
+<button class="px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary rounded flex items-center gap-2 hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="map">map</span>
+        Map View
+    </button>
+</div>
+</div>
+<div class="overflow-x-auto scrollbar-hide">
+<table class="w-full text-left border-collapse min-w-[1000px]">
+<thead>
+<tr class="bg-surface-container-low font-label-md text-xs text-outline uppercase tracking-widest">
+<th class="px-8 py-4 border-b border-subtle">Asset Name &amp; Location</th>
+<th class="px-6 py-4 border-b border-subtle text-right">Occupancy</th>
+<th class="px-6 py-4 border-b border-subtle text-right">Target Rev (UGX)</th>
+<th class="px-6 py-4 border-b border-subtle text-right">Actual (UGX)</th>
+<th class="px-6 py-4 border-b border-subtle text-right">Variance</th>
+<th class="px-8 py-4 border-b border-subtle text-center">Status</th>
+</tr>
+</thead>
+<tbody class="text-sm font-body-md">
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-8 py-5 border-b border-subtle">
+<div class="font-bold text-on-surface group-hover:text-primary transition-colors">Diamond Plaza</div>
+<div class="text-[10px] text-outline font-bold uppercase">Kikuubo, Kampala Central</div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right">
+<span class="font-medium text-on-surface">98.2%</span>
+<div class="w-16 ml-auto h-1 bg-surface-container rounded-full mt-1"><div class="bg-status-paid h-full rounded-full" style="width: 98%"></div></div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-on-surface font-medium">45,000,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-paid font-bold">44,800,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-unpaid font-medium">-200,000</td>
+<td class="px-8 py-5 border-b border-subtle text-center">
+<span class="bg-status-paid/10 text-status-paid px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ring-1 ring-status-paid/20">Operational</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-8 py-5 border-b border-subtle">
+<div class="font-bold text-on-surface">Victory Trading Center</div>
+<div class="text-[10px] text-outline font-bold uppercase">Nansana, Wakiso</div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right">
+<span class="font-medium text-on-surface">85.4%</span>
+<div class="w-16 ml-auto h-1 bg-surface-container rounded-full mt-1"><div class="bg-status-partial h-full rounded-full" style="width: 85%"></div></div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-on-surface font-medium">32,500,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-partial font-bold">28,200,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-unpaid font-medium font-bold">-4,300,000</td>
+<td class="px-8 py-5 border-b border-subtle text-center">
+<span class="bg-status-partial/10 text-status-partial px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ring-1 ring-status-partial/20">Underperforming</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-8 py-5 border-b border-subtle">
+<div class="font-bold text-on-surface">Arua Towers</div>
+<div class="text-[10px] text-outline font-bold uppercase">Hospital Rd, West Nile</div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right">
+<span class="font-medium text-on-surface">100%</span>
+<div class="w-16 ml-auto h-1 bg-surface-container rounded-full mt-1"><div class="bg-status-paid h-full rounded-full" style="width: 100%"></div></div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-on-surface font-medium">22,000,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-paid font-bold">22,000,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-paid font-medium font-bold">+0</td>
+<td class="px-8 py-5 border-b border-subtle text-center">
+<span class="bg-status-paid/10 text-status-paid px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ring-1 ring-status-paid/20">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group">
+<td class="px-8 py-5 border-b border-subtle">
+<div class="font-bold text-on-surface">The Heights Commercial</div>
+<div class="text-[10px] text-outline font-bold uppercase">Kololo Hill, Kampala</div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right">
+<span class="font-medium text-on-surface">62.1%</span>
+<div class="w-16 ml-auto h-1 bg-surface-container rounded-full mt-1"><div class="bg-status-unpaid h-full rounded-full" style="width: 62%"></div></div>
+</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-on-surface font-medium">58,000,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-unpaid font-bold">34,500,000</td>
+<td class="px-6 py-5 border-b border-subtle text-right text-status-unpaid font-medium font-bold">-23,500,000</td>
+<td class="px-8 py-5 border-b border-subtle text-center">
+<span class="bg-status-unpaid/10 text-status-unpaid px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ring-1 ring-status-unpaid/20">Critical Alert</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-8 py-4 bg-surface-container-lowest flex items-center justify-between">
+<span class="text-xs text-outline font-medium">Showing 4 of 24 properties across the network</span>
+<div class="flex items-center gap-1">
+<button class="p-1 hover:bg-surface-container rounded transition-colors"><span class="material-symbols-outlined text-lg" data-icon="chevron_left">chevron_left</span></button>
+<span class="px-3 text-xs font-bold text-primary">1 / 6</span>
+<button class="p-1 hover:bg-surface-container rounded transition-colors"><span class="material-symbols-outlined text-lg" data-icon="chevron_right">chevron_right</span></button>
+</div>
+</div>
+</div>
+<!-- Projection Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="bg-white rounded-xl border border-subtle shadow-sm p-8 flex flex-col justify-between hover:border-primary transition-colors cursor-default">
+<div>
+<p class="text-[10px] text-outline font-bold uppercase tracking-widest mb-2">Quarterly Variance</p>
+<div class="text-3xl font-bold text-status-unpaid tracking-tighter">-4,210,000</div>
+<div class="w-12 h-1 bg-status-unpaid/20 rounded mt-2 overflow-hidden">
+<div class="w-2/3 h-full bg-status-unpaid"></div>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant mt-6 leading-relaxed">System identified maintenance downtime in <span class="font-bold">Victory Center</span> as primary cause for deficit.</p>
+</div>
+<div class="bg-white rounded-xl border border-subtle shadow-sm p-8 flex flex-col justify-between hover:border-primary transition-colors cursor-default">
+<div>
+<p class="text-[10px] text-outline font-bold uppercase tracking-widest mb-2">Arrears Recovery</p>
+<div class="text-3xl font-bold text-status-paid tracking-tighter">8,140,500</div>
+<div class="w-12 h-1 bg-status-paid/20 rounded mt-2 overflow-hidden">
+<div class="w-full h-full bg-status-paid"></div>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant mt-6 leading-relaxed">Recovery rate increased by <span class="font-bold">14%</span> following new automated demand notices in Q2.</p>
+</div>
+<div class="bg-white rounded-xl border border-subtle shadow-sm p-8 flex flex-col justify-between hover:border-primary transition-colors cursor-default">
+<div>
+<p class="text-[10px] text-outline font-bold uppercase tracking-widest mb-2">Forecast Precision</p>
+<div class="text-3xl font-bold text-primary tracking-tighter">91.8%</div>
+<div class="w-12 h-1 bg-primary/20 rounded mt-2 overflow-hidden">
+<div class="w-11/12 h-full bg-primary"></div>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant mt-6 leading-relaxed">Model variance within <span class="font-bold">±2.4%</span> of actuals for historical recurring payments.</p>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="mt-section-gap py-10 border-t border-subtle flex flex-col md:flex-row justify-between items-center text-outline font-label-md text-xs gap-6">
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 bg-surface-container rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-lg" data-icon="verified_user">verified_user</span>
+</div>
+<p>© 2024 RentiHub Enterprise Uganda. Data accurate as of 14:02 EAT.</p>
+</div>
+<div class="flex items-center gap-8">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+    Security Audit
+    <span class="material-symbols-outlined text-sm" data-icon="external_link">open_in_new</span>
+</a>
+<a class="hover:text-primary transition-colors" href="#">Data Processing Agreement</a>
+<a class="hover:text-primary transition-colors" href="#">System Status</a>
+</div>
+</footer>
+</main>
+<!-- Quick Action FAB -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-110 hover:rotate-90 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl" data-icon="add">add</span>
+</button>
+<script>
+    // Simple bar chart reveal animation
+    window.addEventListener('DOMContentLoaded', () => {
+        const bars = document.querySelectorAll('.chart-bar-fill');
+        bars.forEach((bar, index) => {
+            setTimeout(() => {
+                bar.classList.add('opacity-100');
+            }, 100 * index);
+        });
+    });
+
+    // Interactive Table Rows
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.addEventListener('click', () => {
+            // Placeholder for row selection/drill-down
+            console.log('Navigating to building details...');
+        });
+    });
+</script>
+</body></html>
