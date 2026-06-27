@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RentiHub Enterprise | Property &amp; Shop Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "inverse-primary": "#b7c4ff",
+                "outline": "#747686",
+                "tertiary-fixed-dim": "#62df7d",
+                "on-error": "#ffffff",
+                "status-partial": "#F97316",
+                "primary-fixed": "#dce1ff",
+                "tertiary-container": "#006b2c",
+                "secondary": "#575e70",
+                "surface-dim": "#d9dadb",
+                "surface-container-lowest": "#ffffff",
+                "surface-variant": "#e1e3e4",
+                "primary-fixed-dim": "#b7c4ff",
+                "surface-tint": "#2151da",
+                "border-strong": "#9CA3AF",
+                "on-error-container": "#93000a",
+                "on-primary-fixed": "#001551",
+                "inverse-surface": "#2e3132",
+                "on-tertiary-fixed-variant": "#005320",
+                "on-tertiary-container": "#71ee8a",
+                "on-surface": "#191c1d",
+                "status-unpaid": "#DC2626",
+                "on-tertiary-fixed": "#002109",
+                "surface-container-high": "#e7e8e9",
+                "on-background": "#191c1d",
+                "surface": "#f8f9fa",
+                "primary-container": "#1d4ed8",
+                "on-primary-fixed-variant": "#0039b5",
+                "error": "#ba1a1a",
+                "on-primary": "#ffffff",
+                "secondary-fixed-dim": "#c0c6db",
+                "tertiary": "#00501f",
+                "tertiary-fixed": "#7ffc97",
+                "secondary-fixed": "#dce2f7",
+                "on-primary-container": "#cad3ff",
+                "surface-container": "#edeeef",
+                "surface-container-low": "#f3f4f5",
+                "background": "#f8f9fa",
+                "surface-container-highest": "#e1e3e4",
+                "error-container": "#ffdad6",
+                "on-secondary-container": "#5c6274",
+                "primary": "#0037b0",
+                "on-secondary-fixed-variant": "#404758",
+                "surface-bright": "#f8f9fa",
+                "on-secondary": "#ffffff",
+                "on-tertiary": "#ffffff",
+                "secondary-container": "#d9dff5",
+                "on-surface-variant": "#434655",
+                "status-paid": "#16A34A",
+                "outline-variant": "#c4c5d7",
+                "inverse-on-surface": "#f0f1f2",
+                "on-secondary-fixed": "#141b2b",
+                "border-subtle": "#E5E7EB"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "component-gap": "1rem",
+                "section-gap": "2rem",
+                "gutter": "1.5rem",
+                "container-margin": "2rem",
+                "touch-target": "3rem"
+            },
+            "fontFamily": {
+                "body-lg": ["Inter"],
+                "headline-lg": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-lg-mobile": ["Inter"],
+                "body-md": ["Inter"],
+                "status-badge": ["Inter"],
+                "headline-md": ["Inter"],
+                "mono": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "status-badge": ["12px", {"lineHeight": "16px", "fontWeight": "700"}],
+                "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .receipt-mono { font-family: 'JetBrains Mono', monospace; }
+        .property-grid-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Premium Ugandan accents */
+        .ug-accent-border {
+            border-left: 4px solid #0037b0;
+        }
+        .ug-pattern-bg {
+            background-image: radial-gradient(#c4c5d7 0.5px, transparent 0.5px);
+            background-size: 12px 12px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen">
+<header class="bg-surface-container-lowest border-b border-subtle w-full h-16 flex justify-between items-center px-gutter sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]">apartment</span>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-primary">RentiHub Enterprise</h1>
+</div>
+<div class="hidden md:flex h-10 bg-surface-container-low rounded-full items-center px-4 gap-2 border border-outline-variant focus-within:border-primary transition-colors">
+<span class="material-symbols-outlined text-outline text-[20px]">search</span>
+<input class="bg-transparent border-none focus:ring-0 font-body-md text-body-md w-72 placeholder-outline" placeholder="Search buildings, shops, or tenants..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container-high transition-colors rounded-full relative">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full border-2 border-surface-container-lowest"></span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center hover:bg-surface-container-high transition-colors rounded-full">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+<div class="h-8 w-px bg-border-subtle mx-2"></div>
+<div class="flex items-center gap-3 pl-2">
+<div class="text-right hidden sm:block">
+<p class="text-label-md font-bold leading-none">Mathew Kato</p>
+<p class="text-[12px] text-outline leading-none mt-1">Portfolio Admin</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-primary-fixed border border-primary-container overflow-hidden shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A professional headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDg3QVHsxYEzG-LXq0DV5QVpX3PxiGPmGEr3Zz1Gzy1VQtJqDQr1CuuO1y0u7Ug5yKwHX6zDtAbst3gSLjvJJGEKLl-n_suVNkczCqJdKAJfkFf12TdCLUnxRuUfTvkXWOzwvpyLBogq7cNw8rUfO5ASGuOgoPRfPlpGdql_b05iG-F6t0DVvbOMhJYjZtv-egKSV_T73RH0bCeOVZPzXqh7J2mtic1z0ZT9tAiV10XnhsU9ghLRANWWHWh6MYSLVowCRwpu10RXJzC"/>
+</div>
+</div>
+</div>
+</header>
+<div class="flex">
+<aside class="hidden md:flex flex-col h-[calc(100vh-64px)] w-64 fixed left-0 top-16 bg-surface-container-lowest border-r border-subtle py-6 px-4">
+<nav class="flex flex-col gap-1.5 flex-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md">Executive Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-primary-container text-on-primary-container font-bold rounded-lg shadow-sm" href="#">
+<span class="material-symbols-outlined">domain</span>
+<span class="font-label-md">Properties &amp; Shops</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-md">Tenant Directory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md">Rent Collection</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md">Financial Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined">build</span>
+<span class="font-label-md">Maintenance</span>
+</a>
+</nav>
+<div class="mt-auto flex flex-col gap-2 border-t border-subtle pt-6">
+<button class="w-full bg-primary text-on-primary py-3 rounded-xl font-label-md flex items-center justify-center gap-2 hover:bg-opacity-90 active:scale-95 transition-all shadow-md">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                Add Property
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg mt-2" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md">Log Out</span>
+</a>
+</div>
+</aside>
+<main class="flex-1 md:ml-64 p-6 md:p-10 ug-pattern-bg">
+<header class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+<div>
+<nav class="flex items-center gap-2 text-outline font-label-md mb-2">
+<span>Portfolio</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-primary font-bold">Properties</span>
+</nav>
+<h2 class="font-headline-lg text-headline-lg text-on-background tracking-tight">Management Console</h2>
+<p class="font-body-md text-on-surface-variant mt-1">Institutional oversight of Kampala's premier commercial assets.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-5 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-xl font-label-md text-on-surface hover:bg-surface-container-low active:scale-95 transition-all shadow-sm">
+<span class="material-symbols-outlined text-[20px]">file_download</span> 
+                    Reports
+                </button>
+<button class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-xl font-label-md shadow-lg hover:shadow-primary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[20px]">add</span> 
+                    New Building
+                </button>
+</div>
+</header>
+<!-- Premium KPI Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+<div class="bg-surface-container-lowest border border-subtle p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-primary/10 text-primary rounded-lg">
+<span class="material-symbols-outlined">corporate_fare</span>
+</div>
+<span class="text-status-paid font-label-md flex items-center bg-green-50 px-2 py-0.5 rounded-full">+12%</span>
+</div>
+<p class="font-label-md text-outline">Total Buildings</p>
+<h3 class="font-headline-lg text-headline-lg mt-1">12</h3>
+</div>
+<div class="bg-surface-container-lowest border border-subtle p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-secondary/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-secondary/10 text-secondary rounded-lg">
+<span class="material-symbols-outlined">storefront</span>
+</div>
+</div>
+<p class="font-label-md text-outline">Leasable Units</p>
+<h3 class="font-headline-lg text-headline-lg mt-1">458</h3>
+</div>
+<div class="bg-surface-container-lowest border border-subtle p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-tertiary/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-tertiary/10 text-tertiary rounded-lg">
+<span class="material-symbols-outlined">group_work</span>
+</div>
+<span class="text-status-paid font-label-md flex items-center bg-green-50 px-2 py-0.5 rounded-full">Stable</span>
+</div>
+<p class="font-label-md text-outline">Occupancy Rate</p>
+<div class="flex items-end gap-3 mt-1">
+<h3 class="font-headline-lg text-headline-lg">94.2%</h3>
+<div class="flex-1 h-2 bg-surface-container-high rounded-full mb-3 overflow-hidden">
+<div class="h-full bg-status-paid" style="width: 94.2%"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-subtle p-6 rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="absolute right-0 top-0 w-24 h-24 bg-status-partial/5 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-status-partial/10 text-status-partial rounded-lg">
+<span class="material-symbols-outlined">payments</span>
+</div>
+</div>
+<p class="font-label-md text-outline">Revenue Collection</p>
+<h3 class="font-headline-lg text-headline-lg mt-1">UGX 842M</h3>
+</div>
+</div>
+<!-- Property List -->
+<div class="space-y-6">
+<!-- Building Card 1 -->
+<div class="bg-surface-container-lowest border border-subtle rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all ug-accent-border">
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 cursor-pointer" onclick="toggleProperty('building-1')">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 bg-primary-fixed text-primary flex items-center justify-center rounded-2xl shadow-inner">
+<span class="material-symbols-outlined text-[32px]">location_city</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h4 class="font-headline-md text-headline-md text-on-surface">City Plaza</h4>
+<span class="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Flagship</span>
+</div>
+<p class="font-body-md text-outline flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                                Plot 24, Kampala Rd • CBD Central
+                            </p>
+</div>
+</div>
+<div class="flex items-center gap-10 mt-6 md:mt-0">
+<div class="text-center md:text-left">
+<p class="text-label-md text-outline">Occupancy</p>
+<div class="flex items-baseline gap-1">
+<span class="text-headline-md font-bold">115</span>
+<span class="text-outline text-body-md">/ 120 Units</span>
+</div>
+</div>
+<div class="h-10 w-px bg-border-subtle hidden md:block"></div>
+<div class="text-center md:text-left">
+<p class="text-label-md text-outline">Performance</p>
+<p class="text-body-md font-bold text-status-paid flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+                                96.4% Efficiency
+                            </p>
+</div>
+<button class="w-10 h-10 bg-surface-container-low rounded-full flex items-center justify-center text-outline hover:bg-primary/10 hover:text-primary transition-colors duration-300" id="btn-building-1">
+<span class="material-symbols-outlined transition-transform duration-300" id="icon-building-1">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Expanded Content (Building 1) -->
+<div class="hidden border-t border-subtle bg-surface-container-low/30" id="building-1">
+<div class="px-6 py-4 bg-surface border-b border-subtle flex items-center gap-3 overflow-x-auto no-scrollbar">
+<span class="text-label-md text-outline pr-2">Floor:</span>
+<button class="px-4 py-1.5 bg-primary text-on-primary rounded-full font-label-md text-[13px] shadow-sm">Ground Floor</button>
+<button class="px-4 py-1.5 bg-white border border-outline-variant text-on-surface rounded-full font-label-md text-[13px] hover:border-primary transition-colors">Floor 1</button>
+<button class="px-4 py-1.5 bg-white border border-outline-variant text-on-surface rounded-full font-label-md text-[13px] hover:border-primary transition-colors">Floor 2</button>
+<button class="px-4 py-1.5 bg-white border border-outline-variant text-on-surface rounded-full font-label-md text-[13px] hover:border-primary transition-colors">Floor 3</button>
+</div>
+<div class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+<!-- Shop Card -->
+<div class="bg-white border border-subtle p-5 rounded-xl hover:border-primary/50 hover:shadow-md transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-surface-container-low px-2 py-1 rounded font-mono text-label-md font-bold text-primary">G-01</div>
+<span class="bg-status-paid/10 text-status-paid text-status-badge px-2 py-0.5 rounded-full border border-status-paid/20">OCCUPIED</span>
+</div>
+<h5 class="font-label-md text-outline uppercase tracking-tighter text-[11px]">Primary Tenant</h5>
+<p class="font-body-md font-bold text-on-surface truncate">Mugisha Electronics Ltd</p>
+<div class="mt-4 pt-4 border-t border-dashed border-subtle flex items-center justify-between">
+<span class="text-label-md font-mono text-primary">UGX 4.2M / mo</span>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded-lg hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded-lg hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">info</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Shop Card -->
+<div class="bg-white border border-subtle p-5 rounded-xl hover:border-primary/50 hover:shadow-md transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-surface-container-low px-2 py-1 rounded font-mono text-label-md font-bold text-primary">G-02</div>
+<span class="bg-status-paid/10 text-status-paid text-status-badge px-2 py-0.5 rounded-full border border-status-paid/20">OCCUPIED</span>
+</div>
+<h5 class="font-label-md text-outline uppercase tracking-tighter text-[11px]">Primary Tenant</h5>
+<p class="font-body-md font-bold text-on-surface truncate">Nsubuga Fashion Hub</p>
+<div class="mt-4 pt-4 border-t border-dashed border-subtle flex items-center justify-between">
+<span class="text-label-md font-mono text-primary">UGX 3.8M / mo</span>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded-lg hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Shop Card (Vacant) -->
+<div class="bg-surface-container-low/50 border-2 border-dashed border-outline-variant p-5 rounded-xl hover:border-primary/50 hover:bg-white transition-all group flex flex-col justify-center text-center">
+<div class="bg-outline-variant/20 px-2 py-1 rounded font-mono text-label-md font-bold text-outline self-start mb-4">G-03</div>
+<span class="material-symbols-outlined text-outline-variant text-[40px] mb-2">add_home</span>
+<p class="font-label-md font-bold text-outline">Unit Vacant</p>
+<button class="mt-4 py-2 bg-primary text-on-primary rounded-lg font-label-md text-[13px] hover:opacity-90 transition-opacity">Assign Tenant</button>
+</div>
+<!-- Shop Card (Alert) -->
+<div class="bg-status-partial/5 border border-status-partial/30 p-5 rounded-xl hover:shadow-md transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-status-partial/10 px-2 py-1 rounded font-mono text-label-md font-bold text-status-partial">G-04</div>
+<span class="bg-status-partial/10 text-status-partial text-status-badge px-2 py-0.5 rounded-full border border-status-partial/20">ARREARS</span>
+</div>
+<h5 class="font-label-md text-outline uppercase tracking-tighter text-[11px]">Primary Tenant</h5>
+<p class="font-body-md font-bold text-on-surface truncate">Pearl Beauty Saloon</p>
+<div class="mt-4 pt-4 border-t border-dashed border-status-partial/20 flex flex-col gap-2">
+<div class="flex justify-between items-center text-[12px]">
+<span class="text-outline">Balance Due:</span>
+<span class="text-status-partial font-bold">UGX 1.4M</span>
+</div>
+<button class="w-full py-2 bg-status-partial text-white rounded-lg font-label-md text-[13px] hover:opacity-90 transition-opacity">Send Notice</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Building Card 2 -->
+<div class="bg-surface-container-lowest border border-subtle rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 cursor-pointer" onclick="toggleProperty('building-2')">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 bg-secondary-fixed-dim text-secondary flex items-center justify-center rounded-2xl shadow-inner">
+<span class="material-symbols-outlined text-[32px]">shopping_bag</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md text-on-surface">Ham Shopping Mall</h4>
+<p class="font-body-md text-outline flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                                Nakivubo Rd • Downtown Kampala
+                            </p>
+</div>
+</div>
+<div class="flex items-center gap-10 mt-6 md:mt-0">
+<div class="text-center md:text-left">
+<p class="text-label-md text-outline">Occupancy</p>
+<div class="flex items-baseline gap-1">
+<span class="text-headline-md font-bold">310</span>
+<span class="text-outline text-body-md">/ 350 Units</span>
+</div>
+</div>
+<div class="h-10 w-px bg-border-subtle hidden md:block"></div>
+<div class="text-center md:text-left">
+<p class="text-label-md text-outline">Performance</p>
+<p class="text-body-md font-bold text-status-unpaid flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+                                72.1% Efficiency
+                            </p>
+</div>
+<button class="w-10 h-10 bg-surface-container-low rounded-full flex items-center justify-center text-outline hover:bg-primary/10 hover:text-primary transition-colors duration-300">
+<span class="material-symbols-outlined transition-transform duration-300" id="icon-building-2">expand_more</span>
+</button>
+</div>
+</div>
+<div class="hidden border-t border-subtle p-12 text-center bg-surface-container-low/20" id="building-2">
+<div class="max-w-sm mx-auto">
+<div class="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center mx-auto mb-4">
+<span class="material-symbols-outlined text-outline text-[32px]">folder_open</span>
+</div>
+<p class="font-body-md text-on-surface-variant">Building data is synchronized. Select a level to browse sub-units for Ham Shopping Mall.</p>
+<div class="mt-6 flex flex-wrap justify-center gap-2">
+<button class="px-4 py-2 border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all font-label-md text-[13px] bg-white">Basement</button>
+<button class="px-4 py-2 border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all font-label-md text-[13px] bg-white">Floor 1</button>
+<button class="px-4 py-2 border border-outline-variant rounded-lg hover:border-primary hover:text-primary transition-all font-label-md text-[13px] bg-white">Floor 2</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Building Card 3 -->
+<div class="bg-surface-container-lowest border border-subtle rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all">
+<div class="flex flex-col md:flex-row md:items-center justify-between p-6 cursor-pointer" onclick="toggleProperty('building-3')">
+<div class="flex items-center gap-5">
+<div class="w-16 h-16 bg-tertiary-fixed-dim text-tertiary flex items-center justify-center rounded-2xl shadow-inner">
+<span class="material-symbols-outlined text-[32px]">domain</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h4 class="font-headline-md text-headline-md text-on-surface">Acacia Mall</h4>
+<span class="bg-tertiary/10 text-tertiary text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Premium</span>
+</div>
+<p class="font-body-md text-outline flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+                                Kololo Hill • Upper Kampala
+                            </p>
+</div>
+</div>
+<div class="flex items-center gap-10 mt-6 md:mt-0">
+<div class="text-center md:text-left">
+<p class="text-label-md text-outline">Occupancy</p>
+<div class="flex items-baseline gap-1">
+<span class="text-headline-md font-bold">85</span>
+<span class="text-outline text-body-md">/ 85 Units</span>
+</div>
+</div>
+<div class="h-10 w-px bg-border-subtle hidden md:block"></div>
+<div class="text-center md:text-left">
+<p class="text-label-md text-outline">Performance</p>
+<p class="text-body-md font-bold text-status-paid flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+                                100% Collected
+                            </p>
+</div>
+<button class="w-10 h-10 bg-surface-container-low rounded-full flex items-center justify-center text-outline hover:bg-primary/10 hover:text-primary transition-colors duration-300">
+<span class="material-symbols-outlined transition-transform duration-300" id="icon-building-3">expand_more</span>
+</button>
+</div>
+</div>
+<div class="hidden border-t border-subtle p-8 bg-surface-container-low/20" id="building-3">
+<div class="flex items-center justify-center h-20 border-2 border-dashed border-outline-variant rounded-xl bg-white">
+<div class="flex items-center gap-3 text-outline">
+<div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+<p class="font-body-md italic">Optimizing premium unit data stream...</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="mt-12 flex flex-col md:flex-row justify-between items-center gap-6 py-8 border-t border-subtle">
+<div class="flex items-center gap-4">
+<p class="font-body-md text-on-surface-variant">Showing <span class="font-bold text-on-surface">3</span> of 12 registered buildings</p>
+<div class="h-4 w-px bg-border-subtle"></div>
+<div class="flex items-center gap-1 text-label-md text-outline">
+<span>Jump to:</span>
+<select class="bg-transparent border-none focus:ring-0 font-bold text-primary py-0 cursor-pointer">
+<option>Page 1</option>
+<option>Page 2</option>
+<option>Page 3</option>
+</select>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 border border-outline-variant rounded-xl font-label-md bg-white hover:bg-surface-container-low disabled:opacity-30 disabled:cursor-not-allowed transition-colors" disabled="">
+                    Previous
+                </button>
+<button class="px-5 py-2.5 border border-outline-variant rounded-xl font-label-md bg-white hover:bg-primary-container hover:border-primary transition-all shadow-sm">
+                    Next Page
+                </button>
+</div>
+</footer>
+</main>
+</div>
+<button class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-primary text-on-primary rounded-2xl shadow-xl flex items-center justify-center z-50 active:scale-90 hover:scale-105 transition-all">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+<script>
+    function toggleProperty(id) {
+        const element = document.getElementById(id);
+        const icon = document.getElementById('icon-' + id);
+        
+        if (element.classList.contains('hidden')) {
+            element.classList.remove('hidden');
+            icon.style.transform = 'rotate(180deg)';
+        } else {
+            element.classList.add('hidden');
+            icon.style.transform = 'rotate(0deg)';
+        }
+    }
+
+    // Initialize micro-interactions
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('mousedown', () => {
+            btn.style.transform = 'scale(0.97)';
+        });
+        btn.addEventListener('mouseup', () => {
+            btn.style.transform = '';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = '';
+        });
+    });
+</script>
+</body></html>
