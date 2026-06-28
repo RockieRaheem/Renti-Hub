@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rent Collection | RentiHub Enterprise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; line-height: 1; vertical-align: middle; }
+    .receipt-mono { font-family: 'Courier New', Courier, monospace; }
+    .crane-card { background: #ffffff; border: 1px solid #E5E7EB; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); border-radius: 0.75rem; }
+    .crane-input { border: 1px solid #747686; transition: all 0.2s ease; }
+    .crane-input:focus { border-color: #0037b0; box-shadow: 0 0 0 4px rgba(0, 55, 176, 0.1); }
+</style>
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    primary: "#0037b0", "primary-container": "#1d4ed8", secondary: "#575e70", tertiary: "#F97316", background: "#f8f9fa", surface: "#ffffff", "surface-container-low": "#f3f4f5", "surface-container": "#edeeef", "surface-container-high": "#e7e8e9", "on-surface": "#191c1d", "on-surface-variant": "#434655", outline: "#747686", "status-paid": "#16A34A", "status-partial": "#F97316", "status-unpaid": "#DC2626", "border-subtle": "#E5E7EB", "on-primary": "#ffffff", "on-secondary": "#ffffff", "on-tertiary": "#ffffff", "surface-bright": "#f8f9fa", "surface-dim": "#d9dadb", "surface-variant": "#e1e3e4", "outline-variant": "#c4c5d7", "inverse-surface": "#2e3132", "inverse-on-surface": "#f0f1f2", "inverse-primary": "#b7c4ff", "surface-container-lowest": "#ffffff", "surface-container-highest": "#e1e3e4", "error": "#ba1a1a", "error-container": "#ffdad6", "on-error": "#ffffff", "on-error-container": "#93000a", "primary-fixed": "#dce1ff", "primary-fixed-dim": "#b7c4ff", "on-primary-fixed": "#001551", "on-primary-fixed-variant": "#0039b5", "secondary-fixed": "#dce2f7", "secondary-fixed-dim": "#c0c6db", "on-secondary-fixed": "#141b2b", "on-secondary-fixed-variant": "#404758", "tertiary-fixed": "#7ffc97", "tertiary-fixed-dim": "#62df7d", "on-tertiary-fixed": "#002109", "on-tertiary-fixed-variant": "#005320", "tertiary-container": "#006b2c", "on-tertiary-container": "#71ee8a", "border-strong": "#9CA3AF", "surface-tint": "#2151da"
+                },
+                borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", "2xl": "1rem", full: "9999px" },
+                spacing: { "section-gap": "2rem", gutter: "1.5rem", "component-gap": "1rem", "container-margin": "2rem", "touch-target": "3rem" },
+                fontFamily: { "body-lg": ["Inter"], "headline-lg": ["Inter"], "label-md": ["Inter"], "headline-lg-mobile": ["Inter"], "body-md": ["Inter"], "status-badge": ["Inter"], "headline-md": ["Inter"] }
+            }
+        }
+    }
+</script>
+</head>
+<body class="bg-surface-container-low text-on-surface font-body-md min-h-screen">
+<aside class="hidden md:flex flex-col py-6 px-4 bg-surface-container-lowest h-screen w-64 fixed left-0 top-0 border-r border-subtle z-50">
+<div class="mb-8 px-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-on-primary-container" style="font-variation-settings: 'FILL' 1;">domain</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-primary leading-none">RentiHub</h1>
+<p class="text-[10px] uppercase tracking-widest text-outline mt-1">Enterprise Edition</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-3 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high transition-all rounded-lg active:scale-95 duration-150" href="index.html">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Executive Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high transition-all rounded-lg active:scale-95 duration-150" href="properties.html">
+<span class="material-symbols-outlined">domain</span>
+<span>Properties &amp; Shops</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high transition-all rounded-lg active:scale-95 duration-150" href="tenants.html">
+<span class="material-symbols-outlined">groups</span>
+<span>Tenant Directory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 bg-primary-container text-on-primary-container font-bold rounded-lg active:scale-95 transition-all duration-150 shadow-sm" href="rent-collection.html">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span>Rent Collection</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high transition-all rounded-lg active:scale-95 duration-150" href="financial-reports.html">
+<span class="material-symbols-outlined">analytics</span>
+<span>Financial Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high transition-all rounded-lg active:scale-95 duration-150" href="maintenance-board.html">
+<span class="material-symbols-outlined">build</span>
+<span>Maintenance</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-subtle pt-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-3 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-error">logout</span>
+<span>Log Out</span>
+</a>
+</div>
+</aside>
+<main class="md:ml-64 min-h-screen transition-all duration-300">
+<header class="flex justify-between items-center px-gutter w-full sticky top-0 z-40 h-16 bg-surface-container-lowest border-b border-subtle">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full py-2.5 pl-10 pr-4 focus:ring-2 focus:ring-primary text-body-md font-body-md" placeholder="Search Shops or Tenants..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-surface-container-high transition-colors rounded-full relative">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 hover:bg-surface-container-high transition-colors rounded-full">
+<span class="material-symbols-outlined text-on-surface-variant">help</span>
+</button>
+<div class="h-8 w-[1px] bg-outline-variant mx-2"></div>
+<div class="flex items-center gap-3 cursor-pointer group">
+<div class="text-right hidden sm:block">
+<p class="font-label-md text-label-md text-on-surface group-hover:text-primary transition-colors">John Kato</p>
+<p class="text-[10px] text-outline uppercase font-bold">Manager</p>
+</div>
+<img alt="Profile" class="w-10 h-10 rounded-full border-2 border-primary-fixed object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWjzyJ4v9ZIRrwkofFI6cuUlRw00idGHMIeNU906J9xqlyyfIA1Zso9cgzy1Xk0B7aiYmJ1nKrhh5IPyWy_AhpBJZyeBn2Og6m8X-DcDlFwGSv6_xrh7H6zS-xIMQQ7SXwr8MVrQ0SjUQ0Tn6nWXIn6IWfZ7FANIRVLa1CsgFW1QIP5YZATjF-cNYfOT8MQXg76DYJlw_O2T3hF3Lp9tM6QhYxAkIWzOlm7Bc9hzHZ7_153h9OJkkLwY0iRy4EcLigrkkXtQpI__wB"/>
+</div>
+</div>
+</header>
+<div class="p-gutter max-w-7xl mx-auto space-y-section-gap">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Rent Collection</h2>
+<p class="text-on-surface-variant font-body-md mt-1">Digitally record and track today's property payments with institutional precision.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-5 py-2.5 bg-surface-container-lowest border border-outline rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined text-[20px]">file_export</span> Export Ledger
+</button>
+<button class="flex items-center gap-2 px-6 py-2.5 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:shadow-lg hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[20px]">add_circle</span> Batch Entry
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<div class="crane-card p-6">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 bg-primary-fixed rounded-xl flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</div>
+<span class="text-status-paid font-label-md text-status-badge bg-green-50 px-2.5 py-1 rounded-full border border-green-100">+12.5%</span>
+</div>
+<p class="text-outline font-label-md text-label-md uppercase tracking-wider">Today's Total</p>
+<h3 class="text-headline-lg font-headline-lg mt-1 tracking-tight">UGX 1,240,000</h3>
+</div>
+<div class="crane-card p-6">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 bg-secondary-fixed rounded-xl flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">description</span>
+</div>
+<span class="text-on-surface-variant font-label-md text-status-badge bg-surface-container-high px-2.5 py-1 rounded-full border border-subtle">24 Pending</span>
+</div>
+<p class="text-outline font-label-md text-label-md uppercase tracking-wider">Collections</p>
+<h3 class="text-headline-lg font-headline-lg mt-1 tracking-tight">18 <span class="text-outline font-normal text-xl">/ 30</span></h3>
+</div>
+<div class="crane-card p-6">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 bg-error-container rounded-xl flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">event_busy</span>
+</div>
+<span class="text-status-unpaid font-label-md text-status-badge bg-red-50 px-2.5 py-1 rounded-full border border-red-100">Critical</span>
+</div>
+<p class="text-outline font-label-md text-label-md uppercase tracking-wider">Outstanding</p>
+<h3 class="text-headline-lg font-headline-lg mt-1 tracking-tight text-error">UGX 4.5M</h3>
+</div>
+<div class="crane-card p-6">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 bg-tertiary-fixed rounded-xl flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+</div>
+<span class="text-status-partial font-label-md text-status-badge bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100">Mobile Money</span>
+</div>
+<p class="text-outline font-label-md text-label-md uppercase tracking-wider">Digital Yield</p>
+<h3 class="text-headline-lg font-headline-lg mt-1 tracking-tight">UGX 840K</h3>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-section-gap">
+<div class="lg:col-span-7 space-y-gutter">
+<div class="bg-surface-container-lowest rounded-xl border border-subtle shadow-sm overflow-hidden">
+<div class="p-6 border-b border-subtle bg-surface-container-lowest flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-2xl">account_balance</span>
+<h4 class="font-headline-md text-headline-md text-on-surface">Record New Payment</h4>
+</div>
+<span class="px-3 py-1 bg-primary-fixed text-primary font-bold text-[10px] uppercase rounded tracking-widest">Transaction ID: RH-4492</span>
+</div>
+<div class="p-8">
+<form class="space-y-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface flex items-center gap-2">Tenant / Commercial Unit <span class="material-symbols-outlined text-outline text-[16px]">info</span></label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">storefront</span>
+<select class="w-full pl-10 pr-4 py-3.5 bg-white crane-input rounded-lg appearance-none">
+<option>K. Musoke — Shop G04 (Ground Floor)</option>
+<option>B. Nakato — Shop F12 (First Floor)</option>
+<option>S. Okello — Trading Center A</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface">Amount Collected (UGX)</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-primary font-bold">payments</span>
+<input class="w-full pl-10 pr-4 py-3.5 bg-white crane-input rounded-lg font-bold text-lg" placeholder="0.00" type="number"/>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface">Payment Date</label>
+<div class="relative">
+<input class="w-full px-4 py-3.5 bg-white crane-input rounded-lg" type="date" value="2023-10-24"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface">Channel &amp; Settlement</label>
+<div class="flex p-1 bg-surface-container-high rounded-xl border border-subtle">
+<button class="flex-1 flex flex-col items-center gap-1 py-2 bg-white text-primary rounded-lg shadow-sm border border-subtle transition-all" type="button">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="text-[10px] font-bold uppercase">Cash</span>
+</button>
+<button class="flex-1 flex flex-col items-center gap-1 py-2 text-outline hover:text-on-surface transition-all" type="button">
+<span class="material-symbols-outlined">smartphone</span>
+<span class="text-[10px] font-bold uppercase">Mobile</span>
+</button>
+<button class="flex-1 flex flex-col items-center gap-1 py-2 text-outline hover:text-on-surface transition-all" type="button">
+<span class="material-symbols-outlined">account_balance</span>
+<span class="text-[10px] font-bold uppercase">Bank</span>
+</button>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface">Officer Remarks</label>
+<textarea class="w-full px-4 py-3.5 bg-white crane-input rounded-lg" placeholder="Enter specific details regarding the payment terms or settlement exceptions..." rows="3"></textarea>
+</div>
+<div class="pt-4">
+<button class="w-full bg-primary text-on-primary py-5 rounded-xl font-headline-md text-headline-md hover:brightness-110 shadow-lg active:scale-[0.99] transition-all flex items-center justify-center gap-3">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">verified_user</span> Authorize &amp; Issue Receipt
+</button>
+<p class="text-center text-[12px] text-outline mt-4">By authorizing, a digital ledger entry will be immutable and sent via SMS to the tenant.</p>
+</div>
+</form>
+</div>
+</div>
+<div class="bg-surface-container-highest rounded-xl p-10 relative overflow-hidden flex flex-col items-center">
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');"></div>
+<div class="w-full max-w-sm bg-white shadow-2xl rounded-sm receipt-mono relative border-t-[12px] border-primary px-8 py-10">
+<div class="absolute -right-4 -top-4 opacity-10">
+<span class="material-symbols-outlined text-[120px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div class="text-center border-b border-dashed border-outline-variant pb-6 mb-6">
+<h5 class="text-xl font-bold text-on-surface tracking-tighter uppercase">RentiHub Enterprise</h5>
+<p class="text-[10px] text-outline tracking-widest uppercase mt-1">Official Payment Voucher</p>
+</div>
+<div class="space-y-4 text-[13px] text-on-surface">
+<div class="flex justify-between">
+<span class="text-outline uppercase text-[11px] font-bold">Ref No:</span>
+<span class="font-bold">#RH-882931-X</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline uppercase text-[11px] font-bold">Issued:</span>
+<span>24 OCT 2023 | 11:42</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline uppercase text-[11px] font-bold">Tenant:</span>
+<span>Musoke, Kenneth</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline uppercase text-[11px] font-bold">Unit:</span>
+<span>G04 - Commercial Wing</span>
+</div>
+</div>
+<div class="my-8 py-8 border-y border-dashed border-outline-variant text-center">
+<p class="text-[11px] uppercase text-outline font-bold mb-1">Settlement Total</p>
+<p class="text-4xl font-black text-primary tracking-tighter">UGX 450,000</p>
+<p class="text-[10px] text-status-paid font-bold mt-2 uppercase">Status: Fully Processed</p>
+</div>
+<div class="text-[11px] text-center text-on-surface-variant leading-relaxed">
+<p>Authorized by: J. Kato (Manager)</p>
+<p class="mt-4 text-[9px] opacity-60">This is a system-generated document. No physical signature required.</p>
+</div>
+<div class="mt-10 flex gap-3">
+<button class="flex-1 bg-surface-container-low border border-subtle text-on-surface py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider hover:bg-white transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">share</span> Share
+</button>
+<button class="flex-1 bg-surface-container-low border border-subtle text-on-surface py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider hover:bg-white transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">print</span> Print
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-5 space-y-gutter">
+<div class="bg-surface-container-lowest rounded-xl border border-subtle shadow-sm overflow-hidden h-full flex flex-col">
+<div class="p-6 border-b border-subtle bg-surface-container-lowest flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+<h4 class="font-headline-md text-headline-md text-on-surface">Recent Activity</h4>
+</div>
+<a href="financial-reports.html" class="text-primary font-label-md text-label-md hover:underline decoration-2 underline-offset-4">View All Logs</a>
+</div>
+<div class="flex-1">
+<table class="w-full">
+<thead>
+<tr class="text-left bg-surface-container">
+<th class="px-6 py-4 font-label-md text-[11px] text-outline uppercase tracking-widest">Property / Tenant</th>
+<th class="px-6 py-4 font-label-md text-[11px] text-outline uppercase tracking-widest">Amount</th>
+<th class="px-6 py-4 font-label-md text-[11px] text-outline uppercase tracking-widest text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-subtle">
+<tr class="hover:bg-primary/5 transition-colors group cursor-pointer">
+<td class="px-6 py-5">
+<p class="font-semibold text-on-surface">S. Nakimera</p>
+<p class="text-[12px] text-outline">Shop B-12 • 09:15 AM</p>
+</td>
+<td class="px-6 py-5">
+<p class="font-bold text-on-surface">UGX 200,000</p>
+<span class="text-[9px] font-black text-primary uppercase bg-primary-fixed px-1.5 py-0.5 rounded">Cash</span>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="px-3 py-1 bg-green-50 text-status-paid border border-green-100 font-status-badge text-status-badge rounded-full uppercase">Settled</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group cursor-pointer bg-surface">
+<td class="px-6 py-5">
+<p class="font-semibold text-on-surface">A. Mukasa</p>
+<p class="text-[12px] text-outline">Office F02 • 08:45 AM</p>
+</td>
+<td class="px-6 py-5">
+<p class="font-bold text-on-surface">UGX 850,000</p>
+<span class="text-[9px] font-black text-tertiary uppercase bg-tertiary-fixed px-1.5 py-0.5 rounded">Bank</span>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="px-3 py-1 bg-green-50 text-status-paid border border-green-100 font-status-badge text-status-badge rounded-full uppercase">Settled</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group cursor-pointer">
+<td class="px-6 py-5">
+<p class="font-semibold text-on-surface">J. Tumusiime</p>
+<p class="text-[12px] text-outline">Booth 05 • 08:20 AM</p>
+</td>
+<td class="px-6 py-5">
+<p class="font-bold text-on-surface">UGX 50,000</p>
+<span class="text-[9px] font-black text-secondary uppercase bg-secondary-fixed px-1.5 py-0.5 rounded">Mobile</span>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="px-3 py-1 bg-orange-50 text-status-partial border border-orange-100 font-status-badge text-status-badge rounded-full uppercase">Partial</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group cursor-pointer bg-surface">
+<td class="px-6 py-5">
+<p class="font-semibold text-on-surface">F. Lutaaya</p>
+<p class="text-[12px] text-outline">Shop C-08 • Yesterday</p>
+</td>
+<td class="px-6 py-5">
+<p class="font-bold text-on-surface">UGX 300,000</p>
+<span class="text-[9px] font-black text-primary uppercase bg-primary-fixed px-1.5 py-0.5 rounded">Cash</span>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="px-3 py-1 bg-green-50 text-status-paid border border-green-100 font-status-badge text-status-badge rounded-full uppercase">Settled</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors group cursor-pointer">
+<td class="px-6 py-5">
+<p class="font-semibold text-on-surface">W. Kato</p>
+<p class="text-[12px] text-outline">Shop G-01 • Yesterday</p>
+</td>
+<td class="px-6 py-5">
+<p class="font-bold text-on-surface">UGX 0</p>
+<span class="text-[9px] font-black text-outline uppercase border border-outline px-1.5 py-0.5 rounded">Unset</span>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="px-3 py-1 bg-red-50 text-status-unpaid border border-red-100 font-status-badge text-status-badge rounded-full uppercase">Default</span>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="p-8">
+<div class="bg-surface-container-high rounded-xl p-6 border border-dashed border-outline-variant text-center">
+<span class="material-symbols-outlined text-primary text-4xl mb-3">analytics</span>
+<p class="text-on-surface font-semibold">60% Efficiency Today</p>
+<p class="text-[12px] text-outline mt-1 leading-relaxed">System tracking shows 12 tenants yet to settle outstanding balances. Auto-reminders scheduled for 4:00 PM.</p>
+<a href="tenants.html" class="mt-4 px-4 py-2 bg-primary/10 text-primary rounded-lg text-[12px] font-bold uppercase hover:bg-primary/20 transition-all inline-block">View Late Payers</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface-container-lowest border-t border-subtle z-50 flex justify-around items-center py-2 px-gutter shadow-2xl">
+<a class="flex flex-col items-center gap-1 p-2 text-on-surface-variant" href="index.html">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-primary" href="rent-collection.html">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="text-[10px] font-bold">Collect</span>
+</a>
+<div class="relative -top-6">
+<button class="w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center border-4 border-white">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center gap-1 p-2 text-on-surface-variant" href="tenants.html">
+<span class="material-symbols-outlined">groups</span>
+<span class="text-[10px] font-bold">Tenants</span>
+</a>
+<a class="flex flex-col items-center gap-1 p-2 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold">More</span>
+</a>
+</nav>
+<script>
+    const paymentButtons = document.querySelectorAll('form button[type="button"]');
+    paymentButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            paymentButtons.forEach(b => {
+                b.classList.remove('bg-white', 'text-primary', 'shadow-sm', 'border');
+                b.classList.add('text-outline');
+            });
+            btn.classList.add('bg-white', 'text-primary', 'shadow-sm', 'border');
+            btn.classList.remove('text-outline');
+        });
+    });
+</script>
+</body></html>
