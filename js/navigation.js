@@ -14,7 +14,7 @@ class NavigationComponent {
 
         // Check if user is authenticated
         if (!authService.getCurrentUser() && !window.location.pathname.includes('login') && !window.location.pathname.includes('register')) {
-            window.location.href = '/login.html';
+            window.location.href = '/auth/login.html';
             return;
         }
 

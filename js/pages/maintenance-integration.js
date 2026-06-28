@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Check authentication
     firebase.auth().onAuthStateChanged(async (user) => {
         if (!user) {
-            window.location.href = '/login.html';
+            window.location.href = '/auth/login.html';
             return;
         }
 

@@ -22,7 +22,7 @@ class AuthService {
                 // Redirect to login if not on login/register page
                 if (!window.location.pathname.includes('login') &&
                     !window.location.pathname.includes('register')) {
-                    window.location.href = '/login.html';
+                    window.location.href = '/auth/login.html';
                 }
             }
         });
@@ -100,7 +100,7 @@ class AuthService {
         try {
             await auth.signOut();
             localStorage.clear();
-            window.location.href = '/login.html';
+            window.location.href = '/auth/login.html';
         } catch (error) {
             console.error('Logout error:', error);
         }
