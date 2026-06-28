@@ -4,52 +4,52 @@
 let currentReportType = 'daily';
 let currentReportData = null;
 
-document.addEventListener('DOMContentLoaded', async function() {
-  // Initialize services
-  initializeFirebase();
-  dbService.init();
-  
-  // Check authentication
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) {
-      window.location.href = '/login.html';
-      return;
-    }
+document.addEventListener('DOMContentLoaded', async function () {
+    // Initialize services
+    initializeFirebase();
+    dbService.init();
 
-    await authService.loadUserRole(user.uid);
-    
-    // Load default report (today's)
-    await generateDailyReport();
-  });
+    // Check authentication
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (!user) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        await authService.loadUserRole(user.uid);
+
+        // Load default report (today's)
+        await generateDailyReport();
+    });
 });
 
 // ==================== DAILY REPORT ====================
 
 async function generateDailyReport(date = new Date()) {
-  try {
-    showLoading('Generating daily report...');
-    currentReportType = 'daily';
-    
-    const result = await reportsMgmt.generateDailyReport(date);
-    
-    if (result.success) {
-      currentReportData = result.data;
-      renderDailyReport(result.data);
+    try {
+        showLoading('Generating daily report...');
+        currentReportType = 'daily';
+
+        const result = await reportsMgmt.generateDailyReport(date);
+
+        if (result.success) {
+            currentReportData = result.data;
+            renderDailyReport(result.data);
+        }
+
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        console.error('Error generating daily report:', error);
+        showToast('Failed to generate report', 'error');
     }
-    
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    console.error('Error generating daily report:', error);
-    showToast('Failed to generate report', 'error');
-  }
 }
 
 function renderDailyReport(data) {
-  const container = document.getElementById('reportContainer');
-  if (!container) return;
+    const container = document.getElementById('reportContainer');
+    if (!container) return;
 
-  container.innerHTML = `
+    container.innerHTML = `
     <div class="space-y-6">
       <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold">Daily Revenue Report</h2>
@@ -143,33 +143,33 @@ function renderDailyReport(data) {
 // ==================== MONTHLY REPORT ====================
 
 async function generateMonthlyReport() {
-  const month = parseInt(document.getElementById('monthSelect')?.value || new Date().getMonth() + 1);
-  const year = parseInt(document.getElementById('yearSelect')?.value || new Date().getFullYear());
+    const month = parseInt(document.getElementById('monthSelect')?.value || new Date().getMonth() + 1);
+    const year = parseInt(document.getElementById('yearSelect')?.value || new Date().getFullYear());
 
-  try {
-    showLoading('Generating monthly report...');
-    currentReportType = 'monthly';
-    
-    const result = await reportsMgmt.generateMonthlyReport(month, year);
-    
-    if (result.success) {
-      currentReportData = result.data;
-      renderMonthlyReport(result.data);
+    try {
+        showLoading('Generating monthly report...');
+        currentReportType = 'monthly';
+
+        const result = await reportsMgmt.generateMonthlyReport(month, year);
+
+        if (result.success) {
+            currentReportData = result.data;
+            renderMonthlyReport(result.data);
+        }
+
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        console.error('Error generating monthly report:', error);
+        showToast('Failed to generate report', 'error');
     }
-    
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    console.error('Error generating monthly report:', error);
-    showToast('Failed to generate report', 'error');
-  }
 }
 
 function renderMonthlyReport(data) {
-  const container = document.getElementById('reportContainer');
-  if (!container) return;
+    const container = document.getElementById('reportContainer');
+    if (!container) return;
 
-  container.innerHTML = `
+    container.innerHTML = `
     <div class="space-y-6">
       <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold">Monthly Revenue Report</h2>
@@ -222,32 +222,32 @@ function renderMonthlyReport(data) {
 // ==================== ANNUAL REPORT ====================
 
 async function generateAnnualReport() {
-  const year = parseInt(document.getElementById('yearSelect')?.value || new Date().getFullYear());
+    const year = parseInt(document.getElementById('yearSelect')?.value || new Date().getFullYear());
 
-  try {
-    showLoading('Generating annual report...');
-    currentReportType = 'annual';
-    
-    const result = await reportsMgmt.generateAnnualReport(year);
-    
-    if (result.success) {
-      currentReportData = result.data;
-      renderAnnualReport(result.data);
+    try {
+        showLoading('Generating annual report...');
+        currentReportType = 'annual';
+
+        const result = await reportsMgmt.generateAnnualReport(year);
+
+        if (result.success) {
+            currentReportData = result.data;
+            renderAnnualReport(result.data);
+        }
+
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        console.error('Error generating annual report:', error);
+        showToast('Failed to generate report', 'error');
     }
-    
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    console.error('Error generating annual report:', error);
-    showToast('Failed to generate report', 'error');
-  }
 }
 
 function renderAnnualReport(data) {
-  const container = document.getElementById('reportContainer');
-  if (!container) return;
+    const container = document.getElementById('reportContainer');
+    if (!container) return;
 
-  container.innerHTML = `
+    container.innerHTML = `
     <div class="space-y-6">
       <div class="flex justify-between items-center">
         <h2 class="text-2xl font-bold">Annual Revenue Report</h2>
@@ -305,94 +305,94 @@ function renderAnnualReport(data) {
 // ==================== OTHER REPORTS ====================
 
 async function generateOutstandingReport() {
-  try {
-    showLoading('Generating outstanding balances report...');
-    currentReportType = 'outstanding';
-    
-    const result = await reportsMgmt.generateOutstandingReport();
-    
-    if (result.success) {
-      currentReportData = result.data;
-      // Render outstanding report
-      showToast('Outstanding report generated', 'success');
+    try {
+        showLoading('Generating outstanding balances report...');
+        currentReportType = 'outstanding';
+
+        const result = await reportsMgmt.generateOutstandingReport();
+
+        if (result.success) {
+            currentReportData = result.data;
+            // Render outstanding report
+            showToast('Outstanding report generated', 'success');
+        }
+
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        showToast('Failed to generate report', 'error');
     }
-    
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    showToast('Failed to generate report', 'error');
-  }
 }
 
 async function generateOccupancyReport() {
-  try {
-    showLoading('Generating occupancy report...');
-    currentReportType = 'occupancy';
-    
-    const result = await reportsMgmt.generateOccupancyReport();
-    
-    if (result.success) {
-      currentReportData = result.data;
-      // Render occupancy report
-      showToast('Occupancy report generated', 'success');
+    try {
+        showLoading('Generating occupancy report...');
+        currentReportType = 'occupancy';
+
+        const result = await reportsMgmt.generateOccupancyReport();
+
+        if (result.success) {
+            currentReportData = result.data;
+            // Render occupancy report
+            showToast('Occupancy report generated', 'success');
+        }
+
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        showToast('Failed to generate report', 'error');
     }
-    
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    showToast('Failed to generate report', 'error');
-  }
 }
 
 // ==================== EXPORT ====================
 
 function exportReport() {
-  if (!currentReportData) {
-    showToast('No report data to export', 'warning');
-    return;
-  }
+    if (!currentReportData) {
+        showToast('No report data to export', 'warning');
+        return;
+    }
 
-  const filename = `${currentReportType}_report_${new Date().toISOString().split('T')[0]}`;
-  
-  // Convert report data to CSV format
-  let csvData = [];
-  
-  if (currentReportType === 'daily' && currentReportData.payments) {
-    csvData = currentReportData.payments.map(p => ({
-      Date: formatDate(p.paymentDate),
-      Tenant: p.tenantId,
-      Shop: p.shopId,
-      Amount: p.amount,
-      Method: p.paymentMethod
-    }));
-  }
-  
-  if (csvData.length > 0) {
-    exportToCSV(csvData, filename);
-  } else {
-    showToast('No data to export', 'warning');
-  }
+    const filename = `${currentReportType}_report_${new Date().toISOString().split('T')[0]}`;
+
+    // Convert report data to CSV format
+    let csvData = [];
+
+    if (currentReportType === 'daily' && currentReportData.payments) {
+        csvData = currentReportData.payments.map(p => ({
+            Date: formatDate(p.paymentDate),
+            Tenant: p.tenantId,
+            Shop: p.shopId,
+            Amount: p.amount,
+            Method: p.paymentMethod
+        }));
+    }
+
+    if (csvData.length > 0) {
+        exportToCSV(csvData, filename);
+    } else {
+        showToast('No data to export', 'warning');
+    }
 }
 
 // Report type selector
-document.getElementById('reportTypeSelect')?.addEventListener('change', function(e) {
-  const reportType = e.target.value;
-  
-  switch(reportType) {
-    case 'daily':
-      generateDailyReport();
-      break;
-    case 'monthly':
-      generateMonthlyReport();
-      break;
-    case 'annual':
-      generateAnnualReport();
-      break;
-    case 'outstanding':
-      generateOutstandingReport();
-      break;
-    case 'occupancy':
-      generateOccupancyReport();
-      break;
-  }
+document.getElementById('reportTypeSelect')?.addEventListener('change', function (e) {
+    const reportType = e.target.value;
+
+    switch (reportType) {
+        case 'daily':
+            generateDailyReport();
+            break;
+        case 'monthly':
+            generateMonthlyReport();
+            break;
+        case 'annual':
+            generateAnnualReport();
+            break;
+        case 'outstanding':
+            generateOutstandingReport();
+            break;
+        case 'occupancy':
+            generateOccupancyReport();
+            break;
+    }
 });

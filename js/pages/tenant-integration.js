@@ -1,77 +1,77 @@
 // Tenant Directory Integration Script
 // Include this file in tenant_directory/code.html
 
-document.addEventListener('DOMContentLoaded', async function() {
-  // Initialize services
-  initializeFirebase();
-  dbService.init();
-  
-  // Check authentication
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) {
-      window.location.href = '/login.html';
-      return;
-    }
+document.addEventListener('DOMContentLoaded', async function () {
+    // Initialize services
+    initializeFirebase();
+    dbService.init();
 
-    await authService.loadUserRole(user.uid);
-    
-    const userRole = authService.getUserRole();
-    
-    // If tenant, show their dashboard
-    if (userRole === 'tenant') {
-      await loadTenantDashboard();
-    } else {
-      // If manager/owner/admin, show all tenants
-      await loadAllTenants();
-    }
-  });
+    // Check authentication
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (!user) {
+            window.location.href = '/login.html';
+            return;
+        }
+
+        await authService.loadUserRole(user.uid);
+
+        const userRole = authService.getUserRole();
+
+        // If tenant, show their dashboard
+        if (userRole === 'tenant') {
+            await loadTenantDashboard();
+        } else {
+            // If manager/owner/admin, show all tenants
+            await loadAllTenants();
+        }
+    });
 });
 
 // ==================== TENANT DASHBOARD (For Tenant Role) ====================
 
 async function loadTenantDashboard() {
-  try {
-    showLoading('Loading your dashboard...');
+    try {
+        showLoading('Loading your dashboard...');
 
-    const user = authService.getCurrentUser();
-    
-    // Find tenant by email
-    const tenants = await dbService.query('tenants', [
-      { field: 'email', operator: '==', value: user.email }
-    ]);
+        const user = authService.getCurrentUser();
 
-    if (!tenants.success || tenants.data.length === 0) {
-      hideLoading();
-      showToast('Tenant profile not found. Please contact management.', 'error');
-      return;
+        // Find tenant by email
+        const tenants = await dbService.query('tenants', [
+            { field: 'email', operator: '==', value: user.email }
+        ]);
+
+        if (!tenants.success || tenants.data.length === 0) {
+            hideLoading();
+            showToast('Tenant profile not found. Please contact management.', 'error');
+            return;
+        }
+
+        const tenantId = tenants.data[0].id;
+        const dashboardData = await dashboard.getTenantDashboard(tenantId);
+
+        if (!dashboardData.success) {
+            hideLoading();
+            showToast('Failed to load dashboard', 'error');
+            return;
+        }
+
+        renderTenantDashboard(dashboardData.data);
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        console.error('Error loading tenant dashboard:', error);
+        showToast('Error loading dashboard', 'error');
     }
-
-    const tenantId = tenants.data[0].id;
-    const dashboardData = await dashboard.getTenantDashboard(tenantId);
-
-    if (!dashboardData.success) {
-      hideLoading();
-      showToast('Failed to load dashboard', 'error');
-      return;
-    }
-
-    renderTenantDashboard(dashboardData.data);
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    console.error('Error loading tenant dashboard:', error);
-    showToast('Error loading dashboard', 'error');
-  }
 }
 
 function renderTenantDashboard(data) {
-  const container = document.getElementById('tenantDashboard');
-  if (!container) return;
+    const container = document.getElementById('tenantDashboard');
+    if (!container) return;
 
-  const balance = data.balance.balance || 0;
-  const balanceClass = balance > 0 ? 'text-red-600' : 'text-green-600';
+    const balance = data.balance.balance || 0;
+    const balanceClass = balance > 0 ? 'text-red-600' : 'text-green-600';
 
-  container.innerHTML = `
+    container.innerHTML = `
     <div class="space-y-6">
       <!-- Balance Card -->
       <div class="bg-white rounded-lg shadow-lg p-6">
@@ -139,10 +139,10 @@ function renderTenantDashboard(data) {
         </div>
         <div class="space-y-3">
           ${data.maintenanceRequests.slice(0, 5).map(request => {
-            const statusClass = request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                              request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                              'bg-yellow-100 text-yellow-800';
-            return `
+        const statusClass = request.status === 'completed' ? 'bg-green-100 text-green-800' :
+            request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                'bg-yellow-100 text-yellow-800';
+        return `
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
                 <div>
                   <p class="font-semibold">${request.title}</p>
@@ -153,7 +153,7 @@ function renderTenantDashboard(data) {
                 </span>
               </div>
             `;
-          }).join('') || '<p class="text-gray-500">No maintenance requests</p>'}
+    }).join('') || '<p class="text-gray-500">No maintenance requests</p>'}
         </div>
       </div>
     </div>
@@ -163,32 +163,32 @@ function renderTenantDashboard(data) {
 // ==================== ALL TENANTS (For Manager/Owner/Admin) ====================
 
 async function loadAllTenants() {
-  try {
-    showLoading('Loading tenants...');
-    const result = await tenantMgmt.getAllTenants();
-    
-    if (result.success) {
-      renderTenantsTable(result.data);
+    try {
+        showLoading('Loading tenants...');
+        const result = await tenantMgmt.getAllTenants();
+
+        if (result.success) {
+            renderTenantsTable(result.data);
+        }
+
+        hideLoading();
+    } catch (error) {
+        hideLoading();
+        console.error('Error loading tenants:', error);
+        showToast('Failed to load tenants', 'error');
     }
-    
-    hideLoading();
-  } catch (error) {
-    hideLoading();
-    console.error('Error loading tenants:', error);
-    showToast('Failed to load tenants', 'error');
-  }
 }
 
 function renderTenantsTable(tenants) {
-  const tableBody = document.getElementById('tenantsTable');
-  if (!tableBody) return;
+    const tableBody = document.getElementById('tenantsTable');
+    if (!tableBody) return;
 
-  if (tenants.length === 0) {
-    tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">No tenants found</td></tr>';
-    return;
-  }
+    if (tenants.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">No tenants found</td></tr>';
+        return;
+    }
 
-  tableBody.innerHTML = tenants.map(tenant => `
+    tableBody.innerHTML = tenants.map(tenant => `
     <tr class="border-b border-gray-100 hover:bg-gray-50">
       <td class="px-4 py-3 font-semibold">${tenant.fullName}</td>
       <td class="px-4 py-3">${tenant.phone}</td>
@@ -218,98 +218,98 @@ function renderTenantsTable(tenants) {
 
 // ==================== ADD TENANT ====================
 
-document.getElementById('addTenantForm')?.addEventListener('submit', async function(e) {
-  e.preventDefault();
-  
-  const formData = {
-    fullName: document.getElementById('fullName').value,
-    nationalId: document.getElementById('nationalId').value,
-    phone: document.getElementById('phone').value,
-    email: document.getElementById('email').value,
-    businessName: document.getElementById('businessName').value,
-    businessType: document.getElementById('businessType').value,
-    emergencyContact: document.getElementById('emergencyContact').value,
-    emergencyPhone: document.getElementById('emergencyPhone').value,
-    address: document.getElementById('address').value
-  };
+document.getElementById('addTenantForm')?.addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-  const result = await tenantMgmt.createTenant(formData);
-  
-  if (result.success) {
-    closeModal('addTenantModal');
-    this.reset();
-    await loadAllTenants();
-  }
+    const formData = {
+        fullName: document.getElementById('fullName').value,
+        nationalId: document.getElementById('nationalId').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        businessName: document.getElementById('businessName').value,
+        businessType: document.getElementById('businessType').value,
+        emergencyContact: document.getElementById('emergencyContact').value,
+        emergencyPhone: document.getElementById('emergencyPhone').value,
+        address: document.getElementById('address').value
+    };
+
+    const result = await tenantMgmt.createTenant(formData);
+
+    if (result.success) {
+        closeModal('addTenantModal');
+        this.reset();
+        await loadAllTenants();
+    }
 });
 
 // ==================== HELPER FUNCTIONS ====================
 
 async function viewTenantDetails(tenantId) {
-  try {
-    showLoading('Loading tenant details...');
-    
-    const tenant = await tenantMgmt.getTenant(tenantId);
-    const balance = await tenantMgmt.getTenantBalance(tenantId);
-    const payments = await tenantMgmt.getTenantPayments(tenantId);
-    
-    hideLoading();
-    
-    if (!tenant.success) {
-      showToast('Failed to load tenant details', 'error');
-      return;
+    try {
+        showLoading('Loading tenant details...');
+
+        const tenant = await tenantMgmt.getTenant(tenantId);
+        const balance = await tenantMgmt.getTenantBalance(tenantId);
+        const payments = await tenantMgmt.getTenantPayments(tenantId);
+
+        hideLoading();
+
+        if (!tenant.success) {
+            showToast('Failed to load tenant details', 'error');
+            return;
+        }
+
+        // Display tenant details in modal
+        showTenantDetailsModal(tenant.data, balance, payments.data);
+    } catch (error) {
+        hideLoading();
+        console.error('Error viewing tenant:', error);
+        showToast('Failed to load tenant details', 'error');
     }
-    
-    // Display tenant details in modal
-    showTenantDetailsModal(tenant.data, balance, payments.data);
-  } catch (error) {
-    hideLoading();
-    console.error('Error viewing tenant:', error);
-    showToast('Failed to load tenant details', 'error');
-  }
 }
 
 function showTenantDetailsModal(tenant, balance, payments) {
-  // Implementation depends on your modal system
-  showToast('Tenant: ' + tenant.fullName + ' - Balance: ' + formatCurrency(balance.balance), 'info');
+    // Implementation depends on your modal system
+    showToast('Tenant: ' + tenant.fullName + ' - Balance: ' + formatCurrency(balance.balance), 'info');
 }
 
 async function sendReminder(tenantId) {
-  showConfirmDialog('Send rent reminder to this tenant?', async () => {
-    const tenant = await tenantMgmt.getTenant(tenantId);
-    const balance = await tenantMgmt.getTenantBalance(tenantId);
-    
-    if (tenant.success && balance.success && balance.balance > 0) {
-      await tenantMgmt.sendReminder(
-        tenantId,
-        `Rent reminder: Your balance is ${formatCurrency(balance.balance)}. Please make payment.`
-      );
-    } else {
-      showToast('No outstanding balance', 'info');
-    }
-  });
+    showConfirmDialog('Send rent reminder to this tenant?', async () => {
+        const tenant = await tenantMgmt.getTenant(tenantId);
+        const balance = await tenantMgmt.getTenantBalance(tenantId);
+
+        if (tenant.success && balance.success && balance.balance > 0) {
+            await tenantMgmt.sendReminder(
+                tenantId,
+                `Rent reminder: Your balance is ${formatCurrency(balance.balance)}. Please make payment.`
+            );
+        } else {
+            showToast('No outstanding balance', 'info');
+        }
+    });
 }
 
 // Search tenants
-document.getElementById('searchTenants')?.addEventListener('input', debounce(async function(e) {
-  const searchTerm = e.target.value;
-  
-  if (searchTerm.length >= 2) {
-    const result = await tenantMgmt.searchTenants(searchTerm);
-    
-    if (result.success) {
-      renderTenantsTable(result.data);
+document.getElementById('searchTenants')?.addEventListener('input', debounce(async function (e) {
+    const searchTerm = e.target.value;
+
+    if (searchTerm.length >= 2) {
+        const result = await tenantMgmt.searchTenants(searchTerm);
+
+        if (result.success) {
+            renderTenantsTable(result.data);
+        }
+    } else if (searchTerm.length === 0) {
+        await loadAllTenants();
     }
-  } else if (searchTerm.length === 0) {
-    await loadAllTenants();
-  }
 }, 300));
 
 function openModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.classList.remove('hidden');
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('hidden');
 }
 
 function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) modal.classList.add('hidden');
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('hidden');
 }
