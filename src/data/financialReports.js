@@ -1,8 +1,8 @@
 export const reportSummary = [
-  { label: 'Total Revenue (YTD)', value: 'UGX 142.8M', trend: '+18.3% vs LY', icon: 'account_balance', color: 'text-primary' },
-  { label: 'Collection Rate', value: '94.2%', trend: '+2.1% from Q4', icon: 'check_circle', color: 'text-status-paid' },
-  { label: 'Outstanding Rent', value: 'UGX 12.4M', trend: '-8.7% from last month', icon: 'warning', color: 'text-status-partial' },
-  { label: 'Operating Expenses', value: 'UGX 8.2M', trend: '+3.1% from budget', icon: 'receipt_long', color: 'text-on-surface-variant' },
+  { label: 'Total Revenue (YTD)', value: 'UGX 142.8M', trend: '+18.3% vs LY' },
+  { label: 'Collection Rate', value: '94.2%', trend: '+2.1% from Q4' },
+  { label: 'Outstanding Rent', value: 'UGX 12.4M', trend: '-8.7% from last month' },
+  { label: 'Operating Expenses', value: 'UGX 8.2M', trend: '+3.1% from budget' },
 ]
 
 export const cashFlowData = [
@@ -18,7 +18,7 @@ export const revenueMix = [
   { label: 'Commercial', value: 45, color: '#0037b0' },
   { label: 'Retail', value: 30, color: '#1d4ed8' },
   { label: 'Residential', value: 20, color: '#F97316' },
-  { label: 'Parking', value: 5, color: '#575e70' },
+  { label: 'Parking', value: 5, color: '#9ca3af' },
 ]
 
 export const propertyBreakdown = [
