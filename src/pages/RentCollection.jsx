@@ -6,108 +6,149 @@ export default function RentCollection() {
   const [method, setMethod] = useState('Mobile Money')
   const [amount, setAmount] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [receiptId, setReceiptId] = useState('')
 
   const tenant = tenants.find((t) => t.id === selected)
   const due = tenant ? tenant.rent + tenant.lateFee : 0
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setReceiptId(Math.random().toString(36).slice(2, 8).toUpperCase())
     setSubmitted(true)
   }
 
+  const resetForm = () => {
+    setAmount('')
+    setSubmitted(false)
+    setReceiptId('')
+  }
+
   return (
-    <div className="p-8 space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div className="p-6 md:p-8 space-y-6">
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Today's Collection", value: collectionStats.today, icon: 'payments', color: 'text-primary' },
-          { label: 'This Week', value: collectionStats.week, icon: 'calendar_month', color: 'text-status-paid' },
-          { label: 'Monthly Total', value: collectionStats.month, icon: 'account_balance', color: 'text-tertiary' },
-          { label: 'Pending Payments', value: collectionStats.pending, icon: 'hourglass_empty', color: 'text-status-partial' },
-        ].map((s, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl shadow-premium border border-border-subtle">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-on-surface-variant text-xs font-bold uppercase tracking-wider">{s.label}</p>
-              <span className={`material-symbols-outlined ${s.color}`}>{s.icon}</span>
-            </div>
-            <h3 className="text-2xl font-extrabold text-on-surface">{s.value}</h3>
+          { label: "Today's Collection", value: collectionStats.today },
+          { label: 'This Week', value: collectionStats.week },
+          { label: 'Monthly Total', value: collectionStats.month },
+          { label: 'Pending Payments', value: collectionStats.pending },
+        ].map((s) => (
+          <div key={s.label} className="bg-white rounded-lg border border-gray-200 p-5">
+            <p className="text-xs text-gray-500 font-medium mb-0.5">{s.label}</p>
+            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 bg-white rounded-2xl shadow-premium border border-border-subtle p-8">
-          <h3 className="text-xl font-bold text-on-surface mb-6">Record Payment</h3>
-          <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7 bg-white rounded-lg border border-gray-200 p-6">
+          <h3 className="text-base font-semibold text-gray-900 mb-6">Record Payment</h3>
+
+          {submitted ? (
             <div>
-              <label className="block text-sm font-semibold text-on-surface mb-2">Tenant</label>
-              <select value={selected} onChange={(e) => { setSelected(Number(e.target.value)); setSubmitted(false) }}
-                className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none">
-                {tenants.map((t) => <option key={t.id} value={t.id}>{t.name} - {t.unit}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-on-surface mb-2">Amount Due</label>
-                <p className="text-2xl font-extrabold text-primary">UGX {due.toLocaleString()}</p>
-                {tenant && tenant.lateFee > 0 && <p className="text-xs text-status-unpaid">Includes UGX {tenant.lateFee.toLocaleString()} late fee</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-on-surface mb-2">Amount Paying</label>
-                <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none" placeholder="Enter amount..." />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-on-surface mb-2">Payment Method</label>
-              <div className="flex gap-3 flex-wrap">
-                {paymentMethods.map((m) => (
-                  <button key={m} type="button" onClick={() => setMethod(m)}
-                    className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${method === m ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}`}>{m}</button>
-                ))}
-              </div>
-            </div>
-            <button type="submit" className="w-full bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-primary-container transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined">check_circle</span> Complete Payment
-            </button>
-          </form>
-          {submitted && (
-            <div className="mt-6 p-6 bg-surface-container-low rounded-2xl border border-border-subtle">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-status-paid/10 rounded-full flex items-center justify-center">
-                  <span className="material-symbols-outlined text-status-paid">check_circle</span>
+              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
+                <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-green-600 text-2xl">check_circle</span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-on-surface">Payment Recorded</h4>
-                  <p className="text-sm text-on-surface-variant">Receipt #{Math.random().toString(36).slice(2, 8).toUpperCase()}</p>
+                  <h4 className="font-semibold text-gray-900">Payment Recorded</h4>
+                  <p className="text-sm text-gray-400">Receipt #{receiptId}</p>
                 </div>
               </div>
-              <div className="border-t border-border-subtle pt-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-on-surface-variant">Tenant</span><span className="font-bold">{tenant?.name}</span></div>
-                <div className="flex justify-between"><span className="text-on-surface-variant">Amount</span><span className="font-bold">UGX {Number(amount || due).toLocaleString()}</span></div>
-                <div className="flex justify-between"><span className="text-on-surface-variant">Method</span><span className="font-bold">{method}</span></div>
-                <div className="flex justify-between"><span className="text-on-surface-variant">Date</span><span className="font-bold">{new Date().toLocaleDateString()}</span></div>
+              <div className="space-y-3 text-sm mb-6">
+                {[
+                  { label: 'Tenant', value: tenant?.name },
+                  { label: 'Amount', value: `UGX ${Number(amount || due).toLocaleString()}` },
+                  { label: 'Method', value: method },
+                  { label: 'Date', value: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) },
+                  { label: 'Status', value: 'Completed' },
+                ].map((r) => (
+                  <div key={r.label} className="flex justify-between">
+                    <span className="text-gray-400">{r.label}</span>
+                    <span className="font-medium text-gray-900">{r.value}</span>
+                  </div>
+                ))}
               </div>
+              <button onClick={resetForm} className="w-full border border-gray-200 text-gray-600 font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                Record Another Payment
+              </button>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Tenant</label>
+                <select
+                  value={selected}
+                  onChange={(e) => { setSelected(Number(e.target.value)); setSubmitted(false) }}
+                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all"
+                >
+                  {tenants.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} &mdash; {t.unit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-xs text-gray-400 font-medium mb-1">Amount Due</p>
+                  <p className="text-xl font-bold text-gray-900">UGX {due.toLocaleString()}</p>
+                  {tenant && tenant.lateFee > 0 && (
+                    <p className="text-xs text-red-500 mt-1">Includes UGX {tenant.lateFee.toLocaleString()} late fee</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount Paying</label>
+                  <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all" placeholder="Enter amount..." />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                <div className="flex gap-2 flex-wrap">
+                  {paymentMethods.map((m) => (
+                    <button key={m} type="button" onClick={() => setMethod(m)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        method === m
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
+                      }`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button type="submit" className="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                Complete Payment
+              </button>
+            </form>
           )}
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-premium border border-border-subtle p-8">
-          <h3 className="text-xl font-bold text-on-surface mb-6">Today's Activity</h3>
-          <div className="space-y-4">
+        <div className="lg:col-span-5 bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-base font-semibold text-gray-900">Today&rsquo;s Activity</h3>
+            <span className="text-xs text-gray-400 font-medium">{activityLog.length} payments</span>
+          </div>
+          <div className="space-y-3">
             {activityLog.map((a, i) => (
-              <div key={i} className="flex gap-4 p-4 bg-surface-container-low rounded-xl">
-                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-primary text-sm">payments</span>
+              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-blue-600 text-lg">payments</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <p className="font-semibold text-sm text-on-surface">{a.tenant}</p>
-                    <span className="text-xs text-on-surface-variant whitespace-nowrap">{a.time}</span>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-sm font-medium text-gray-900">{a.tenant}</p>
+                    <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">{a.time}</span>
                   </div>
-                  <p className="text-xs text-on-surface-variant mt-0.5">{a.method}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="font-bold text-sm text-on-surface">{a.amount}</span>
-                    <span className="text-[10px] font-bold text-status-paid uppercase tracking-wider">{a.status}</span>
+                  <p className="text-xs text-gray-400">{a.method}</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-sm font-semibold text-gray-900">{a.amount}</span>
+                    <span className="text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded">{a.status}</span>
                   </div>
                 </div>
               </div>
