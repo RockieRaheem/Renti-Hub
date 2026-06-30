@@ -1,47 +1,40 @@
 import { Link } from 'react-router-dom'
 import StatusBadge from '../components/ui/StatusBadge'
-import { maintenanceStats, requests } from '../data/maintenance'
-
-const priorityColor = { Critical: 'border-l-red-500', High: 'border-l-orange-500', Medium: 'border-l-yellow-500', Low: 'border-l-blue-500' }
+import { maintenanceStats, requests, getAssigneeColor, assigneeInitials, priorityBorders } from '../data/maintenance'
 
 function KanbanCard({ item }) {
   return (
-    <div className={`bg-white rounded-xl border border-border-subtle shadow-sm p-4 border-l-4 ${priorityColor[item.priority] || 'border-l-gray-300'} hover:shadow-md transition-shadow`}>
-      <div className="flex justify-between items-start mb-3">
-        <h4 className="font-bold text-sm text-on-surface">{item.title}</h4>
-        <span className="material-symbols-outlined text-on-surface-variant text-[18px] cursor-grab">drag_indicator</span>
+    <div className={`bg-white rounded-lg border border-gray-200 border-l-4 ${priorityBorders[item.priority] || 'border-l-gray-300'} p-4`}>
+      <div className="flex items-start justify-between mb-2">
+        <h4 className="text-sm font-semibold text-gray-900">{item.title}</h4>
+        <span className="text-[10px] text-gray-400 whitespace-nowrap ml-3">{item.date}</span>
       </div>
-      <p className="text-xs text-on-surface-variant mb-3">{item.property} - {item.tenant}</p>
-      <div className="flex justify-between items-center">
+      <p className="text-xs text-gray-400 mb-3">{item.property} &middot; {item.tenant}</p>
+      <div className="flex items-center justify-between">
         <StatusBadge status={item.priority} />
-        <span className="text-[10px] text-on-surface-variant">{item.date}</span>
-      </div>
-      {item.assignee && item.assignee !== 'Unassigned' && (
-        <div className="mt-3 pt-3 border-t border-border-subtle flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold text-primary">
-            {item.assignee.split(' ').map((w) => w[0]).join('')}
+        {item.assignee && (
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAssigneeColor(item.assignee)}`}>
+            {assigneeInitials(item.assignee)}
           </div>
-          <span className="text-[10px] text-on-surface-variant">{item.assignee}</span>
-        </div>
-      )}
+        )}
+      </div>
       {item.resolution && (
-        <div className="mt-3 pt-3 border-t border-border-subtle">
-          <p className="text-[10px] text-status-paid font-medium">Resolution: {item.resolution}</p>
-        </div>
+        <p className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-green-600 font-medium">
+          Resolution: {item.resolution}
+        </p>
       )}
     </div>
   )
 }
 
-function KanbanColumn({ title, count, color, items }) {
+function KanbanColumn({ title, count, items }) {
   return (
-    <div className="bg-surface-container-low/50 rounded-2xl p-5 border border-border-subtle">
-      <div className="flex items-center gap-3 mb-5">
-        <div className={`w-3 h-3 rounded-full ${color}`} />
-        <h3 className="font-bold text-on-surface">{title}</h3>
-        <span className={`ml-auto px-2.5 py-0.5 text-xs font-bold rounded-full ${color}/10 text-on-surface-variant`}>{count}</span>
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <span className="text-xs text-gray-400 bg-white border border-gray-200 rounded-md px-2 py-0.5">{count}</span>
       </div>
-      <div className="space-y-4 min-h-[300px]">
+      <div className="space-y-3">
         {items.map((item) => <KanbanCard key={item.id} item={item} />)}
       </div>
     </div>
@@ -49,31 +42,36 @@ function KanbanColumn({ title, count, color, items }) {
 }
 
 export default function MaintenanceBoard() {
+  const columns = [
+    { title: 'Pending', count: maintenanceStats.pending, items: requests.pending },
+    { title: 'In Progress', count: maintenanceStats.inProgress, items: requests.inProgress },
+    { title: 'Resolved', count: maintenanceStats.resolved, items: requests.resolved },
+  ]
+
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex gap-4">
-          {[
-            { label: 'Pending', value: maintenanceStats.pending, color: 'bg-yellow-400' },
-            { label: 'In Progress', value: maintenanceStats.inProgress, color: 'bg-blue-400' },
-            { label: 'Resolved', value: maintenanceStats.resolved, color: 'bg-green-400' },
-          ].map((s, i) => (
-            <div key={i} className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-premium border border-border-subtle">
-              <div className={`w-2.5 h-2.5 rounded-full ${s.color}`} />
-              <span className="text-sm text-on-surface-variant">{s.label}</span>
-              <span className="font-bold text-on-surface">{s.value}</span>
-            </div>
-          ))}
-        </div>
-        <Link to="/maintenance-requests" className="text-primary text-sm font-bold hover:underline flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">swap_view</span> List View
+    <div className="p-6 md:p-8 space-y-6">
+
+      <div className="grid grid-cols-3 gap-4">
+        {columns.map((c) => (
+          <div key={c.title} className="bg-white rounded-lg border border-gray-200 p-5">
+            <p className="text-xs text-gray-500 font-medium mb-0.5">{c.title}</p>
+            <p className="text-2xl font-bold text-gray-900">{c.count}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-400">{maintenanceStats.pending + maintenanceStats.inProgress + maintenanceStats.resolved} total requests</p>
+        <Link to="/maintenance-requests" className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+          <span className="material-symbols-outlined text-sm">list_alt</span>
+          List View
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <KanbanColumn title="Pending" count={requests.pending.length} color="bg-yellow-400" items={requests.pending} />
-        <KanbanColumn title="In Progress" count={requests.inProgress.length} color="bg-blue-400" items={requests.inProgress} />
-        <KanbanColumn title="Resolved" count={requests.resolved.length} color="bg-green-400" items={requests.resolved} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {columns.map((c) => (
+          <KanbanColumn key={c.title} title={c.title} count={c.count} items={c.items} />
+        ))}
       </div>
     </div>
   )

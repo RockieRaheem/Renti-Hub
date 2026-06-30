@@ -1,47 +1,57 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import StatusBadge from '../components/ui/StatusBadge'
-import { requests } from '../data/maintenance'
+import { requests, getAssigneeColor, assigneeInitials, priorityBorders } from '../data/maintenance'
 
 const allRequests = [...requests.pending, ...requests.inProgress, ...requests.resolved]
 
-const statusClass = (r) => {
-  if (r.resolution) return 'bg-status-paid/10 text-status-paid'
-  if (r.assignee && r.assignee !== 'Unassigned') return 'bg-blue-100 text-blue-700'
-  return 'bg-yellow-100 text-yellow-700'
+const statusMeta = (r) => {
+  if (r.resolution) return { label: 'Resolved', class: 'bg-green-50 text-green-700' }
+  if (r.assignee) return { label: 'In Progress', class: 'bg-blue-50 text-blue-700' }
+  return { label: 'Pending', class: 'bg-yellow-50 text-yellow-700' }
 }
-const statusLabel = (r) => {
-  if (r.resolution) return 'Resolved'
-  if (r.assignee && r.assignee !== 'Unassigned') return 'In Progress'
-  return 'Pending'
+
+function KanbanCard({ item }) {
+  return (
+    <div className={`bg-white rounded-lg border border-gray-200 border-l-4 ${priorityBorders[item.priority] || 'border-l-gray-300'} p-4`}>
+      <div className="flex items-start justify-between mb-2">
+        <h4 className="text-sm font-semibold text-gray-900">{item.title}</h4>
+        <span className="text-[10px] text-gray-400 whitespace-nowrap ml-3">{item.date}</span>
+      </div>
+      <p className="text-xs text-gray-400 mb-3">{item.property} &middot; {item.tenant}</p>
+      <div className="flex items-center justify-between">
+        <StatusBadge status={item.priority} />
+        {item.assignee && (
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAssigneeColor(item.assignee)}`}>
+            {assigneeInitials(item.assignee)}
+          </div>
+        )}
+      </div>
+      {item.resolution && (
+        <p className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-green-600 font-medium">
+          Resolution: {item.resolution}
+        </p>
+      )}
+    </div>
+  )
 }
 
 function KanbanView() {
   const columns = [
-    { title: 'Pending', items: requests.pending, color: 'bg-yellow-400' },
-    { title: 'In Progress', items: requests.inProgress, color: 'bg-blue-400' },
-    { title: 'Resolved', items: requests.resolved, color: 'bg-green-400' },
+    { title: 'Pending', items: requests.pending },
+    { title: 'In Progress', items: requests.inProgress },
+    { title: 'Resolved', items: requests.resolved },
   ]
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
       {columns.map((col) => (
-        <div key={col.title} className="bg-surface-container-low/50 rounded-2xl p-5 border border-border-subtle">
-          <div className="flex items-center gap-3 mb-5">
-            <div className={`w-3 h-3 rounded-full ${col.color}`} />
-            <h3 className="font-bold text-on-surface">{col.title}</h3>
-            <span className="ml-auto px-2.5 py-0.5 text-xs font-bold rounded-full bg-white/50 text-on-surface-variant">{col.items.length}</span>
+        <div key={col.title} className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-sm font-semibold text-gray-900">{col.title}</h3>
+            <span className="text-xs text-gray-400 bg-white border border-gray-200 rounded-md px-2 py-0.5">{col.items.length}</span>
           </div>
-          <div className="space-y-4">
-            {col.items.map((item) => (
-              <div key={item.id} className="bg-white rounded-xl border border-border-subtle shadow-sm p-4 hover:shadow-md transition-shadow">
-                <h4 className="font-bold text-sm text-on-surface mb-2">{item.title}</h4>
-                <p className="text-xs text-on-surface-variant mb-3">{item.property} - {item.tenant}</p>
-                <div className="flex justify-between items-center">
-                  <StatusBadge status={item.priority} />
-                  <span className="text-[10px] text-on-surface-variant">{item.date}</span>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-3">
+            {col.items.map((item) => <KanbanCard key={item.id} item={item} />)}
           </div>
         </div>
       ))}
@@ -51,31 +61,49 @@ function KanbanView() {
 
 function ListView() {
   return (
-    <div className="bg-white rounded-2xl shadow-premium border border-border-subtle overflow-hidden">
-      <table className="w-full text-left">
-        <thead className="bg-surface-container-low">
-          <tr>
-            {['Request', 'Property', 'Tenant', 'Priority', 'Status', 'Assignee', 'Date'].map((h) => (
-              <th key={h} className="px-6 py-4 text-xs font-bold text-on-surface-variant uppercase tracking-widest">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-subtle">
-          {allRequests.map((r) => (
-            <tr key={r.id} className="hover:bg-surface-container-lowest transition-colors">
-              <td className="px-6 py-4 font-semibold text-sm text-on-surface">{r.title}</td>
-              <td className="px-6 py-4 text-sm text-on-surface-variant">{r.property}</td>
-              <td className="px-6 py-4 text-sm">{r.tenant}</td>
-              <td className="px-6 py-4"><StatusBadge status={r.priority} /></td>
-              <td className="px-6 py-4">
-                <span className={`px-3 py-1 text-xs font-bold rounded-full ${statusClass(r)}`}>{statusLabel(r)}</span>
-              </td>
-              <td className="px-6 py-4 text-sm text-on-surface-variant">{r.assignee}</td>
-              <td className="px-6 py-4 text-sm text-on-surface-variant">{r.date}</td>
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-50">
+              {['Request', 'Property', 'Tenant', 'Priority', 'Status', 'Assignee', 'Date'].map((h) => (
+                <th key={h} className="text-left px-6 py-3 text-[11px] text-gray-400 font-semibold uppercase tracking-wider">{h}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {allRequests.map((r) => {
+              const sm = statusMeta(r)
+              return (
+                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-gray-900">{r.title}</td>
+                  <td className="px-6 py-4 text-gray-500">{r.property}</td>
+                  <td className="px-6 py-4 text-gray-700">{r.tenant}</td>
+                  <td className="px-6 py-4"><StatusBadge status={r.priority} /></td>
+                  <td className="px-6 py-4">
+                    <span className={`${sm.class} px-2.5 py-1 text-[11px] font-semibold rounded-md`}>{sm.label}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      {r.assignee ? (
+                        <>
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAssigneeColor(r.assignee)}`}>
+                            {assigneeInitials(r.assignee)}
+                          </div>
+                          <span className="text-gray-500 text-sm">{r.assignee}</span>
+                        </>
+                      ) : (
+                        <span className="text-gray-300 text-sm">Unassigned</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-gray-400">{r.date}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -84,16 +112,29 @@ export default function MaintenanceRequests() {
   const [view, setView] = useState('kanban')
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2 bg-surface-container-low p-1 rounded-lg">
-          <button onClick={() => setView('kanban')} className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${view === 'kanban' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant'}`}>Kanban</button>
-          <button onClick={() => setView('list')} className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${view === 'list' ? 'bg-white shadow-sm text-primary' : 'text-on-surface-variant'}`}>List</button>
+    <div className="p-6 md:p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center bg-gray-50 rounded-lg p-0.5 gap-0.5">
+          {['kanban', 'list'].map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                view === v
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {v === 'kanban' ? 'Kanban' : 'List'}
+            </button>
+          ))}
         </div>
-        <Link to="/maintenance-board" className="text-primary text-sm font-bold hover:underline flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">dashboard</span> Board View
+        <Link to="/maintenance-board" className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+          <span className="material-symbols-outlined text-sm">dashboard</span>
+          Board View
         </Link>
       </div>
+
       {view === 'kanban' ? <KanbanView /> : <ListView />}
     </div>
   )

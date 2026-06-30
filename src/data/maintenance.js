@@ -1,10 +1,10 @@
-export const maintenanceStats = { pending: 4, inProgress: 3, resolved: 5, total: 12 }
+export const maintenanceStats = { pending: 4, inProgress: 3, resolved: 5 }
 
 export const requests = {
   pending: [
-    { id: 1, title: 'Water pipe burst', property: 'City Plaza', priority: 'Critical', tenant: 'Mukwano Industries', date: '2 hours ago', assignee: 'Unassigned' },
+    { id: 1, title: 'Water pipe burst', property: 'City Plaza', priority: 'Critical', tenant: 'Mukwano Industries', date: '2 hours ago', assignee: null },
     { id: 2, title: 'Elevator malfunction', property: 'Ham Mall', priority: 'High', tenant: 'Cafe Javas', date: '1 day ago', assignee: 'John Ssempijja' },
-    { id: 3, title: 'Broken window', property: 'Acacia Mall', priority: 'Medium', tenant: 'Shoprite Uganda', date: '2 days ago', assignee: 'Unassigned' },
+    { id: 3, title: 'Broken window', property: 'Acacia Mall', priority: 'Medium', tenant: 'Shoprite Uganda', date: '2 days ago', assignee: null },
     { id: 4, title: 'Lighting replacement', property: 'City Plaza', priority: 'Low', tenant: 'Uganda Telecom', date: '3 days ago', assignee: 'Sarah Nabatanzi' },
   ],
   inProgress: [
@@ -19,4 +19,29 @@ export const requests = {
     { id: 11, title: 'Gate automation', property: 'City Plaza', priority: 'Low', tenant: 'Events Uganda', date: '1 month ago', assignee: 'Sarah Nabatanzi', resolution: 'Reprogrammed motor' },
     { id: 12, title: 'Paint touch-up', property: 'Ham Mall', priority: 'Low', tenant: 'Cafe Javas', date: '1 month ago', assignee: 'Peter Wasswa', resolution: 'Completed' },
   ],
+}
+
+function initials(name) {
+  return name.split(' ').map((w) => w[0]).join('')
+}
+
+const assigneeColors = {
+  'John Ssempijja': 'bg-blue-100 text-blue-700',
+  'Peter Wasswa': 'bg-purple-100 text-purple-700',
+  'Sarah Nabatanzi': 'bg-teal-100 text-teal-700',
+}
+
+export function getAssigneeColor(name) {
+  return assigneeColors[name] || 'bg-gray-100 text-gray-700'
+}
+
+export function assigneeInitials(name) {
+  return initials(name)
+}
+
+export const priorityBorders = {
+  Critical: 'border-l-red-500',
+  High: 'border-l-orange-500',
+  Medium: 'border-l-yellow-500',
+  Low: 'border-l-blue-400',
 }
