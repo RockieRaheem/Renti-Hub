@@ -12,3 +12,22 @@ export const tenants = [
   { name: 'Food Village Ltd', unit: 'Acacia Mall - Food Court', lease: '5 years', rent: 'UGX 28,000,000/mo', status: 'Good Payer', paid: true, initials: 'FV' },
   { name: 'Uganda Telecom Ltd', unit: 'City Plaza - Office Suite A', lease: '3 years', rent: 'UGX 18,000,000/mo', status: 'Good Payer', paid: true, initials: 'UT' },
 ]
+
+export const tenantFilters = ['All', 'Good Payer', 'Neutral Payer', 'Bad Payer']
+
+const avatarColors = {
+  MT: 'bg-blue-100 text-blue-700',
+  AM: 'bg-orange-100 text-orange-700',
+  NK: 'bg-red-100 text-red-700',
+  SU: 'bg-green-100 text-green-700',
+  SB: 'bg-indigo-100 text-indigo-700',
+  BC: 'bg-purple-100 text-purple-700',
+  CJ: 'bg-teal-100 text-teal-700',
+  KA: 'bg-red-100 text-red-700',
+  FV: 'bg-cyan-100 text-cyan-700',
+  UT: 'bg-blue-100 text-blue-700',
+}
+
+export function getAvatarColor(initials) {
+  return avatarColors[initials] || 'bg-gray-100 text-gray-700'
+}

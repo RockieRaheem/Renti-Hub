@@ -1,8 +1,13 @@
+function countShops(floors) {
+  return floors.reduce((sum, f) => sum + f.units.filter((u) => /shop|retail/i.test(u.name)).length, 0)
+}
+
 export const propertyStats = { total: 3, occupancy: '94.2%', revenue: 'UGX 842M', tenants: 47 }
 
 export const buildings = [
   {
     id: 1, name: 'City Plaza', location: 'Nakasero, Kampala', units: 24, occupied: 22, revenue: 'UGX 312M', status: 'Operational',
+    shops: 3,
     floors: [
       { name: 'Ground Floor', units: [
         { id: 'G1', name: 'Shop 1', tenant: 'Mukwano Industries', rent: 'UGX 12M/yr', status: 'occupied' },
@@ -20,6 +25,7 @@ export const buildings = [
   },
   {
     id: 2, name: 'Ham Mall', location: 'Kampala Road, Central', units: 18, occupied: 17, revenue: 'UGX 285M', status: 'Operational',
+    shops: 2,
     floors: [
       { name: 'Ground Floor', units: [
         { id: 'H1', name: 'Shop A', tenant: 'Bella Cosmetics', rent: 'UGX 10M/yr', status: 'occupied' },
@@ -33,6 +39,7 @@ export const buildings = [
   },
   {
     id: 3, name: 'Acacia Mall', location: 'Kololo, Kampala', units: 30, occupied: 30, revenue: 'UGX 245M', status: 'Full',
+    shops: 0,
     floors: [
       { name: 'Ground Floor', units: [
         { id: 'A1', name: 'Retail Block A', tenant: 'Shoprite Uganda', rent: 'UGX 40M/yr', status: 'occupied' },
@@ -44,3 +51,5 @@ export const buildings = [
     ],
   },
 ]
+
+export const propertyTypes = ['All', 'Operational', 'Full']
