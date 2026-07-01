@@ -27,7 +27,7 @@ function KanbanCard({ item }) {
         <h4 className="text-sm font-semibold text-gray-900">{item.title}</h4>
         <span className="text-[10px] text-gray-400 whitespace-nowrap ml-3">{item.date}</span>
       </div>
-      <p className="text-xs text-gray-400 mb-3">{item.tenant}</p>
+      <p className="text-xs text-gray-400 mb-3">{item.floor}{item.unit ? ` - ${item.unit}` : ''} &middot; {item.tenant}</p>
       <div className="flex items-center justify-between">
         <StatusBadge status={item.priority} />
         {item.assignee && (
@@ -73,7 +73,7 @@ function ListView() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-50">
-              {['Request', 'Tenant', 'Priority', 'Status', 'Assignee', 'Date'].map((h) => (
+              {['Request', 'Location', 'Priority', 'Status', 'Assignee', 'Date'].map((h) => (
                 <th key={h} className="text-left px-6 py-3 text-[11px] text-gray-400 font-semibold uppercase tracking-wider">{h}</th>
               ))}
             </tr>
@@ -84,7 +84,7 @@ function ListView() {
               return (
                 <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{r.title}</td>
-                  <td className="px-6 py-4 text-gray-700">{r.tenant}</td>
+                  <td className="px-6 py-4 text-gray-500 text-xs">{r.floor}{r.unit ? ` - ${r.unit}` : ''}<br /><span className="text-gray-400">{r.tenant}</span></td>
                   <td className="px-6 py-4"><StatusBadge status={r.priority} /></td>
                   <td className="px-6 py-4">
                     <span className={`${sm.class} px-2.5 py-1 text-[11px] font-semibold rounded-md`}>{sm.label}</span>

@@ -18,7 +18,7 @@ function KanbanCard({ item }) {
         <h4 className="text-sm font-semibold text-gray-900">{item.title}</h4>
         <span className="text-[10px] text-gray-400 whitespace-nowrap ml-3">{item.date}</span>
       </div>
-      <p className="text-xs text-gray-400 mb-3">{item.tenant}</p>
+          <p className="text-xs text-gray-400 mb-3">{item.floor}{item.unit ? ` - ${item.unit}` : ''} &middot; {item.tenant}</p>
       <div className="flex items-center justify-between">
         <StatusBadge status={item.priority} />
         {item.assignee && (
