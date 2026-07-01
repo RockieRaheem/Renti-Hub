@@ -21,9 +21,9 @@ const colorMap = {
 
 export default function StatusBadge({ status, size = 'sm' }) {
   const cls = colorMap[status] || 'bg-gray-100 text-gray-500'
-  const sizing = size === 'sm' ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'
+  const sizing = size === 'sm' ? 'px-2.5 py-0.5 text-[11px]' : 'px-3.5 py-1 text-xs'
   return (
-    <span className={`${cls} ${sizing} font-bold rounded-full uppercase tracking-tighter inline-flex items-center`}>
+    <span className={`${cls} ${sizing} font-semibold rounded-full inline-flex items-center leading-none`}>
       {status}
     </span>
   )

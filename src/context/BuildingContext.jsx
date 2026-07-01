@@ -213,32 +213,33 @@ export function BuildingProvider({ children }) {
   }, [])
 
   // ---- Record Payment ----
-  const addPayment = useCallback((floorName, unitId, amount, method) => {
+  const addPayment = useCallback(({ floor, unit, amount, method, tenantName, status, date }) => {
+    const rawAmount = Number(amount) || 0
     setPayments((prev) => [
       {
+        id: Date.now().toString(),
+        floor, unit, amount: rawAmount,
+        method: method || 'Cash',
+        status: status || 'Paid',
+        tenantName: tenantName || '',
+        date: date || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-        floor: floorName,
-        unit: unitId,
-        amount: `UGX ${Number(amount).toLocaleString()}`,
-        method,
-        status: 'completed',
       },
       ...prev,
     ])
     setFloors((prev) =>
-      prev.map((floor) => {
-        if (floor.name !== floorName) return floor
+      prev.map((f) => {
+        if (f.name !== floor) return f
         return {
-          ...floor,
-          units: floor.units.map((u) => {
-            if (u.id !== unitId || !u.tenant) return u
+          ...f,
+          units: f.units.map((u) => {
+            if (u.name !== unit || !u.tenant) return u
             return {
               ...u,
               tenant: {
                 ...u.tenant,
                 paid: true,
-                lastPayment: `UGX ${Number(amount).toLocaleString()}`,
+                lastPayment: `UGX ${rawAmount.toLocaleString()}`,
                 lastPaymentDate: new Date().toLocaleDateString('en-GB', {
                   day: 'numeric', month: 'short', year: 'numeric',
                 }),
@@ -365,8 +366,8 @@ export function BuildingProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      building: seedBuilding,
-      floors, totalUnits, occupiedUnits, monthlyRevenue,
+      building: seedBuilding, floors, payments,
+      totalUnits, occupiedUnits, monthlyRevenue,
       tenants, tenantStats, transactions, alerts, upcomingPayments,
       revenueMonthly, revenueMix, cashFlowData, maintenance, maintenanceStats,
       paymentMethods, tenantFilters, statusBorders, priorityBorders,
@@ -377,7 +378,7 @@ export function BuildingProvider({ children }) {
       auth, login, register, logout,
     }),
     [
-      floors, totalUnits, occupiedUnits, monthlyRevenue,
+      floors, payments, totalUnits, occupiedUnits, monthlyRevenue,
       tenants, tenantStats, transactions, alerts, upcomingPayments,
       getFloorBySlug, getUnitByFloorAndId, getAvatarColor,
       addTenant, updateTenant, deleteTenant,

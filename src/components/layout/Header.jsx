@@ -1,47 +1,47 @@
 import { useLocation } from 'react-router-dom'
 import { useBuilding } from '../../context/BuildingContext'
 
-function titleForPath(path) {
-  if (path.startsWith('/properties/floor/') && path.includes('/unit/')) return { title: 'Unit Details', subtitle: `Shop information and tenant details` }
-  if (path.startsWith('/properties/floor/')) return { title: 'Floor Overview', subtitle: `Shops and units on this floor` }
-  const titles = {
-    '/dashboard': { title: 'Dashboard', subtitle: 'Overview and key metrics' },
-    '/properties': { title: 'Tenants', subtitle: 'Browse tenants by floor' },
-    '/rent-collection': { title: 'Rent Collection', subtitle: 'Record payments and track balances' },
-    '/financial-reports': { title: 'Financial Reports', subtitle: 'Revenue and cash flow' },
-    '/maintenance-board': { title: 'Maintenance Board', subtitle: 'Track maintenance requests' },
-    '/maintenance-requests': { title: 'Maintenance Requests', subtitle: 'All requests' },
-  }
-  return titles[path] || { title: 'RentiHub', subtitle: '' }
+const titles = {
+  '/dashboard': { title: 'Dashboard', subtitle: 'Portfolio overview and key metrics' },
+  '/properties': { title: 'Tenants', subtitle: 'Browse tenants by floor' },
+  '/rent-collection': { title: 'Rent Collection', subtitle: 'Record payments and track balances' },
+  '/financial-reports': { title: 'Financial Reports', subtitle: 'Revenue and cash flow analysis' },
+  '/maintenance-board': { title: 'Maintenance Board', subtitle: 'Track maintenance requests' },
+  '/maintenance-requests': { title: 'Maintenance Requests', subtitle: 'All requests' },
 }
 
 export default function Header() {
   const { pathname } = useLocation()
   const { building } = useBuilding()
-  const info = titleForPath(pathname)
+
+  let info = titles[pathname]
+  if (!info) {
+    if (pathname.startsWith('/properties/floor/') && pathname.includes('/unit/'))
+      info = { title: 'Unit Details', subtitle: 'Shop information and tenant details' }
+    else if (pathname.startsWith('/properties/floor/'))
+      info = { title: 'Floor Overview', subtitle: 'Shops and units on this floor' }
+    else
+      info = { title: 'RentiHub', subtitle: '' }
+  }
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
-      <div className="px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-outline">
+      <div className="px-6 h-14 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">{info.title}</h1>
-          <p className="text-xs text-gray-400 mt-0.5">{building.name} &mdash; {info.subtitle}</p>
+          <h1 className="text-base font-bold text-on-surface">{info.title}</h1>
+          <p className="text-[11px] text-on-surface-muted mt-px">{info.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined text-xl">notifications</span>
+        <div className="flex items-center gap-1">
+          <button className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+            <span className="material-symbols-outlined text-lg">notifications</span>
           </button>
-          <button className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
-            <span className="material-symbols-outlined text-xl">help</span>
+          <button className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+            <span className="material-symbols-outlined text-lg">help</span>
           </button>
-          <div className="w-px h-6 bg-gray-100 mx-1" />
-          <div className="flex items-center gap-2.5 pl-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-              JK
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-sm font-medium text-gray-900 leading-tight">James Kato</p>
-              <p className="text-xs text-gray-400 leading-tight">Chief Executive</p>
+          <div className="w-px h-5 bg-outline mx-1" />
+          <div className="flex items-center gap-2 pl-1">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
+              {building.name ? building.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'RH'}
             </div>
           </div>
         </div>

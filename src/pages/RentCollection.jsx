@@ -1,182 +1,214 @@
 import { useState } from 'react'
 import { useBuilding } from '../context/BuildingContext'
+import StatusBadge from '../components/ui/StatusBadge'
 
 export default function RentCollection() {
-  const { building, floors, paymentMethods, addPayment, combinedActivityLog } = useBuilding()
-  const [selectedFloor, setSelectedFloor] = useState(floors[0]?.name || '')
-  const [selectedUnit, setSelectedUnit] = useState(floors[0]?.units[0]?.id || '')
-  const [method, setMethod] = useState('Mobile Money')
-  const [amount, setAmount] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-  const [receiptId, setReceiptId] = useState('')
+  const { floors, payments, addPayment } = useBuilding()
+  const [filterFloor, setFilterFloor] = useState('all')
+  const [showModal, setShowModal] = useState(false)
+  const [form, setForm] = useState({ tenantName: '', unit: '', floor: '', amount: '', status: 'Paid', date: new Date().toISOString().slice(0, 10) })
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
-  const floor = floors.find((f) => f.name === selectedFloor)
-  const unit = floor?.units.find((u) => u.id === selectedUnit)
-  const tenant = unit?.tenant
+  const allTenants = floors.flatMap((f) =>
+    f.units.filter((u) => u.tenant).map((u) => ({ ...u.tenant, unit: u.name, floor: f.name, unitId: u.id, monthlyRent: u.monthlyRent }))
+  )
+  const filtered = filterFloor === 'all' ? allTenants : allTenants.filter((t) => t.floor === filterFloor)
 
-  const handleSubmit = (e) => {
+  const totalCollected = payments.reduce((s, p) => s + (p.amount || 0), 0)
+  const totalExpected = allTenants.reduce((s, t) => s + (t.monthlyRent || 0), 0)
+  const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0
+  const overdueCount = allTenants.filter((t) => !t.paid).length
+
+  const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
+
+  const handleRecordPayment = (e) => {
     e.preventDefault()
-    const paid = Number(amount) || unit?.monthlyRent || 0
-    addPayment(selectedFloor, selectedUnit, paid, method)
-    setReceiptId(Math.random().toString(36).slice(2, 8).toUpperCase())
-    setSubmitted(true)
+    addPayment({
+      floor: form.floor, unit: form.unit, amount: parseFloat(form.amount),
+      method: 'Cash', tenantName: form.tenantName, status: form.status, date: form.date,
+    })
+    setForm({ tenantName: '', unit: '', floor: '', amount: '', status: 'Paid', date: new Date().toISOString().slice(0, 10) })
+    setShowModal(false)
   }
 
-  const handleFloorChange = (name) => {
-    const f = floors.find((fl) => fl.name === name)
-    setSelectedFloor(name)
-    setSelectedUnit(f?.units[0]?.id || '')
-    setSubmitted(false)
-  }
-
-  const log = combinedActivityLog.slice(0, 8)
+  const latestPayments = [...payments].reverse().slice(0, 5)
 
   return (
     <div className="p-6 md:p-8 space-y-6">
 
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-2 h-2 rounded-full bg-green-500" />
-        <p className="text-sm text-gray-500">
-          <span className="font-semibold text-gray-900">{building.name}</span> &mdash; Rent Collection
-        </p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { icon: 'payments', label: 'Total Collected', value: `UGX ${(totalCollected / 1000000).toFixed(1)}M` },
+          { icon: 'account_balance', label: 'Expected Revenue', value: `UGX ${(totalExpected / 1000000).toFixed(1)}M` },
+          { icon: 'pie_chart', label: 'Collection Rate', value: `${collectionRate}%`, sub: `${payments.length} payments` },
+          { icon: 'warning', label: 'Overdue Tenants', value: overdueCount, sub: 'Need follow-up' },
+        ].map((s) => (
+          <div key={s.label} className="bg-surface rounded-card border border-outline p-5 shadow-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary text-xl">{s.icon}</span>
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-on-surface mb-0.5 tracking-tight">{s.value}</p>
+            <p className="text-xs text-on-surface-muted">{s.label}</p>
+            {s.sub && <p className="text-[11px] text-on-surface-dim mt-0.5">{s.sub}</p>}
+          </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-        <div className="lg:col-span-4 bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-6">Record Payment</h3>
-
-          {submitted ? (
-            <div>
-              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-                <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-green-600 text-2xl">check_circle</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Payment Recorded</h4>
-                  <p className="text-sm text-gray-400">Receipt #{receiptId}</p>
-                </div>
-              </div>
-              <div className="space-y-3 text-sm mb-6">
-                {[
-                  { label: 'Floor', value: selectedFloor },
-                  { label: 'Unit', value: unit?.name },
-                  { label: 'Tenant', value: tenant?.name },
-                  { label: 'Amount', value: `UGX ${Number(amount || unit?.monthlyRent || 0).toLocaleString()}` },
-                  { label: 'Method', value: method },
-                  { label: 'Date', value: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                ].map((r) => (
-                  <div key={r.label} className="flex justify-between">
-                    <span className="text-gray-400">{r.label}</span>
-                    <span className="font-medium text-gray-900">{r.value}</span>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => { setAmount(''); setSubmitted(false); setReceiptId('') }}
-                className="w-full border border-gray-200 text-gray-600 font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                Record Another Payment
+      <div className="bg-surface rounded-card border border-outline overflow-hidden shadow-card">
+        <div className="p-5 border-b border-outline flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-semibold text-on-surface">Tenants</h3>
+            <div className="flex items-center bg-surface-container-highest rounded-lg p-0.5 gap-0.5">
+              <button onClick={() => setFilterFloor('all')}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${filterFloor === 'all' ? 'bg-surface text-on-surface shadow-card' : 'text-on-surface-muted hover:text-on-surface'}`}>
+                All
               </button>
+              {floors.map((f) => (
+                <button key={f.name} onClick={() => setFilterFloor(f.name)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${filterFloor === f.name ? 'bg-surface text-on-surface shadow-card' : 'text-on-surface-muted hover:text-on-surface'}`}>
+                  {f.name}
+                </button>
+              ))}
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Floor</label>
-                  <select value={selectedFloor} onChange={(e) => handleFloorChange(e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none">
-                    {floors.map((f) => (
-                      <option key={f.name} value={f.name}>{f.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Unit</label>
-                  <select value={selectedUnit} onChange={(e) => { setSelectedUnit(e.target.value); setSubmitted(false) }}
-                    className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none">
-                    {floor?.units.map((u) => (
-                      <option key={u.id} value={u.id}>{u.name} {u.tenant ? `- ${u.tenant.name}` : '(Vacant)'}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {tenant ? (
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Tenant</span>
-                    <span className="font-medium text-gray-900">{tenant.name}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Lease</span>
-                    <span className="text-gray-700">{tenant.leaseStart} - {tenant.leaseEnd}</span>
-                  </div>
-                  <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-                    <span className="text-gray-500">Monthly Rent</span>
-                    <span className="font-bold text-gray-900">UGX {(unit?.monthlyRent || 0).toLocaleString()}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-700">
-                  This unit is currently vacant
-                </div>
-              )}
-
-              {tenant && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
-                    <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none" placeholder="Enter amount..." />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {paymentMethods.map((m) => (
-                        <button key={m} type="button" onClick={() => setMethod(m)}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            method === m ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
-                          }`}>{m}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button type="submit" className="w-full bg-blue-600 text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-lg">check_circle</span>
-                    Complete Payment
-                  </button>
-                </>
-              )}
-            </form>
-          )}
+          </div>
+          <button onClick={() => setShowModal(true)}
+            className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-base">add</span>
+            Record Payment
+          </button>
         </div>
 
-        <div className="lg:col-span-3 bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-semibold text-gray-900">Activity</h3>
-            <span className="text-xs text-gray-400 font-medium">{log.length} payments</span>
+        {filtered.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-outline bg-surface-container/50">
+                  {['Tenant', 'Unit', 'Floor', 'Monthly Rent', 'Status', 'Last Payment', ''].map((h) => (
+                    <th key={h} className="text-left px-5 py-3 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline">
+                {filtered.map((t) => (
+                  <tr key={`${t.floor}-${t.unit}`} className="hover:bg-surface-container transition-colors">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${t.paymentStatus === 'Good Payer' ? 'bg-green-50 text-green-700' : t.paymentStatus === 'Neutral Payer' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
+                          {t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-on-surface">{t.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-on-surface-muted">{t.unit}</td>
+                    <td className="px-5 py-3 text-on-surface-muted">{t.floor}</td>
+                    <td className="px-5 py-3 font-medium text-on-surface">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
+                    <td className="px-5 py-3"><StatusBadge status={t.paid ? 'Paid' : 'Overdue'} /></td>
+                    <td className="px-5 py-3 text-on-surface-muted text-xs">{t.lastPaymentDate || '—'}</td>
+                    <td className="px-5 py-3">
+                      <button onClick={() => {
+                        setForm({ tenantName: t.name, unit: t.unit, floor: t.floor, amount: (t.monthlyRent || 0).toString(), status: 'Paid', date: new Date().toISOString().slice(0, 10) })
+                        setShowModal(true)
+                      }}
+                        className="text-xs font-medium text-primary hover:bg-primary-50 px-2.5 py-1.5 rounded-lg transition-colors">
+                        Record
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="space-y-3 max-h-[600px] overflow-y-auto">
-            {log.map((a, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
-                <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-blue-600 text-lg">payments</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className="text-sm font-medium text-gray-900">{a.tenant}</p>
-                    <span className="text-[10px] text-gray-400 whitespace-nowrap ml-2">{a.time}</span>
+        ) : (
+          <div className="text-center py-12 px-5">
+            <span className="material-symbols-outlined text-4xl text-on-surface-dim mb-3">payments</span>
+            <p className="text-sm text-on-surface-muted mb-1">No tenants found</p>
+            <p className="text-xs text-on-surface-dim">Add tenants to start tracking rent payments</p>
+          </div>
+        )}
+      </div>
+
+      {latestPayments.length > 0 && (
+        <div className="bg-surface rounded-card border border-outline p-5 shadow-card">
+          <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-4">Recent Activity</h3>
+          <div className="space-y-2">
+            {latestPayments.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-2 border-b border-outline/50 last:border-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-status-paid" />
+                  <div>
+                    <p className="text-sm font-medium text-on-surface">{p.tenantName}</p>
+                    <p className="text-xs text-on-surface-muted">{p.unit} &middot; {p.date}</p>
                   </div>
-                  <p className="text-xs text-gray-400">{a.floor} &middot; {a.unit} &middot; {a.method}</p>
-                  <div className="flex items-center justify-between mt-1.5">
-                    <span className="text-sm font-semibold text-gray-900">{a.amount}</span>
-                    <span className="text-[10px] font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded">{a.status}</span>
-                  </div>
                 </div>
+                <span className="text-sm font-semibold text-status-paid">UGX {(p.amount || 0).toLocaleString()}</span>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
+              <div>
+                <h2 className="text-base font-bold text-on-surface">Record Payment</h2>
+                <p className="text-xs text-on-surface-muted mt-0.5">Enter payment details below</p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Tenant Name</label>
+                  <input value={form.tenantName} onChange={(e) => setForm(p => ({ ...p, tenantName: e.target.value }))} className={inputClass} placeholder="Tenant name" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Floor</label>
+                  <select value={form.floor} onChange={(e) => setForm(p => ({ ...p, floor: e.target.value }))} className={inputClass} required>
+                    <option value="">Select floor</option>
+                    {floors.map((f) => <option key={f.name} value={f.name}>{f.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Unit</label>
+                  <input value={form.unit} onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))} className={inputClass} placeholder="e.g. Shop 1" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Amount (UGX)</label>
+                  <input type="number" value={form.amount} onChange={(e) => setForm(p => ({ ...p, amount: e.target.value }))} className={inputClass} placeholder="1000000" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Date</label>
+                  <input type="date" value={form.date} onChange={(e) => setForm(p => ({ ...p, date: e.target.value }))} className={inputClass} required />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Status</label>
+                  <select value={form.status} onChange={(e) => setForm(p => ({ ...p, status: e.target.value }))} className={inputClass}>
+                    <option value="Paid">Paid</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Overdue">Overdue</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowModal(false)}
+                  className="px-4 py-2.5 text-sm font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors">
+                  Cancel
+                </button>
+                <button type="submit"
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors">
+                  Record Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

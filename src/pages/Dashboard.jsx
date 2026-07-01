@@ -3,42 +3,51 @@ import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
 
+function KpiCard({ icon, label, value, trend, sub }) {
+  return (
+    <div className="bg-surface rounded-card border border-outline p-5 shadow-card hover:shadow-card-hover transition-shadow">
+      <div className="flex items-center justify-between mb-3">
+        <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
+          <span className="material-symbols-outlined text-primary text-xl">{icon}</span>
+        </div>
+        {trend && (
+          <span className={`flex items-center gap-0.5 text-xs font-semibold ${trend > 0 ? 'text-status-paid' : trend < 0 ? 'text-status-unpaid' : 'text-on-surface-muted'}`}>
+            <span className="material-symbols-outlined text-sm">{trend > 0 ? 'trending_up' : trend < 0 ? 'trending_down' : 'remove'}</span>
+            {Math.abs(trend)}%
+          </span>
+        )}
+      </div>
+      <p className="text-2xl font-bold text-on-surface mb-0.5 tracking-tight">{value}</p>
+      <p className="text-xs text-on-surface-muted">{label}</p>
+      {sub && <p className="text-[11px] text-on-surface-dim mt-1">{sub}</p>}
+    </div>
+  )
+}
+
 export default function Dashboard() {
-  const { building, floors, totalUnits, occupiedUnits, monthlyRevenue, revenueMonthly, revenueMix, transactions, alerts, upcomingPayments } = useBuilding()
-  const [period, setPeriod] = useState('Monthly')
+  const { building, floors, maintenance, maintenanceStats, monthlyRevenue, payments } = useBuilding()
+  const [period, setPeriod] = useState('month')
+  const totalUnits = floors.reduce((s, f) => s + f.units.length, 0)
+  const occupiedUnits = floors.reduce((s, f) => s + f.units.filter(u => u.status === 'occupied').length, 0)
+  const recentPayments = [...payments].reverse().slice(0, 5)
+  const pendingMaint = maintenanceStats.pending + maintenanceStats.inProgress
 
-  const periodData = {
-    Monthly: revenueMonthly,
-    Quarterly: [
-      { month: 'Q1', value: 12.9, label: 'UGX 12.9M' },
-      { month: 'Q2 (Est)', value: 14.8, label: 'Proj: UGX 14.8M', projected: true },
-    ],
-    Annual: [
-      { month: '2024', value: 42.5, label: 'UGX 42.5M' },
-      { month: '2025', value: 58.2, label: 'UGX 58.2M' },
-      { month: '2026 (Est)', value: 62.0, label: 'Proj: UGX 62.0M', projected: true },
-    ],
-  }
+  const hasData = totalUnits > 0
 
-  const data = periodData[period] || revenueMonthly
-  const maxRevenue = Math.max(...data.map((d) => d.value))
-
-  function FloorCard({ floor }) {
-    const occ = floor.units.filter((u) => u.status === 'occupied').length
-    const rev = floor.units.reduce((s, u) => s + (u.status === 'occupied' ? u.monthlyRent : 0), 0)
-    const pct = Math.round((occ / floor.units.length) * 100)
+  if (!hasData) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-gray-900">{floor.name}</h4>
-          <span className="text-xs text-gray-400">{occ}/{floor.units.length} occupied</span>
-        </div>
-        <div className="h-1.5 bg-gray-100 rounded-full mb-3">
-          <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex justify-between text-xs">
-          <span className="text-gray-400">Revenue</span>
-          <span className="font-semibold text-gray-900">UGX {(rev / 1000000).toFixed(1)}M</span>
+      <div className="p-6 md:p-8 space-y-6">
+        <div className="bg-surface rounded-card border border-outline p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-primary text-3xl">dashboard</span>
+          </div>
+          <h2 className="text-lg font-bold text-on-surface mb-2">Welcome to RentiHub</h2>
+          <p className="text-sm text-on-surface-muted mb-6 max-w-md mx-auto">Your dashboard is empty because you haven&rsquo;t added any floors yet. Start by creating your first floor with shops.</p>
+          <div className="flex items-center justify-center gap-3">
+            <Link to="/properties" className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card">
+              Add Your First Floor
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -46,128 +55,111 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="w-2 h-2 rounded-full bg-green-500" />
-        <p className="text-sm text-gray-500">
-          <span className="font-semibold text-gray-900">{building.name}</span> &mdash; {building.location}
-        </p>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-on-surface-muted font-medium">{building.name}</p>
+        </div>
+        <div className="flex items-center bg-surface-container-highest rounded-lg p-0.5 gap-0.5">
+          {['week', 'month', 'year'].map((p) => (
+            <button key={p} onClick={() => setPeriod(p)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${period === p ? 'bg-surface text-on-surface shadow-card' : 'text-on-surface-muted hover:text-on-surface'}`}>
+              {p.charAt(0).toUpperCase() + p.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Units', value: totalUnits },
-          { label: 'Occupied', value: occupiedUnits },
-          { label: 'Monthly Revenue', value: `UGX ${(monthlyRevenue / 1000000).toFixed(1)}M` },
-          { label: 'Vacant', value: totalUnits - occupiedUnits },
-        ].map((k) => (
-          <div key={k.label} className="bg-white rounded-lg border border-gray-200 p-5">
-            <p className="text-xs text-gray-500 font-medium mb-0.5">{k.label}</p>
-            <p className="text-2xl font-bold text-gray-900">{k.value}</p>
-          </div>
-        ))}
+        <KpiCard icon="payments" label="Monthly Revenue" value={`UGX ${(monthlyRevenue / 1000000).toFixed(1)}M`} trend={8.2} sub="vs last period" />
+        <KpiCard icon="real_estate_agent" label="Occupancy" value={`${occupiedUnits}/${totalUnits}`} trend={occupiedUnits > 0 ? 4.1 : 0} sub={`${Math.round((occupiedUnits / totalUnits) * 100)}% occupied`} />
+        <KpiCard icon="warning" label="Pending Issues" value={pendingMaint} trend={null} sub={`${maintenanceStats.resolved} resolved this period`} />
+        <KpiCard icon="group" label="Total Tenants" value={occupiedUnits} trend={null} sub="Across all floors" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">Revenue</h3>
-              <p className="text-sm text-gray-400">{building.name}</p>
-            </div>
-            <div className="flex items-center bg-gray-50 rounded-lg p-0.5 gap-0.5">
-              {['Monthly', 'Quarterly', 'Annual'].map((p) => (
-                <button key={p} onClick={() => setPeriod(p)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}>{p}</button>
-              ))}
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-surface rounded-card border border-outline p-5 shadow-card">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-on-surface">Recent Payments</h3>
+            <Link to="/rent-collection" className="text-xs font-medium text-primary hover:text-primary-600 transition-colors">View all</Link>
           </div>
-          <div className="flex items-end gap-3 h-48">
-            {data.map((d) => (
-              <div key={d.month} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                <span className="text-[10px] text-gray-400 font-medium leading-none">{d.label}</span>
-                <div className={`w-full rounded-sm transition-all duration-300 ${d.projected ? 'bg-orange-100 border border-dashed border-orange-400' : 'bg-blue-600'}`}
-                  style={{ height: `${(d.value / maxRevenue) * 70}%` }} />
-                <span className="text-[11px] text-gray-500 font-medium mt-auto pt-2">{d.month}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Floor Overview</h3>
-            <div className="space-y-3">
-              {floors.length === 0 && <p className="text-sm text-gray-400">No floors yet</p>}
-              {floors.map((f) => <FloorCard key={f.name} floor={f} />)}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-base font-semibold text-gray-900 mb-4">Revenue by Type</h3>
-            <div className="space-y-3">
-              {revenueMix.map((r) => (
-                <div key={r.label}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">{r.label}</span>
-                    <span className="font-semibold text-gray-900">{r.value}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${r.value}%`, backgroundColor: r.color }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900">Recent Payments</h3>
-            <Link to="/rent-collection" className="text-xs font-medium text-blue-600 hover:text-blue-700">View all</Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-50">
-                  {['Floor', 'Unit', 'Tenant', 'Status', 'Amount'].map((h) => (
-                    <th key={h} className="text-left px-6 py-3 text-[11px] text-gray-400 font-semibold uppercase tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {transactions.map((t, i) => (
-                  <tr key={i} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-gray-400 text-xs">{t.floor}</td>
-                    <td className="px-6 py-4 text-gray-500">{t.unit}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{t.tenant}</td>
-                    <td className="px-6 py-4"><StatusBadge status={t.badge} /></td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{t.amount}</td>
+          {recentPayments.length > 0 ? (
+            <div className="overflow-x-auto -mx-5">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-outline">
+                    <th className="text-left px-5 py-2.5 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider">Tenant</th>
+                    <th className="text-left px-5 py-2.5 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider">Unit</th>
+                    <th className="text-left px-5 py-2.5 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider">Amount</th>
+                    <th className="text-left px-5 py-2.5 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-outline">
+                  {recentPayments.map((p) => (
+                    <tr key={p.id} className="hover:bg-surface-container transition-colors">
+                      <td className="px-5 py-3 font-medium text-on-surface">{p.tenantName}</td>
+                      <td className="px-5 py-3 text-on-surface-muted">{p.unit}</td>
+                      <td className="px-5 py-3 font-medium text-on-surface">UGX {(p.amount || 0).toLocaleString()}</td>
+                      <td className="px-5 py-3"><StatusBadge status={p.status || 'Paid'} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <span className="material-symbols-outlined text-3xl text-on-surface-dim mb-2">payments</span>
+              <p className="text-sm text-on-surface-muted">No payments recorded yet</p>
+              <Link to="/rent-collection" className="text-xs font-medium text-primary hover:underline mt-1 inline-block">Record your first payment</Link>
+            </div>
+          )}
         </div>
 
-        <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-4">Alerts</h3>
-          <div className="space-y-3">
-            {alerts.slice(0, 5).map((a, i) => (
-              <div key={i} className={`rounded-lg border p-3.5 ${
-                a.urgency === 'Urgent' ? 'bg-red-50 border-red-200 text-red-700' :
-                a.urgency === 'Overdue' ? 'bg-orange-50 border-orange-200 text-orange-700' :
-                'bg-blue-50 border-blue-200 text-blue-700'
-              }`}>
-                <div className="flex items-start justify-between mb-1">
-                  <span className="text-xs font-semibold uppercase tracking-wider">{a.type}</span>
-                  <span className="text-xs font-semibold">{a.due}</span>
-                </div>
-                <p className="text-sm font-medium">{a.issue}</p>
-              </div>
-            ))}
-            <Link to="/maintenance-requests" className="block text-center text-xs font-medium text-blue-600 hover:text-blue-700 pt-1">View all</Link>
+        <div className="space-y-6">
+          <div className="bg-surface rounded-card border border-outline p-5 shadow-card">
+            <h3 className="text-sm font-semibold text-on-surface mb-4">Occupancy by Floor</h3>
+            <div className="space-y-3">
+              {floors.slice(0, 5).map((f) => {
+                const occ = f.units.filter(u => u.status === 'occupied').length
+                const total = f.units.length
+                const pct = Math.round((occ / total) * 100)
+                return (
+                  <div key={f.name}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-on-surface-muted">{f.name}</span>
+                      <span className="font-semibold text-on-surface">{occ}/{total}</span>
+                    </div>
+                    <div className="h-1.5 bg-surface-container-highest rounded-full">
+                      <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {floors.length > 5 && (
+              <Link to="/properties" className="text-xs font-medium text-primary hover:underline mt-3 inline-block">View all floors</Link>
+            )}
+            {floors.length === 0 && (
+              <p className="text-xs text-on-surface-muted text-center py-4">No floors added yet</p>
+            )}
+          </div>
+
+          <div className="bg-surface rounded-card border border-outline p-5 shadow-card">
+            <h3 className="text-sm font-semibold text-on-surface mb-3">Quick Actions</h3>
+            <div className="space-y-2">
+              {[
+                { icon: 'add_business', label: 'Add Floor', to: '/properties', color: 'bg-primary-50 text-primary' },
+                { icon: 'person_add', label: 'Add Tenant', to: '/properties', color: 'bg-green-50 text-green-700' },
+                { icon: 'payments', label: 'Record Payment', to: '/rent-collection', color: 'bg-orange-50 text-orange-700' },
+              ].map((a) => (
+                <Link key={a.label} to={a.to} className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg hover:bg-surface-container transition-colors group">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${a.color}`}>
+                    <span className="material-symbols-outlined text-lg">{a.icon}</span>
+                  </div>
+                  <span className="text-sm font-medium text-on-surface group-hover:text-primary transition-colors">{a.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </div>

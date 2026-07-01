@@ -2,107 +2,126 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 
-const blocks = [
-  { h: 'h-32', w: 'w-16', color: 'bg-blue-600', offset: 'mt-16' },
-  { h: 'h-48', w: 'w-20', color: 'bg-blue-500', offset: 'mt-0' },
-  { h: 'h-24', w: 'w-12', color: 'bg-orange-500', offset: 'mt-24' },
-  { h: 'h-40', w: 'w-14', color: 'bg-blue-700', offset: 'mt-8' },
-  { h: 'h-20', w: 'w-10', color: 'bg-blue-400', offset: 'mt-28' },
-  { h: 'h-36', w: 'w-14', color: 'bg-blue-600', offset: 'mt-12' },
-  { h: 'h-52', w: 'w-18', color: 'bg-blue-500', offset: 'mt-0' },
-  { h: 'h-28', w: 'w-12', color: 'bg-orange-500', offset: 'mt-20' },
-  { h: 'h-44', w: 'w-14', color: 'bg-blue-700', offset: 'mt-4' },
-]
-
 export default function Login() {
   const navigate = useNavigate()
   const { login } = useBuilding()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [showPw, setShowPw] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
     setError('')
-    if (login(email, password)) {
-      navigate('/dashboard')
-    } else {
-      setError('Invalid email or password')
-    }
+    setLoading(true)
+    setTimeout(() => {
+      if (login(email, password)) {
+        navigate('/dashboard')
+      } else {
+        setError('Invalid email or password. Try again.')
+        setLoading(false)
+      }
+    }, 400)
   }
 
   return (
-    <div className="min-h-screen flex">
-      <div className="flex-1 bg-[#0f172a] flex items-center justify-center p-8 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }} />
-        <div className="w-full max-w-sm relative">
-          <div className="flex items-center gap-2.5 mb-10">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+    <div className="min-h-screen flex bg-surface-container">
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="flex items-center gap-2.5 mb-8">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="material-symbols-outlined text-white text-base">corporate_fare</span>
             </div>
-            <span className="text-lg font-bold text-white">RentiHub</span>
+            <span className="text-base font-bold text-on-surface">RentiHub</span>
           </div>
-          <div className="bg-white rounded-xl p-8 shadow-2xl">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-              <p className="text-sm text-gray-400 mt-1">Sign in to your account</p>
+
+          <div className="bg-surface rounded-xl border border-outline p-7 shadow-card">
+            <div className="mb-6">
+              <h1 className="text-xl font-bold text-on-surface">Welcome back</h1>
+              <p className="text-sm text-on-surface-muted mt-1">Sign in to your account to continue</p>
             </div>
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all" placeholder="manager@rentihub.com" required />
+                <label className="block text-xs font-semibold text-on-surface mb-1.5">Email address</label>
+                <input
+                  type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  placeholder="manager@rentihub.com" required autoFocus
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all" placeholder="Enter your password" required />
+                <label className="block text-xs font-semibold text-on-surface mb-1.5">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
+                    className="w-full h-10 px-3.5 pr-10 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    placeholder="Enter your password" required
+                  />
+                  <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-dim hover:text-on-surface transition-colors">
+                    <span className="material-symbols-outlined text-lg">{showPw ? 'visibility_off' : 'visibility'}</span>
+                  </button>
+                </div>
               </div>
-              {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-              <button type="submit" className="w-full bg-[#0037b0] text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                Sign In
+
+              {error && (
+                <div className="flex items-center gap-2 text-sm text-status-unpaid bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">
+                  <span className="material-symbols-outlined text-base">error</span>
+                  {error}
+                </div>
+              )}
+
+              <button type="submit" disabled={loading}
+                className="w-full h-10 bg-primary text-white font-semibold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2 shadow-card">
+                {loading ? <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : 'Sign In'}
               </button>
             </form>
-            <p className="text-center text-sm text-gray-400 mt-6">
+
+            <p className="text-center text-sm text-on-surface-muted mt-6">
               Don&rsquo;t have an account?{' '}
-              <Link to="/register" className="font-medium text-[#0037b0] hover:text-blue-700">Create one</Link>
+              <Link to="/register" className="font-semibold text-primary hover:text-primary-600">Create one</Link>
             </p>
           </div>
+
+          <p className="text-xs text-on-surface-dim text-center mt-6">
+            By signing in, you agree to our{' '}
+            <a href="#" className="underline hover:text-on-surface">Terms</a> and{' '}
+            <a href="#" className="underline hover:text-on-surface">Privacy Policy</a>
+          </p>
         </div>
       </div>
 
-      <div className="hidden lg:flex w-[480px] bg-white p-12 flex-col justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#0037b0] flex items-center justify-center">
-            <span className="material-symbols-outlined text-white text-base">corporate_fare</span>
+      <div className="hidden lg:flex w-[440px] bg-primary p-10 flex-col justify-between relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.05]" style={{
+          backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+        }} />
+        <div className="relative">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-sm">corporate_fare</span>
+            </div>
+            <span className="text-sm font-bold text-white/90">RentiHub</span>
           </div>
-          <span className="text-lg font-bold text-gray-900">RentiHub</span>
         </div>
-        <div className="flex items-end gap-2 h-64">
-          {blocks.map((b, i) => (
-            <div key={i} className={`${b.h} ${b.w} ${b.color} ${b.offset} rounded-t-lg transition-all hover:scale-105`} />
-          ))}
-        </div>
-        <div>
-          <blockquote className="text-gray-900 text-lg font-medium leading-relaxed mb-6">
-            &ldquo;RentiHub transformed how we manage our portfolio. We went from spreadsheets to a single source of truth.&rdquo;
+        <div className="relative space-y-6">
+          <blockquote className="text-white text-lg font-medium leading-relaxed">
+            &ldquo;RentiHub transformed how we manage our portfolio. We went from scattered spreadsheets to a single source of truth.&rdquo;
           </blockquote>
           <div>
-            <p className="text-gray-900 font-medium text-sm">James Kato</p>
-            <p className="text-gray-400 text-xs">Portfolio Manager, Kampala Properties Ltd</p>
+            <p className="text-white font-semibold text-sm">James Kato</p>
+            <p className="text-primary-200 text-xs">Portfolio Manager, Kampala Properties Ltd</p>
           </div>
-          <div className="flex gap-8 mt-8 pt-8 border-t border-gray-100">
+          <div className="flex gap-8 pt-6 border-t border-white/15">
             {[
               { value: '124+', label: 'Properties' },
-              { value: 'UGX 4.2B', label: 'Portfolio' },
-              { value: '98.2%', label: 'Collection' },
+              { value: 'UGX 4.2B', label: 'Portfolio Value' },
+              { value: '98.2%', label: 'Collection Rate' },
             ].map((s) => (
               <div key={s.label}>
-                <p className="text-gray-900 font-bold text-lg">{s.value}</p>
-                <p className="text-gray-400 text-xs">{s.label}</p>
+                <p className="text-white font-bold text-lg">{s.value}</p>
+                <p className="text-primary-200 text-[11px]">{s.label}</p>
               </div>
             ))}
           </div>

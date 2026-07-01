@@ -1,332 +1,116 @@
-import { useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useBuilding } from '../context/BuildingContext'
-import { floorSlug } from '../data/currentBuilding'
-import StatusBadge from '../components/ui/StatusBadge'
-import TenantFormModal from '../components/TenantFormModal'
 import FloorFormModal from '../components/FloorFormModal'
-
-const floorStyles = [
-  {
-    icon: 'storefront',
-    gradient: 'from-amber-800 to-amber-600',
-    lightBg: 'bg-amber-50',
-    iconBg: 'bg-white/15',
-    iconShadow: 'shadow-amber-800/15',
-    accent: 'text-amber-700',
-    chipFloor: 'bg-amber-100 text-amber-800',
-  },
-  {
-    icon: 'business',
-    gradient: 'from-slate-800 to-slate-600',
-    lightBg: 'bg-slate-50',
-    iconBg: 'bg-white/15',
-    iconShadow: 'shadow-slate-800/15',
-    accent: 'text-slate-700',
-    chipFloor: 'bg-slate-100 text-slate-800',
-  },
-  {
-    icon: 'celebration',
-    gradient: 'from-rose-800 to-rose-600',
-    lightBg: 'bg-rose-50',
-    iconBg: 'bg-white/15',
-    iconShadow: 'shadow-rose-800/15',
-    accent: 'text-rose-700',
-    chipFloor: 'bg-rose-100 text-rose-800',
-  },
-  {
-    icon: 'layers',
-    gradient: 'from-emerald-800 to-emerald-600',
-    lightBg: 'bg-emerald-50',
-    iconBg: 'bg-white/15',
-    iconShadow: 'shadow-emerald-800/15',
-    accent: 'text-emerald-700',
-    chipFloor: 'bg-emerald-100 text-emerald-800',
-  },
-  {
-    icon: 'stacked_line_chart',
-    gradient: 'from-cyan-800 to-cyan-600',
-    lightBg: 'bg-cyan-50',
-    iconBg: 'bg-white/15',
-    iconShadow: 'shadow-cyan-800/15',
-    accent: 'text-cyan-700',
-    chipFloor: 'bg-cyan-100 text-cyan-800',
-  },
-  {
-    icon: 'grid_view',
-    gradient: 'from-orange-800 to-orange-600',
-    lightBg: 'bg-orange-50',
-    iconBg: 'bg-white/15',
-    iconShadow: 'shadow-orange-800/15',
-    accent: 'text-orange-700',
-    chipFloor: 'bg-orange-100 text-orange-800',
-  },
-]
+import TenantFormModal from '../components/TenantFormModal'
 
 export default function Properties() {
-  const { building, floors, totalUnits, occupiedUnits, monthlyRevenue } = useBuilding()
-  const [search, setSearch] = useState('')
-  const [modal, setModal] = useState(null)
-  const [floorModal, setFloorModal] = useState(null)
+  const { floors } = useBuilding()
+  const [expandedFloor, setExpandedFloor] = useState(null)
+  const [floorModal, setFloorModal] = useState(false)
+  const [tenantModal, setTenantModal] = useState(null)
 
-  const q = search.toLowerCase().trim()
+  const hasData = floors.length > 0
 
-  const filteredFloors = useMemo(() => {
-    if (!q) return floors
-    return floors
-      .map((floor) => ({
-        ...floor,
-        units: floor.units.filter(
-          (u) =>
-            u.name.toLowerCase().includes(q) ||
-            (u.tenant && u.tenant.name.toLowerCase().includes(q)),
-        ),
-      }))
-      .filter((f) => f.units.length > 0)
-  }, [floors, q])
-
-  const closeModal = () => setModal(null)
+  if (!hasData) {
+    return (
+      <div className="p-6 md:p-8 space-y-6">
+        <div className="bg-surface rounded-card border border-outline p-12 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-primary text-3xl">add_business</span>
+          </div>
+          <h2 className="text-lg font-bold text-on-surface mb-2">No floors yet</h2>
+          <p className="text-sm text-on-surface-muted mb-6 max-w-md mx-auto">Get started by adding your first floor. Each floor can contain multiple shop units that you can assign to tenants.</p>
+          <button onClick={() => setFloorModal(true)}
+            className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg">add</span>
+            Add Your First Floor
+          </button>
+          {floorModal && <FloorFormModal mode="add" onClose={() => setFloorModal(false)} />}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="p-6 md:p-8 space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Units', value: totalUnits, icon: 'door_front' },
-          { label: 'Occupied', value: occupiedUnits, icon: 'check_circle' },
-          { label: 'Vacant', value: totalUnits - occupiedUnits, icon: 'meeting_room' },
-          { label: 'Monthly Revenue', value: `UGX ${(monthlyRevenue / 1000000).toFixed(1)}M`, icon: 'trending_up' },
-        ].map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-500 font-medium">{s.label}</p>
-              <span className="material-symbols-outlined text-gray-300 text-xl">{s.icon}</span>
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-          </div>
-        ))}
+    <div className="p-6 md:p-8 space-y-5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-on-surface-muted font-medium">{floors.length} floor{floors.length !== 1 ? 's' : ''} &middot; {floors.reduce((s, f) => s + f.units.length, 0)} units</p>
+        <button onClick={() => setFloorModal(true)}
+          className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-base">add</span>
+          Add Floor
+        </button>
       </div>
 
-      <div className="flex items-center gap-4 mb-2">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-700 flex items-center justify-center shadow-lg shadow-slate-800/15 shrink-0">
-          <span className="material-symbols-outlined text-white text-2xl">groups</span>
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold text-gray-900">{building.name}</h2>
-          <p className="text-sm text-gray-400 truncate">{building.location}</p>
-        </div>
-        <div className="ml-auto flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-1.5 text-sm text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span>{occupiedUnits} occupied</span>
-          </div>
-          <div className="h-5 w-px bg-gray-200" />
-          <StatusBadge status={building.type} />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 text-lg pointer-events-none">search</span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tenants or units..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors">
-              <span className="material-symbols-outlined text-lg">close</span>
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setFloorModal({ mode: 'add' })}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 text-sm font-semibold rounded-xl transition-colors"
-          >
-            <span className="material-symbols-outlined text-lg">add_business</span>
-            Add Floor
-          </button>
-          <button
-            onClick={() => setModal({ mode: 'add' })}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
-          >
-            <span className="material-symbols-outlined text-lg">person_add</span>
-            Add Tenant
-          </button>
-        </div>
-        {q && (
-          <span className="text-xs text-gray-400">
-            {filteredFloors.reduce((s, f) => s + f.units.length, 0)} result{(filteredFloors.reduce((s, f) => s + f.units.length, 0)) !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {filteredFloors.map((floor, index) => {
-          const occ = floor.units.filter((u) => u.status === 'occupied').length
+      <div className="grid gap-4">
+        {floors.map((floor) => {
+          const occ = floor.units.filter(u => u.status === 'occupied').length
           const vac = floor.units.length - occ
-          const rev = floor.units.reduce((s, u) => s + (u.status === 'occupied' ? u.monthlyRent : 0), 0)
-          const pct = floor.units.length ? Math.round((occ / floor.units.length) * 100) : 0
-          const style = floorStyles[index % floorStyles.length]
+          const pct = Math.round((occ / floor.units.length) * 100)
+          const isExpanded = expandedFloor === floor.name
 
           return (
-            <div key={floor.name} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-              <div className="relative">
-                <Link to={`/properties/floor/${floorSlug(floor.name)}`} className="block">
-                  <div className={`bg-gradient-to-r ${style.gradient} p-5 pb-6 relative overflow-hidden`}>
-                    <div className="absolute inset-0 opacity-10" style={{
-                      backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px)',
-                      backgroundSize: '16px 16px',
-                    }} />
-                    <div className="flex items-start justify-between relative">
-                      <div className={`w-12 h-12 rounded-2xl ${style.iconBg} backdrop-blur-sm flex items-center justify-center shadow-lg ${style.iconShadow}`}>
-                        <span className="material-symbols-outlined text-white text-2xl" style={{ fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24" }}>{style.icon}</span>
-                      </div>
-                      <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-[11px] font-semibold text-white tracking-wide">
-                        {pct}% occupied
-                      </div>
-                    </div>
-                    <h3 className="text-white text-xl font-bold mt-4 relative">{floor.name}</h3>
-                    <p className="text-white/70 text-sm mt-0.5 relative">{floor.units.length} units &middot; {building.name}</p>
+            <div key={floor.name} className="bg-surface rounded-card border border-outline overflow-hidden shadow-card hover:shadow-card-hover transition-shadow">
+              <button
+                onClick={() => setExpandedFloor(isExpanded ? null : floor.name)}
+                className="w-full flex items-center justify-between p-5 text-left hover:bg-surface-container transition-colors"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary shrink-0">
+                    <span className="material-symbols-outlined text-xl">layers</span>
                   </div>
-                </Link>
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); setFloorModal({ mode: 'edit', floorName: floor.name }) }}
-                  className="absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm text-white/80 hover:bg-white/30 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
-                  title="Edit floor"
-                >
-                  <span className="material-symbols-outlined text-lg">edit</span>
-                </button>
-              </div>
-
-              <div className="p-5 -mt-2 relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-gray-900">{occ}</p>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Occupied</p>
-                    </div>
-                    <div className="w-px h-8 bg-gray-100" />
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-gray-300">{vac}</p>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Vacant</p>
-                    </div>
-                    <div className="w-px h-8 bg-gray-100" />
-                    <div className="text-center">
-                      <p className={`text-lg font-bold ${style.accent}`}>{pct}%</p>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wide">Full</p>
-                    </div>
-                  </div>
-                  <div className={style.lightBg + ' rounded-lg px-3 py-2 text-center'}>
-                    <p className={`text-sm font-bold ${style.accent}`}>UGX {(rev / 1000000).toFixed(1)}M</p>
-                    <p className="text-[9px] text-gray-400 uppercase tracking-wide">Revenue</p>
+                  <div>
+                    <h3 className="text-sm font-semibold text-on-surface">{floor.name}</h3>
+                    <p className="text-xs text-on-surface-muted">{occ} occupied &middot; {vac} vacant &middot; {floor.units.length} units</p>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1 mb-4">
-                  {floor.units.map((unit) => (
-                    <div
-                      key={unit.id}
-                      className={`flex-1 h-2 rounded-full transition-all duration-300 group-hover:scale-y-150 ${
-                        unit.status === 'occupied' ? 'bg-green-500' : 'bg-gray-200'
-                      }`}
-                      title={`${unit.name}: ${unit.status}`}
-                    />
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {floor.units.map((unit) => {
-                    const hasTenant = !!unit.tenant
-                    return (
-                      <button
-                        key={unit.id}
-                        type="button"
-                        onClick={() =>
-                          setModal(
-                            hasTenant
-                              ? { mode: 'edit', floorName: floor.name, unitId: unit.id, data: unit.tenant }
-                              : { mode: 'add', floorName: floor.name, unitId: unit.id },
-                          )
-                        }
-                        className={`group/chip relative text-[10px] font-medium px-2 py-0.5 rounded-md border transition-all ${
-                          hasTenant
-                            ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300'
-                            : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-200'
-                        }`}
-                        title={hasTenant ? `Click to edit ${unit.tenant.name}` : 'Click to add tenant'}
-                      >
-                        {unit.name}
-                        <span className={`ml-1 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full transition-all ${
-                          hasTenant ? 'text-green-400 group-hover/chip:text-green-600' : 'text-gray-300 group-hover/chip:text-blue-400'
-                        }`}>
-                          <span className="material-symbols-outlined text-[10px]">
-                            {hasTenant ? 'edit' : 'add'}
-                          </span>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                  <div className="flex items-center gap-1">
-                    {floor.units.filter((u) => u.tenant).slice(0, 5).map((unit) => (
-                      <button
-                        key={unit.id}
-                        type="button"
-                        onClick={() => setModal({ mode: 'edit', floorName: floor.name, unitId: unit.id, data: unit.tenant })}
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold border-2 border-white -mr-1.5 shadow-sm hover:ring-2 hover:ring-blue-300 transition-all cursor-pointer ${style.chipFloor}`}
-                        title={`Edit ${unit.tenant.name}`}
-                      >
-                        {unit.tenant.initials}
-                      </button>
-                    ))}
-                    {occ > 5 && (
-                      <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[8px] font-bold text-gray-500 border-2 border-white -ml-1">
-                        +{occ - 5}
-                      </div>
-                    )}
+                <div className="flex items-center gap-4">
+                  <div className="hidden sm:flex items-center gap-2">
+                    <div className="w-20 h-1.5 bg-surface-container-highest rounded-full">
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-xs font-semibold text-on-surface-muted">{pct}%</span>
                   </div>
-                  <Link
-                    to={`/properties/floor/${floorSlug(floor.name)}`}
-                    className="flex items-center gap-1 text-xs font-semibold text-gray-900 bg-gray-50 px-3 py-1.5 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  >
-                    View floor
-                    <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
-                  </Link>
+                  <span className={`material-symbols-outlined text-on-surface-dim transition-transform ${isExpanded ? 'rotate-180' : ''}`}>expand_more</span>
                 </div>
-              </div>
+              </button>
+
+              {isExpanded && (
+                <div className="border-t border-outline p-5 bg-surface-container/50">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {floor.units.map((unit) => {
+                      const occupied = unit.status === 'occupied'
+                      return (
+                        <div key={unit.id}
+                          className={`relative rounded-lg border p-3 text-center transition-all ${occupied ? 'bg-surface border-primary/20' : 'bg-surface-container border-outline'}`}>
+                          <div className={`w-2 h-2 rounded-full mx-auto mb-2 ${occupied ? 'bg-status-paid' : 'bg-status-vacant'}`} />
+                          <p className={`text-xs font-semibold ${occupied ? 'text-on-surface' : 'text-on-surface-muted'}`}>{unit.name}</p>
+                          {occupied && unit.tenant ? (
+                            <p className="text-[10px] text-on-surface-muted mt-0.5 truncate">{unit.tenant.name}</p>
+                          ) : (
+                            <p className="text-[10px] text-on-surface-dim mt-0.5">Vacant</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-outline">
+                    <button onClick={() => setTenantModal({ floor: floor.name })}
+                      className="px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary-50 rounded-lg transition-colors inline-flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">person_add</span>
+                      Add Tenant
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
 
-      {filteredFloors.length === 0 && q && (
-        <div className="text-center py-16">
-          <span className="material-symbols-outlined text-5xl text-gray-200 mb-3">search_off</span>
-          <p className="text-gray-400 font-medium">No results for &ldquo;{q}&rdquo;</p>
-          <p className="text-xs text-gray-300 mt-1">Try a different name or unit</p>
-        </div>
-      )}
-
-      {modal && (
-        <TenantFormModal
-          mode={modal.mode}
-          initialData={modal.data}
-          floorName={modal.floorName}
-          unitId={modal.unitId}
-          onClose={closeModal}
-        />
-      )}
-      {floorModal && (
-        <FloorFormModal
-          mode={floorModal.mode}
-          floorName={floorModal.floorName}
-          onClose={() => setFloorModal(null)}
-        />
+      {floorModal && <FloorFormModal mode="add" onClose={() => setFloorModal(false)} />}
+      {tenantModal && (
+        <TenantFormModal mode="add" floorName={tenantModal.floor} onClose={() => setTenantModal(null)} />
       )}
     </div>
   )
