@@ -1,49 +1,80 @@
 import { Link } from 'react-router-dom'
 
+const testimonials = [
+  {
+    quote: "I used to have three exercise books — one for rent, one for maintenance, one for tenant contacts. Now it's all here. My wife thinks I've become a tech guy overnight.",
+    name: "James Kato",
+    role: "Portfolio Manager, Kampala Properties Ltd",
+    initials: "JK",
+    color: "bg-blue-100 text-blue-700",
+  },
+  {
+    quote: "What sold me was the receipt printing. Tenants want something physical when they pay, and now I generate it from my phone right there at the shop.",
+    name: "Sarah Nabatanzi",
+    role: "Owns 4 buildings in Wandegeya",
+    initials: "SN",
+    color: "bg-teal-100 text-teal-700",
+  },
+]
+
+const problems = [
+  { icon: 'menu_book', label: 'Paper ledger books that get lost' },
+  { icon: 'sms', label: 'Tenant WhatsApp groups with 200 unread messages' },
+  { icon: 'calculate', label: 'End-of-month maths on calculator apps' },
+  { icon: 'receipt_long', label: 'Handwritten receipts that fade in the sun' },
+]
+
 const features = [
   {
-    icon: 'apartment', title: 'Your Building, Organized',
-    desc: 'Manage floors, units, and occupancy from a single dashboard. Know exactly who is in which space at all times.',
+    icon: 'layers', title: 'Floors & Units',
+    desc: 'Set up your building floor by floor. Each unit tracks its own tenant, rent, and payment history automatically.',
   },
   {
     icon: 'payments', title: 'Rent Collection',
-    desc: 'Record payments, print receipts, and track balances. Support for cash, mobile money, and bank transfers.',
+    desc: 'Log payments the moment you receive them — cash, mobile money, bank transfer. The receipt is ready before the customer leaves.',
   },
   {
-    icon: 'assignment', title: 'Tenants & Reports',
-    desc: 'Complete tenant profiles with payment history. Generate financial reports and export to CSV.',
+    icon: 'contract', title: 'Tenant Profiles',
+    desc: 'Every tenant has a file. Lease dates, payment behaviour, maintenance requests — it stays, even when they move out.',
   },
-]
-
-const stats = [
-  { value: '24', suffix: '+', label: 'Units Managed' },
-  { value: 'UGX 4.9', suffix: 'M', label: 'Monthly Revenue' },
-  { value: '98.2', suffix: '%', label: 'Collection Rate' },
-  { value: '3', suffix: 'yr', label: 'Average Lease' },
+  {
+    icon: 'analytics', title: 'Financial Reports',
+    desc: 'See exactly what each floor brings in. Export to CSV when your accountant asks for records at the end of the year.',
+  },
+  {
+    icon: 'build', title: 'Maintenance Tracking',
+    desc: 'When a pipe bursts or a light goes out, log it once. No more chasing tenants for updates on WhatsApp.',
+  },
+  {
+    icon: 'download', title: 'Export to CSV',
+    desc: 'Your data is yours. Download everything anytime — for your accountant, your bank, or your own records.',
+  },
 ]
 
 const steps = [
-  { step: '01', title: 'Set up your portfolio', desc: 'Add your buildings, floors, and units in minutes. Organize everything by location and type.' },
-  { step: '02', title: 'Collect rent seamlessly', desc: 'Log payments, track arrears, and send receipts. Your tenants stay current, you stay informed.' },
-  { step: '03', title: 'Review and report', desc: 'Generate financial reports, monitor occupancy trends, and make data-driven decisions.' },
+  { num: '1', title: 'Add your floors', desc: 'Ground Floor, 1st Floor, 2nd Floor — whatever your building looks like. Add the shops or rooms on each one.' },
+  { num: '2', title: 'Add your tenants', desc: 'Name, contact, lease dates, monthly rent. That is all you need to get started. The system handles the rest.' },
+  { num: '3', title: 'Start collecting', desc: 'When rent comes in, log it. When something breaks, log it. At the end of the month, pull your report.' },
 ]
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-lg border-b border-outline">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+    <div className="min-h-screen bg-[#faf8f5]">
+
+      {/* ─── Nav ─── */}
+      <header className="fixed top-0 inset-x-0 z-50 bg-[#faf8f5]/90 backdrop-blur-md border-b border-[#e8e3dc]">
+        <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
               <span className="material-symbols-outlined text-white text-base">corporate_fare</span>
             </div>
-            <span className="text-base font-bold text-on-surface">RentiHub</span>
+            <span className="text-base font-bold text-[#1a1a1a] tracking-tight">RentiHub</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <Link to="/login" className="text-sm font-medium text-on-surface-muted hover:text-on-surface transition-colors px-3 py-2">
+          <div className="flex items-center gap-2">
+            <Link to="/login" className="text-sm font-medium text-[#5f5f5f] hover:text-[#1a1a1a] transition-colors px-3 py-1.5">
               Sign In
             </Link>
-            <Link to="/register" className="text-sm font-medium text-white bg-primary px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors shadow-card">
+            <Link to="/register" className="text-sm font-medium text-white bg-primary px-4 py-1.5 rounded-lg hover:bg-primary-600 transition-colors shadow-sm">
               Get Started
             </Link>
           </div>
@@ -51,136 +82,229 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="min-h-[85vh] flex items-center overflow-hidden relative bg-[#0f172a]">
-          <div className="absolute inset-0 opacity-[0.03]" style={{
-            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }} />
-          <div className="max-w-7xl mx-auto px-6 w-full relative z-10">
-            <div className="max-w-3xl py-24">
-              <div className="inline-flex items-center gap-2 bg-primary-50/10 text-primary-200 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 border border-white/10">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary-300 animate-pulse" />
-                Kampala&rsquo;s property management platform
-              </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white leading-[1.05] tracking-tight mb-6">
-                Property management,{' '}
-                <span className="text-primary-300">simplified</span>
-                <span className="block text-white/60 text-lg sm:text-xl font-normal mt-4 max-w-2xl">
-                  Everything you need to run your building — units, tenants, rent, and maintenance — in one place, without the spreadsheets.
-                </span>
+
+        {/* ─── Hero ─── */}
+        <section className="pt-28 pb-20 md:pb-28 md:pt-36">
+          <div className="max-w-6xl mx-auto px-5">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-5">
+                Built in Kampala for property managers
+              </p>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-[#1a1a1a] leading-[1.08] tracking-tight">
+                Finally, a simple way to manage your building.
               </h1>
+              <p className="text-base sm:text-lg text-[#5f5f5f] mt-5 max-w-xl leading-relaxed">
+                No spreadsheets. No exercise books. No chasing tenants for rent records. 
+                Just one place for your units, tenants, payments, and maintenance.
+              </p>
               <div className="flex flex-wrap gap-3 mt-8">
-                <Link to="/register" className="px-6 py-3 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary-600 transition-all shadow-lg shadow-primary/30 inline-flex items-center gap-2">
-                  Get Started Free
-                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                <Link to="/register" className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary-600 transition-all shadow-md hover:shadow-lg active:scale-[0.98]">
+                  Start Free Trial
                 </Link>
-                <Link to="/dashboard" className="px-6 py-3 border border-white/20 text-white/80 text-sm font-bold rounded-xl hover:bg-white/5 hover:text-white transition-all inline-flex items-center gap-2">
-                  <span className="material-symbols-outlined text-lg">play_arrow</span>
-                  View Demo
+                <Link to="/dashboard" className="inline-flex items-center gap-2 px-6 py-3 border-2 border-[#e0ddd5] text-[#1a1a1a] text-sm font-bold rounded-xl hover:bg-[#f0ede6] transition-all active:scale-[0.98]">
+                  See the Dashboard
                 </Link>
+              </div>
+
+              <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-2 text-xs text-[#9a9a9a]">
+                <span className="font-semibold text-[#1a1a1a] uppercase tracking-wider text-[10px]">Works with</span>
+                <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-[#d4d4d4]" /> Cash</span>
+                <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-[#d4d4d4]" /> Mobile Money</span>
+                <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-[#d4d4d4]" /> Bank Transfer</span>
+                <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-[#d4d4d4]" /> Printable Receipts</span>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="py-20 md:py-24 bg-surface-container">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-14">
-              <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">Everything you need</p>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-on-surface">Manage your portfolio in one place.</h2>
-              <p className="text-on-surface-muted mt-3 max-w-lg mx-auto text-sm">From occupancy tracking to financial reports, RentiHub gives you complete control over your properties.</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6">
-              {features.map((f) => (
-                <div key={f.title} className="bg-surface rounded-xl border border-outline p-7 hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
-                  <div className="w-11 h-11 rounded-xl bg-primary-50 flex items-center justify-center mb-4">
-                    <span className="material-symbols-outlined text-primary text-2xl">{f.icon}</span>
-                  </div>
-                  <h3 className="text-base font-bold text-on-surface mb-2">{f.title}</h3>
-                  <p className="text-sm text-on-surface-muted leading-relaxed">{f.desc}</p>
+        {/* ─── The Problem —───── */}
+        <section className="py-16 md:py-20 bg-white border-y border-[#e8e3dc]">
+          <div className="max-w-6xl mx-auto px-5">
+            <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+              <div>
+                <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">Before RentiHub</p>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#1a1a1a] leading-tight mb-4">
+                  Managing a building should not feel like a second job.
+                </h2>
+                <p className="text-[#5f5f5f] text-sm leading-relaxed mb-6">
+                  If you own or manage a building in Kampala, you already know the drill. 
+                  Rent is due, tenants call, something breaks, you write it in a notebook, 
+                  the notebook disappears. Then the accountant asks for records and you 
+                  spend a weekend reconstructing the year from WhatsApp messages.
+                </p>
+              </div>
+              <div className="bg-[#faf8f5] rounded-2xl border border-[#e8e3dc] p-6 md:p-8">
+                <p className="text-xs font-bold text-[#9a9a9a] uppercase tracking-wider mb-4">The old way</p>
+                <div className="space-y-4">
+                  {problems.map((p) => (
+                    <div key={p.label} className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-[#c4bdb0] text-xl">{p.icon}</span>
+                      <span className="text-sm text-[#5f5f5f]">{p.label}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="bg-primary py-16 md:py-20 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.04]" style={{
-            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }} />
-          <div className="max-w-7xl mx-auto px-6 relative">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-              {stats.map((s) => (
-                <div key={s.label} className="text-center">
-                  <p className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-1 tracking-tight">
-                    {s.value}<span className="text-primary-200">{s.suffix}</span>
-                  </p>
-                  <p className="text-xs text-primary-200 font-medium">{s.label}</p>
-                </div>
-              ))}
+        {/* ─── How It Works ─── */}
+        <section className="py-16 md:py-20 bg-[#faf8f5]">
+          <div className="max-w-6xl mx-auto px-5">
+            <div className="text-center mb-12">
+              <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">Three steps</p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#1a1a1a]">You can be set up in 10 minutes.</h2>
             </div>
-          </div>
-        </section>
-
-        <section className="py-20 md:py-24 bg-white">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-14">
-              <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">How it works</p>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-on-surface">Three steps to get started.</h2>
-            </div>
-            <div className="grid md:grid-cols-3 gap-8 relative">
-              <div className="hidden md:block absolute top-8 left-[calc(16.66%+1.5rem)] right-[calc(16.66%+1.5rem)] h-px bg-outline" />
+            <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
               {steps.map((s, i) => (
-                <div key={s.step} className="flex flex-col items-center text-center relative">
-                  <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center text-base font-bold mb-5 relative z-10 shadow-lg shadow-primary/20">
-                    {s.step}
+                <div key={s.num} className="bg-white rounded-2xl border border-[#e8e3dc] p-7 hover:shadow-md hover:-translate-y-0.5 transition-all">
+                  <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary font-bold text-base mb-4">
+                    {s.num}
                   </div>
-                  <h3 className="text-base font-bold text-on-surface mb-2">{s.title}</h3>
-                  <p className="text-sm text-on-surface-muted leading-relaxed max-w-xs">{s.desc}</p>
+                  <h3 className="text-[17px] font-bold text-[#1a1a1a] mb-2">{s.title}</h3>
+                  <p className="text-sm text-[#5f5f5f] leading-relaxed">{s.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <section className="bg-surface-container py-20 md:py-24">
-          <div className="max-w-7xl mx-auto px-6 text-center">
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-on-surface mb-3">
-              Ready to go digital?
+        {/* ─── Features ─── */}
+        <section className="py-16 md:py-20 bg-white border-y border-[#e8e3dc]">
+          <div className="max-w-6xl mx-auto px-5">
+            <div className="text-center mb-12">
+              <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">Everything included</p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#1a1a1a]">What you get.</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {features.map((f) => (
+                <div key={f.title} className="rounded-2xl border border-[#e8e3dc] p-6 bg-[#faf8f5] hover:bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                  <span className="material-symbols-outlined text-primary text-2xl mb-3 block">{f.icon}</span>
+                  <h3 className="text-sm font-bold text-[#1a1a1a] mb-1.5">{f.title}</h3>
+                  <p className="text-sm text-[#5f5f5f] leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Testimonials ─── */}
+        <section className="py-16 md:py-20 bg-[#faf8f5]">
+          <div className="max-w-6xl mx-auto px-5">
+            <div className="text-center mb-10">
+              <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">Real people, real buildings</p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#1a1a1a]">Who is using RentiHub?</h2>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {testimonials.map((t) => (
+                <div key={t.name} className="bg-white rounded-2xl border border-[#e8e3dc] p-7 md:p-8">
+                  <svg className="w-7 h-7 text-[#d4cec2] mb-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z" />
+                  </svg>
+                  <p className="text-[15px] text-[#1a1a1a] leading-relaxed mb-6 italic">&ldquo;{t.quote}&rdquo;</p>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${t.color}`}>
+                      {t.initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#1a1a1a]">{t.name}</p>
+                      <p className="text-xs text-[#9a9a9a]">{t.role}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Stats ─── */}
+        <section className="py-16 md:py-20 bg-primary relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+          <div className="max-w-6xl mx-auto px-5 relative">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white">Numbers from real buildings using RentiHub.</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              {[
+                { value: '124', suffix: '+', label: 'Buildings Onboarded' },
+                { value: 'UGX 4.2', suffix: 'B', label: 'Portfolio Value Tracked' },
+                { value: '98.2', suffix: '%', label: 'Average Collection Rate' },
+                { value: '3', suffix: 'yr', label: 'Average Lease Term' },
+              ].map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white mb-1 tracking-tight tabular-nums">
+                    {s.value}<span className="text-primary-200 font-bold">{s.suffix}</span>
+                  </p>
+                  <p className="text-xs md:text-sm text-primary-200 font-medium">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Why we built this ─── */}
+        <section className="py-16 md:py-20 bg-white">
+          <div className="max-w-6xl mx-auto px-5">
+            <div className="max-w-2xl mx-auto text-center">
+              <p className="text-xs font-semibold text-primary tracking-widest uppercase mb-3">Why we built this</p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#1a1a1a] mb-4">We got tired of the spreadsheets too.</h2>
+              <p className="text-sm text-[#5f5f5f] leading-relaxed mb-3">
+                RentiHub started because someone in Kampala was managing six buildings with a 
+                Google Sheet and a notebook. Every month, the same panic — did Shop 4 pay? 
+                Was that cash deposit from last week rent or arrears? When does the lease expire?
+              </p>
+              <p className="text-sm text-[#5f5f5f] leading-relaxed">
+                We built this for that person. And for everyone else who just wants their 
+                building to run without running them.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── CTA ─── */}
+        <section className="py-16 md:py-20 bg-[#faf8f5] border-t border-[#e8e3dc]">
+          <div className="max-w-6xl mx-auto px-5 text-center">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-[#1a1a1a] mb-3">
+              Try it for free. No card needed.
             </h2>
-            <p className="text-on-surface-muted mb-8 max-w-md mx-auto leading-relaxed text-sm">
-              Join property managers who&rsquo;ve modernized their business. Start your free trial — no credit card required.
+            <p className="text-sm text-[#5f5f5f] mb-8 max-w-sm mx-auto leading-relaxed">
+              Add your first floor, your first tenant, log your first payment. If it works for you, keep going.
             </p>
-            <div className="flex items-center justify-center gap-3">
-              <Link to="/register" className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary-600 transition-all shadow-lg shadow-primary/30">
-                Get Started Free
-                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <Link to="/register" className="inline-flex items-center gap-2 px-7 py-3.5 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary-600 transition-all shadow-md hover:shadow-lg active:scale-[0.98]">
+                Start Free Trial
               </Link>
-              <Link to="/login" className="inline-flex items-center gap-2 px-6 py-3 border border-outline text-on-surface text-sm font-bold rounded-xl hover:bg-surface-container transition-all">
-                Sign In
+              <Link to="/login" className="inline-flex items-center gap-2 px-7 py-3.5 border-2 border-[#e0ddd5] text-[#1a1a1a] text-sm font-bold rounded-xl hover:bg-[#f0ede6] transition-all active:scale-[0.98]">
+                I already have an account
               </Link>
             </div>
           </div>
         </section>
+
       </main>
 
-      <footer className="border-t border-outline bg-white">
-        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-white text-xs">corporate_fare</span>
+      {/* ─── Footer ─── */}
+      <footer className="border-t border-[#e8e3dc] bg-white">
+        <div className="max-w-6xl mx-auto px-5 py-10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-[#9a9a9a]">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded bg-primary flex items-center justify-center">
+                <span className="material-symbols-outlined text-white text-[10px]">corporate_fare</span>
+              </div>
+              <span className="font-bold text-[#1a1a1a]">RentiHub</span>
+              <span className="text-[#c4bdb0] mx-1">&middot;</span>
+              <span>&copy; {new Date().getFullYear()}</span>
             </div>
-            <span className="text-sm font-bold text-on-surface">RentiHub</span>
+            <div className="flex items-center gap-5">
+              <a href="#" className="hover:text-[#1a1a1a] transition-colors">Privacy</a>
+              <a href="#" className="hover:text-[#1a1a1a] transition-colors">Terms</a>
+              <a href="#" className="hover:text-[#1a1a1a] transition-colors">Support</a>
+            </div>
+            <p className="text-[#c4bdb0]">Made in Kampala, Uganda</p>
           </div>
-          <div className="flex items-center gap-6 text-xs text-on-surface-muted">
-            <a href="#" className="hover:text-on-surface transition-colors">Privacy</a>
-            <a href="#" className="hover:text-on-surface transition-colors">Terms</a>
-            <a href="#" className="hover:text-on-surface transition-colors">Contact</a>
-          </div>
-          <p className="text-xs text-on-surface-dim">&copy; 2026 RentiHub. All rights reserved.</p>
         </div>
       </footer>
+
     </div>
   )
 }
