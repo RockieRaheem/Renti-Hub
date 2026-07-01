@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useBuilding } from '../context/BuildingContext'
 
 const blocks = [
   { h: 'h-32', w: 'w-16', color: 'bg-blue-600', offset: 'mt-16' },
@@ -15,10 +16,21 @@ const blocks = [
 
 export default function Register() {
   const navigate = useNavigate()
+  const { register } = useBuilding()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const handleSubmit = (e) => { e.preventDefault(); navigate('/dashboard') }
+  const [error, setError] = useState('')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    setError('')
+    if (register(name, email, password)) {
+      navigate('/dashboard')
+    } else {
+      setError('An account with this email already exists')
+    }
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -55,6 +67,7 @@ export default function Register() {
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all" placeholder="Create a strong password" required />
               </div>
+              {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
               <button type="submit" className="w-full bg-[#0037b0] text-white font-medium py-2.5 rounded-lg hover:bg-blue-700 transition-colors text-sm">
                 Create Account
               </button>

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { building, floors, paymentMethods, activityLog } from '../data/currentBuilding'
+import { useBuilding } from '../context/BuildingContext'
 
 export default function RentCollection() {
-  const [selectedFloor, setSelectedFloor] = useState(floors[0].name)
-  const [selectedUnit, setSelectedUnit] = useState(floors[0].units[0].id)
+  const { building, floors, paymentMethods, addPayment, combinedActivityLog } = useBuilding()
+  const [selectedFloor, setSelectedFloor] = useState(floors[0]?.name || '')
+  const [selectedUnit, setSelectedUnit] = useState(floors[0]?.units[0]?.id || '')
   const [method, setMethod] = useState('Mobile Money')
   const [amount, setAmount] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -13,10 +14,10 @@ export default function RentCollection() {
   const unit = floor?.units.find((u) => u.id === selectedUnit)
   const tenant = unit?.tenant
 
-  const due = tenant ? unit.monthlyRent : 0
-
   const handleSubmit = (e) => {
     e.preventDefault()
+    const paid = Number(amount) || unit?.monthlyRent || 0
+    addPayment(selectedFloor, selectedUnit, paid, method)
     setReceiptId(Math.random().toString(36).slice(2, 8).toUpperCase())
     setSubmitted(true)
   }
@@ -27,6 +28,8 @@ export default function RentCollection() {
     setSelectedUnit(f?.units[0]?.id || '')
     setSubmitted(false)
   }
+
+  const log = combinedActivityLog.slice(0, 8)
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -58,7 +61,7 @@ export default function RentCollection() {
                   { label: 'Floor', value: selectedFloor },
                   { label: 'Unit', value: unit?.name },
                   { label: 'Tenant', value: tenant?.name },
-                  { label: 'Amount', value: `UGX ${Number(amount || due).toLocaleString()}` },
+                  { label: 'Amount', value: `UGX ${Number(amount || unit?.monthlyRent || 0).toLocaleString()}` },
                   { label: 'Method', value: method },
                   { label: 'Date', value: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) },
                 ].map((r) => (
@@ -108,7 +111,7 @@ export default function RentCollection() {
                   </div>
                   <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
                     <span className="text-gray-500">Monthly Rent</span>
-                    <span className="font-bold text-gray-900">UGX {due.toLocaleString()}</span>
+                    <span className="font-bold text-gray-900">UGX {(unit?.monthlyRent || 0).toLocaleString()}</span>
                   </div>
                 </div>
               ) : (
@@ -149,11 +152,11 @@ export default function RentCollection() {
 
         <div className="lg:col-span-3 bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-semibold text-gray-900">Today&rsquo;s Activity</h3>
-            <span className="text-xs text-gray-400 font-medium">{activityLog.length} payments</span>
+            <h3 className="text-base font-semibold text-gray-900">Activity</h3>
+            <span className="text-xs text-gray-400 font-medium">{log.length} payments</span>
           </div>
-          <div className="space-y-3">
-            {activityLog.map((a, i) => (
+          <div className="space-y-3 max-h-[600px] overflow-y-auto">
+            {log.map((a, i) => (
               <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
                 <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-blue-600 text-lg">payments</span>

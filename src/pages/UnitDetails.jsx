@@ -1,9 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
+import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
-import { building, getUnitByFloorAndId, maintenance, getAvatarColor, paymentMethods } from '../data/currentBuilding'
 
 export default function UnitDetails() {
   const { floorName, unitId } = useParams()
+  const { building, getUnitByFloorAndId, maintenance, getAvatarColor } = useBuilding()
   const unit = getUnitByFloorAndId(floorName, unitId)
   const t = unit?.tenant
 
@@ -26,7 +27,7 @@ export default function UnitDetails() {
     <div className="p-6 md:p-8 space-y-6">
 
       <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-        <Link to="/properties" className="hover:text-blue-600 transition-colors">Building</Link>
+        <Link to="/properties" className="hover:text-blue-600 transition-colors">Tenants</Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
         <Link to={`/properties/floor/${floorName}`} className="hover:text-blue-600 transition-colors">{unit.floor}</Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
@@ -101,11 +102,11 @@ export default function UnitDetails() {
                     <h4 className="font-semibold text-gray-900 mb-2">Payment History</h4>
                     <div className="flex justify-between py-2 border-b border-gray-50">
                       <span className="text-gray-400">Last Payment</span>
-                      <span className="font-medium text-green-600">{t.lastPayment}</span>
+                      <span className="font-medium text-green-600">{t.lastPayment || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-50">
                       <span className="text-gray-400">Date</span>
-                      <span className="font-medium text-gray-900">{t.lastPaymentDate}</span>
+                      <span className="font-medium text-gray-900">{t.lastPaymentDate || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between py-2">
                       <span className="text-gray-400">Status</span>

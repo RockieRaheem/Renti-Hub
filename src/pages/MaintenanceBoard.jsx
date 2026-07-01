@@ -1,36 +1,26 @@
 import { Link } from 'react-router-dom'
+import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
-import { building, maintenance, maintenanceStats, priorityBorders } from '../data/currentBuilding'
-
-function assigneeInitials(name) {
-  return name.split(' ').map((w) => w[0]).join('')
-}
-
-function getAvatarColor(name) {
-  const colors = { 'John Ssempijja': 'bg-blue-100 text-blue-700', 'Sarah Nabatanzi': 'bg-teal-100 text-teal-700' }
-  return colors[name] || 'bg-gray-100 text-gray-700'
-}
+import { assigneeInitials, getAssigneeColor } from '../data/helpers'
 
 function KanbanCard({ item }) {
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 border-l-4 ${priorityBorders[item.priority] || 'border-l-gray-300'} p-4`}>
+    <div className={`bg-white rounded-lg border border-gray-200 border-l-4 ${item.priority === 'Critical' ? 'border-l-red-500' : item.priority === 'High' ? 'border-l-orange-500' : item.priority === 'Medium' ? 'border-l-yellow-500' : 'border-l-blue-400'} p-4`}>
       <div className="flex items-start justify-between mb-2">
         <h4 className="text-sm font-semibold text-gray-900">{item.title}</h4>
         <span className="text-[10px] text-gray-400 whitespace-nowrap ml-3">{item.date}</span>
       </div>
-          <p className="text-xs text-gray-400 mb-3">{item.floor}{item.unit ? ` - ${item.unit}` : ''} &middot; {item.tenant}</p>
+      <p className="text-xs text-gray-400 mb-3">{item.floor}{item.unit ? ` - ${item.unit}` : ''} &middot; {item.tenant}</p>
       <div className="flex items-center justify-between">
         <StatusBadge status={item.priority} />
         {item.assignee && (
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAvatarColor(item.assignee)}`}>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAssigneeColor(item.assignee)}`}>
             {assigneeInitials(item.assignee)}
           </div>
         )}
       </div>
       {item.resolution && (
-        <p className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-green-600 font-medium">
-          {item.resolution}
-        </p>
+        <p className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-green-600 font-medium">{item.resolution}</p>
       )}
     </div>
   )
@@ -51,6 +41,7 @@ function KanbanColumn({ title, count, items }) {
 }
 
 export default function MaintenanceBoard() {
+  const { building, maintenance, maintenanceStats } = useBuilding()
   const columns = [
     { title: 'Pending', count: maintenanceStats.pending, items: maintenance.pending },
     { title: 'In Progress', count: maintenanceStats.inProgress, items: maintenance.inProgress },

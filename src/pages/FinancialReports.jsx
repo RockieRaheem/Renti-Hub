@@ -1,10 +1,11 @@
+import { useBuilding } from '../context/BuildingContext'
 import DonutChart from '../components/charts/DonutChart'
-import { building, floors, monthlyRevenue, cashFlowData, revenueMix } from '../data/currentBuilding'
-
-const maxCashFlow = Math.max(...cashFlowData.flatMap((d) => [d.income, d.expenses]))
-const totalMix = revenueMix.reduce((s, item) => s + item.value, 0)
 
 export default function FinancialReports() {
+  const { building, floors, monthlyRevenue, cashFlowData, revenueMix } = useBuilding()
+  const maxCashFlow = Math.max(...cashFlowData.flatMap((d) => [d.income, d.expenses]))
+  const totalMix = revenueMix.reduce((s, item) => s + item.value, 0)
+
   return (
     <div className="p-6 md:p-8 space-y-6">
 
@@ -61,7 +62,7 @@ export default function FinancialReports() {
             <div className="space-y-4">
               {floors.map((f) => {
                 const rev = f.units.reduce((s, u) => s + (u.status === 'occupied' ? u.monthlyRent : 0), 0)
-                const pct = Math.round((rev / monthlyRevenue) * 100)
+                const pct = monthlyRevenue > 0 ? Math.round((rev / monthlyRevenue) * 100) : 0
                 return (
                   <div key={f.name}>
                     <div className="flex justify-between text-sm mb-1">

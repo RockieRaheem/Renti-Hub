@@ -1,39 +1,51 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
-import { building, floors, totalUnits, occupiedUnits, vacantUnits, monthlyRevenue, revenueMonthly, revenueMix, transactions, alerts, upcomingPayments, tenantFilters } from '../data/currentBuilding'
-
-const maxRevenue = Math.max(...revenueMonthly.map((d) => d.value))
-
-function FloorCard({ floor }) {
-  const occ = floor.units.filter((u) => u.status === 'occupied').length
-  const rev = floor.units.reduce((s, u) => s + (u.status === 'occupied' ? u.monthlyRent : 0), 0)
-  const pct = Math.round((occ / floor.units.length) * 100)
-
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-gray-900">{floor.name}</h4>
-        <span className="text-xs text-gray-400">{occ}/{floor.units.length} occupied</span>
-      </div>
-      <div className="h-1.5 bg-gray-100 rounded-full mb-3">
-        <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
-      </div>
-      <div className="flex justify-between text-xs">
-        <span className="text-gray-400">Revenue</span>
-        <span className="font-semibold text-gray-900">UGX {(rev / 1000000).toFixed(1)}M</span>
-      </div>
-    </div>
-  )
-}
 
 export default function Dashboard() {
+  const { building, floors, totalUnits, occupiedUnits, monthlyRevenue, revenueMonthly, revenueMix, transactions, alerts, upcomingPayments } = useBuilding()
   const [period, setPeriod] = useState('Monthly')
-  const data = revenueMonthly
+
+  const periodData = {
+    Monthly: revenueMonthly,
+    Quarterly: [
+      { month: 'Q1', value: 12.9, label: 'UGX 12.9M' },
+      { month: 'Q2 (Est)', value: 14.8, label: 'Proj: UGX 14.8M', projected: true },
+    ],
+    Annual: [
+      { month: '2024', value: 42.5, label: 'UGX 42.5M' },
+      { month: '2025', value: 58.2, label: 'UGX 58.2M' },
+      { month: '2026 (Est)', value: 62.0, label: 'Proj: UGX 62.0M', projected: true },
+    ],
+  }
+
+  const data = periodData[period] || revenueMonthly
+  const maxRevenue = Math.max(...data.map((d) => d.value))
+
+  function FloorCard({ floor }) {
+    const occ = floor.units.filter((u) => u.status === 'occupied').length
+    const rev = floor.units.reduce((s, u) => s + (u.status === 'occupied' ? u.monthlyRent : 0), 0)
+    const pct = Math.round((occ / floor.units.length) * 100)
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-gray-900">{floor.name}</h4>
+          <span className="text-xs text-gray-400">{occ}/{floor.units.length} occupied</span>
+        </div>
+        <div className="h-1.5 bg-gray-100 rounded-full mb-3">
+          <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-gray-400">Revenue</span>
+          <span className="font-semibold text-gray-900">UGX {(rev / 1000000).toFixed(1)}M</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-
       <div className="flex items-center gap-3 mb-2">
         <div className="w-2 h-2 rounded-full bg-green-500" />
         <p className="text-sm text-gray-500">
@@ -46,7 +58,7 @@ export default function Dashboard() {
           { label: 'Total Units', value: totalUnits },
           { label: 'Occupied', value: occupiedUnits },
           { label: 'Monthly Revenue', value: `UGX ${(monthlyRevenue / 1000000).toFixed(1)}M` },
-          { label: 'Vacant', value: vacantUnits },
+          { label: 'Vacant', value: totalUnits - occupiedUnits },
         ].map((k) => (
           <div key={k.label} className="bg-white rounded-lg border border-gray-200 p-5">
             <p className="text-xs text-gray-500 font-medium mb-0.5">{k.label}</p>
@@ -59,7 +71,7 @@ export default function Dashboard() {
         <div className="lg:col-span-3 bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Monthly Revenue</h3>
+              <h3 className="text-base font-semibold text-gray-900">Revenue</h3>
               <p className="text-sm text-gray-400">{building.name}</p>
             </div>
             <div className="flex items-center bg-gray-50 rounded-lg p-0.5 gap-0.5">
@@ -85,6 +97,7 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h3 className="text-base font-semibold text-gray-900 mb-4">Floor Overview</h3>
             <div className="space-y-3">
+              {floors.length === 0 && <p className="text-sm text-gray-400">No floors yet</p>}
               {floors.map((f) => <FloorCard key={f.name} floor={f} />)}
             </div>
           </div>
@@ -124,8 +137,8 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {transactions.map((t) => (
-                  <tr key={t.tenant} className="hover:bg-gray-50 transition-colors">
+                {transactions.map((t, i) => (
+                  <tr key={i} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-gray-400 text-xs">{t.floor}</td>
                     <td className="px-6 py-4 text-gray-500">{t.unit}</td>
                     <td className="px-6 py-4 font-medium text-gray-900">{t.tenant}</td>
@@ -141,8 +154,8 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-base font-semibold text-gray-900 mb-4">Alerts</h3>
           <div className="space-y-3">
-            {alerts.map((a) => (
-              <div key={a.issue} className={`rounded-lg border p-3.5 ${
+            {alerts.slice(0, 5).map((a, i) => (
+              <div key={i} className={`rounded-lg border p-3.5 ${
                 a.urgency === 'Urgent' ? 'bg-red-50 border-red-200 text-red-700' :
                 a.urgency === 'Overdue' ? 'bg-orange-50 border-orange-200 text-orange-700' :
                 'bg-blue-50 border-blue-200 text-blue-700'

@@ -1,9 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useBuilding } from '../context/BuildingContext'
 
 export default function FloorFormModal({ mode, floorName, onClose }) {
+  const overlayRef = useRef(null)
   const { floors, addFloor, updateFloor, deleteFloor } = useBuilding()
   const isAdd = mode === 'add'
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
 
   const [name, setName] = useState(isAdd ? '' : floorName)
   const [unitCount, setUnitCount] = useState(4)
@@ -28,7 +35,7 @@ export default function FloorFormModal({ mode, floorName, onClose }) {
     'w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div ref={overlayRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === overlayRef.current) onClose() }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div>
@@ -47,13 +54,13 @@ export default function FloorFormModal({ mode, floorName, onClose }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Floor Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputClass}
-              placeholder="e.g. 3rd Floor, Basement"
-              required
-            />
+              <input autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={inputClass}
+                placeholder="e.g. 3rd Floor, Basement"
+                required
+              />
           </div>
 
           {isAdd && (

@@ -1,23 +1,23 @@
 import { useLocation } from 'react-router-dom'
-import { building } from '../../data/currentBuilding'
-
-const titles = {
-  '/dashboard': { title: 'Dashboard', subtitle: `${building.name} &mdash; ${building.location}` },
-  '/properties': { title: 'Tenants', subtitle: `${building.name} &mdash; Browse tenants by floor` },
-  '/rent-collection': { title: 'Rent Collection', subtitle: `${building.name} &mdash; Record payments and track balances` },
-  '/financial-reports': { title: 'Financial Reports', subtitle: `${building.name} &mdash; Revenue and cash flow` },
-  '/maintenance-board': { title: 'Maintenance Board', subtitle: `${building.name} &mdash; Track maintenance requests` },
-  '/maintenance-requests': { title: 'Maintenance Requests', subtitle: `${building.name} &mdash; All requests` },
-}
+import { useBuilding } from '../../context/BuildingContext'
 
 function titleForPath(path) {
-  if (path.startsWith('/properties/floor/') && path.includes('/unit/')) return { title: 'Unit Details', subtitle: `${building.name} &mdash; Shop information and tenant details` }
-  if (path.startsWith('/properties/floor/')) return { title: 'Floor Overview', subtitle: `${building.name} &mdash; Shops and units on this floor` }
+  if (path.startsWith('/properties/floor/') && path.includes('/unit/')) return { title: 'Unit Details', subtitle: `Shop information and tenant details` }
+  if (path.startsWith('/properties/floor/')) return { title: 'Floor Overview', subtitle: `Shops and units on this floor` }
+  const titles = {
+    '/dashboard': { title: 'Dashboard', subtitle: 'Overview and key metrics' },
+    '/properties': { title: 'Tenants', subtitle: 'Browse tenants by floor' },
+    '/rent-collection': { title: 'Rent Collection', subtitle: 'Record payments and track balances' },
+    '/financial-reports': { title: 'Financial Reports', subtitle: 'Revenue and cash flow' },
+    '/maintenance-board': { title: 'Maintenance Board', subtitle: 'Track maintenance requests' },
+    '/maintenance-requests': { title: 'Maintenance Requests', subtitle: 'All requests' },
+  }
   return titles[path] || { title: 'RentiHub', subtitle: '' }
 }
 
 export default function Header() {
   const { pathname } = useLocation()
+  const { building } = useBuilding()
   const info = titleForPath(pathname)
 
   return (
@@ -25,7 +25,7 @@ export default function Header() {
       <div className="px-8 h-16 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">{info.title}</h1>
-          <p className="text-xs text-gray-400 mt-0.5">{info.subtitle}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{building.name} &mdash; {info.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">

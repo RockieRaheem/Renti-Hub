@@ -1,9 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useBuilding } from '../context/BuildingContext'
 
 const paymentStatuses = ['Good Payer', 'Neutral Payer', 'Bad Payer']
 
 export default function TenantFormModal({ mode, initialData, floorName, unitId, onClose }) {
+  const overlayRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
   const { floors, addTenant, updateTenant, deleteTenant } = useBuilding()
   const isAdd = mode === 'add'
 
@@ -48,7 +55,7 @@ export default function TenantFormModal({ mode, initialData, floorName, unitId, 
     'w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div ref={overlayRef} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === overlayRef.current) onClose() }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div>
@@ -69,7 +76,7 @@ export default function TenantFormModal({ mode, initialData, floorName, unitId, 
             <>
               <div>
                 <label className={labelClass}>Floor</label>
-                <select value={selectedFloor} onChange={(e) => { setSelectedFloor(e.target.value); setSelectedUnit('') }} className={inputClass} required>
+                <select autoFocus value={selectedFloor} onChange={(e) => { setSelectedFloor(e.target.value); setSelectedUnit('') }} className={inputClass} required>
                   <option value="">Select floor</option>
                   {floors.map((f) => (
                     <option key={f.name} value={f.name}>{f.name}</option>

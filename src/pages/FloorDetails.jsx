@@ -1,9 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
+import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
-import { building, getFloorBySlug, getAvatarColor } from '../data/currentBuilding'
 
 export default function FloorDetails() {
   const { floorName } = useParams()
+  const { building, getFloorBySlug, getAvatarColor } = useBuilding()
   const floor = getFloorBySlug(floorName)
 
   if (!floor) {
@@ -24,7 +25,7 @@ export default function FloorDetails() {
     <div className="p-6 md:p-8 space-y-6">
 
       <div className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-        <Link to="/properties" className="hover:text-blue-600 transition-colors">Building</Link>
+        <Link to="/properties" className="hover:text-blue-600 transition-colors">Tenants</Link>
         <span className="material-symbols-outlined text-base">chevron_right</span>
         <span className="text-gray-900 font-medium">{floor.name}</span>
       </div>
@@ -60,7 +61,6 @@ export default function FloorDetails() {
           <div className="grid gap-4">
             {floor.units.map((unit) => {
               const t = unit.tenant
-              const unitRev = unit.status === 'occupied' ? unit.monthlyRent : 0
               return (
                 <Link
                   key={unit.id}
