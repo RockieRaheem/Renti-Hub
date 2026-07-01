@@ -4,17 +4,14 @@ import Header from './Header'
 
 export default function AppLayout() {
   return (
-    <div className="flex h-screen overflow-hidden bg-background"
-      style={{
-        backgroundImage:
-          'radial-gradient(at 0% 0%, rgba(0, 55, 176, 0.03) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(249, 115, 22, 0.03) 0px, transparent 50%)',
-      }}
-    >
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <div className="max-w-7xl mx-auto">
-          <Outlet />
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>
