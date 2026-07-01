@@ -208,3 +208,18 @@ export const priorityBorders = {
   Medium: 'border-l-yellow-500',
   Low: 'border-l-blue-400',
 }
+
+export function floorSlug(name) {
+  return name.toLowerCase().replace(/\s+/g, '-')
+}
+
+export function getFloorBySlug(slug) {
+  return floors.find((f) => floorSlug(f.name) === slug) || null
+}
+
+export function getUnitByFloorAndId(floorSlugParam, unitId) {
+  const f = getFloorBySlug(floorSlugParam)
+  if (!f) return null
+  const unit = f.units.find((u) => u.id === unitId) || null
+  return unit ? { ...unit, floor: f.name } : null
+}
