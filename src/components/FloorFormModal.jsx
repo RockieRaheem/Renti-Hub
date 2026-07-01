@@ -58,19 +58,17 @@ export default function FloorFormModal({ mode, floorName, onClose }) {
 
           {isAdd && (
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Number of Units</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min={1}
-                  max={12}
-                  value={unitCount}
-                  onChange={(e) => setUnitCount(Number(e.target.value))}
-                  className="flex-1 accent-blue-600"
-                />
-                <span className="text-sm font-semibold text-gray-900 w-6 text-center">{unitCount}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">Auto-generates {unitCount} vacant unit{unitCount !== 1 ? 's' : ''} on this floor</p>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Number of Shops</label>
+              <input
+                type="number"
+                min={1}
+                value={unitCount}
+                onChange={(e) => setUnitCount(Math.max(1, parseInt(e.target.value) || 1))}
+                className={inputClass}
+                placeholder="e.g. 6"
+                required
+              />
+              <p className="text-xs text-gray-400 mt-1.5">Auto-generates {unitCount} vacant shop{unitCount !== 1 ? 's' : ''} on this floor</p>
             </div>
           )}
 
