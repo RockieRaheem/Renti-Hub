@@ -1,6 +1,15 @@
 import { Link } from 'react-router-dom'
 import StatusBadge from '../components/ui/StatusBadge'
-import { maintenanceStats, requests, getAssigneeColor, assigneeInitials, priorityBorders } from '../data/maintenance'
+import { building, maintenance, maintenanceStats, priorityBorders } from '../data/currentBuilding'
+
+function assigneeInitials(name) {
+  return name.split(' ').map((w) => w[0]).join('')
+}
+
+function getAvatarColor(name) {
+  const colors = { 'John Ssempijja': 'bg-blue-100 text-blue-700', 'Sarah Nabatanzi': 'bg-teal-100 text-teal-700' }
+  return colors[name] || 'bg-gray-100 text-gray-700'
+}
 
 function KanbanCard({ item }) {
   return (
@@ -9,18 +18,18 @@ function KanbanCard({ item }) {
         <h4 className="text-sm font-semibold text-gray-900">{item.title}</h4>
         <span className="text-[10px] text-gray-400 whitespace-nowrap ml-3">{item.date}</span>
       </div>
-      <p className="text-xs text-gray-400 mb-3">{item.property} &middot; {item.tenant}</p>
+      <p className="text-xs text-gray-400 mb-3">{item.tenant}</p>
       <div className="flex items-center justify-between">
         <StatusBadge status={item.priority} />
         {item.assignee && (
-          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAssigneeColor(item.assignee)}`}>
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ${getAvatarColor(item.assignee)}`}>
             {assigneeInitials(item.assignee)}
           </div>
         )}
       </div>
       {item.resolution && (
         <p className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-green-600 font-medium">
-          Resolution: {item.resolution}
+          {item.resolution}
         </p>
       )}
     </div>
@@ -43,13 +52,20 @@ function KanbanColumn({ title, count, items }) {
 
 export default function MaintenanceBoard() {
   const columns = [
-    { title: 'Pending', count: maintenanceStats.pending, items: requests.pending },
-    { title: 'In Progress', count: maintenanceStats.inProgress, items: requests.inProgress },
-    { title: 'Resolved', count: maintenanceStats.resolved, items: requests.resolved },
+    { title: 'Pending', count: maintenanceStats.pending, items: maintenance.pending },
+    { title: 'In Progress', count: maintenanceStats.inProgress, items: maintenance.inProgress },
+    { title: 'Resolved', count: maintenanceStats.resolved, items: maintenance.resolved },
   ]
 
   return (
     <div className="p-6 md:p-8 space-y-6">
+
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-2 h-2 rounded-full bg-green-500" />
+        <p className="text-sm text-gray-500">
+          <span className="font-semibold text-gray-900">{building.name}</span> &mdash; Maintenance
+        </p>
+      </div>
 
       <div className="grid grid-cols-3 gap-4">
         {columns.map((c) => (

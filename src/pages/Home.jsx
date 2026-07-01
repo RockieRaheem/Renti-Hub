@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 const features = [
   {
     icon: 'apartment',
-    title: 'Properties & Shops',
-    desc: 'Manage buildings, floors, and units from a single dashboard. Track occupancy, leases, and revenue across your entire portfolio.',
+    title: 'Your Building, Organized',
+    desc: 'Manage floors, units, and occupancy from a single dashboard. Know exactly who is in which space at all times.',
     color: 'bg-blue-600',
   },
   {
@@ -72,7 +72,7 @@ export default function Home() {
                   <span className="bg-[#0037b0] text-white px-3 inline-block mt-1">simplified.</span>
                 </h1>
                 <p className="text-base sm:text-lg text-gray-400 leading-relaxed mb-8 max-w-lg">
-                  Digitize your rent collection, manage properties across Kampala, and keep every record organized — without the spreadsheets.
+                  Everything you need to run your building &mdash; units, tenants, rent, and maintenance &mdash; in one place, without the spreadsheets.
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <Link to="/register" className="px-7 py-3.5 bg-[#0037b0] text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
@@ -133,8 +133,8 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-6 relative">
             <div className="grid md:grid-cols-3 gap-12 md:gap-16">
               {[
-                { value: '124+', label: 'Properties Managed' },
-                { value: 'UGX 4.2B', label: 'Total Portfolio Value' },
+                { value: '24', label: 'Units Managed' },
+                { value: 'UGX 4.9M', label: 'Monthly Revenue' },
                 { value: '98.2%', label: 'Collection Rate' },
               ].map((s) => (
                 <div key={s.label} className="text-center md:text-left">

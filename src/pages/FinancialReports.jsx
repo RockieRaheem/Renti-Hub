@@ -1,5 +1,5 @@
 import DonutChart from '../components/charts/DonutChart'
-import { reportSummary, cashFlowData, revenueMix, propertyBreakdown } from '../data/financialReports'
+import { building, kpis, cashFlowData, revenueMix } from '../data/currentBuilding'
 
 const maxCashFlow = Math.max(...cashFlowData.flatMap((d) => [d.income, d.expenses]))
 const totalMix = revenueMix.reduce((s, item) => s + item.value, 0)
@@ -8,19 +8,25 @@ export default function FinancialReports() {
   return (
     <div className="p-6 md:p-8 space-y-6">
 
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-2 h-2 rounded-full bg-green-500" />
+        <p className="text-sm text-gray-500">
+          <span className="font-semibold text-gray-900">{building.name}</span> &mdash; Financial Reports
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {reportSummary.map((s) => (
-          <div key={s.label} className="bg-white rounded-lg border border-gray-200 p-5">
-            <p className="text-xs text-gray-500 font-medium mb-0.5">{s.label}</p>
-            <p className="text-2xl font-bold text-gray-900 mb-1">{s.value}</p>
-            <p className="text-xs text-gray-400">{s.trend}</p>
+        {kpis.map((k) => (
+          <div key={k.label} className="bg-white rounded-lg border border-gray-200 p-5">
+            <p className="text-xs text-gray-500 font-medium mb-0.5">{k.label}</p>
+            <p className="text-2xl font-bold text-gray-900">{k.value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-7 bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-6">Cash Flow Analysis</h3>
+          <h3 className="text-base font-semibold text-gray-900 mb-6">Cash Flow</h3>
           <div className="flex items-center gap-4 mb-6">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-blue-600" />
@@ -33,14 +39,13 @@ export default function FinancialReports() {
           </div>
           <div className="flex items-end gap-3 h-52 border-b border-gray-100 pb-1">
             {cashFlowData.map((d) => {
-              const maxH = 85
-              const incomeH = (d.income / maxCashFlow) * maxH
-              const expenseH = (d.expenses / maxCashFlow) * maxH
+              const incomeH = (d.income / maxCashFlow) * 85
+              const expenseH = (d.expenses / maxCashFlow) * 85
               return (
                 <div key={d.month} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                   <div className="flex items-end gap-1 w-full justify-center" style={{ height: `${Math.max(incomeH, expenseH)}%` }}>
-                    <div className="w-[35%] bg-blue-600 rounded-t-sm transition-all" style={{ height: `${incomeH}%` }} title={`Income: ${d.income}`} />
-                    <div className="w-[35%] bg-orange-500 rounded-t-sm transition-all" style={{ height: `${expenseH}%` }} title={`Expenses: ${d.expenses}`} />
+                    <div className="w-[35%] bg-blue-600 rounded-t-sm transition-all" style={{ height: `${incomeH}%` }} />
+                    <div className="w-[35%] bg-orange-500 rounded-t-sm transition-all" style={{ height: `${expenseH}%` }} />
                   </div>
                   <span className="text-[10px] text-gray-400 font-medium pt-1">{d.month}</span>
                 </div>
@@ -63,39 +68,6 @@ export default function FinancialReports() {
               ))}
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900">Property Revenue Breakdown</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-50">
-                {['Property', 'Type', 'Occupied', 'Occupancy', 'Revenue', 'Collection'].map((h) => (
-                  <th key={h} className="text-left px-6 py-3 text-[11px] text-gray-400 font-semibold uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {propertyBreakdown.map((p) => (
-                <tr key={p.name} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{p.name}</td>
-                  <td className="px-6 py-4"><span className="bg-gray-100 text-gray-600 text-[11px] font-medium px-2.5 py-1 rounded-md">{p.type}</span></td>
-                  <td className="px-6 py-4 text-gray-700">{p.units}</td>
-                  <td className="px-6 py-4">
-                    <span className="font-semibold text-green-600">{p.occupancy}</span>
-                  </td>
-                  <td className="px-6 py-4 font-medium text-gray-900">{p.revenue}</td>
-                  <td className="px-6 py-4">
-                    <span className="font-semibold text-blue-600">{p.collection}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>

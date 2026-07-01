@@ -1,9 +1,9 @@
 import { NavLink } from 'react-router-dom'
 
 const links = [
-  { to: '/dashboard', icon: 'dashboard', label: 'Executive Dashboard' },
-  { to: '/properties', icon: 'apartment', label: 'Properties & Shops' },
-  { to: '/tenants', icon: 'groups', label: 'Tenant Directory' },
+  { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
+  { to: '/properties', icon: 'apartment', label: 'Building' },
+  { to: '/tenants', icon: 'groups', label: 'Tenants' },
   { to: '/rent-collection', icon: 'payments', label: 'Rent Collection' },
   { to: '/financial-reports', icon: 'analytics', label: 'Financial Reports' },
   { to: '/maintenance-board', icon: 'build', label: 'Maintenance' },

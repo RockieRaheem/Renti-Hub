@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { collectionStats, tenants, paymentMethods, activityLog } from '../data/rentCollection'
+import { building, tenants, paymentMethods, activityLog } from '../data/currentBuilding'
 
 export default function RentCollection() {
-  const [selected, setSelected] = useState(tenants[0].id)
+  const [selected, setSelected] = useState(tenants[0].name)
   const [method, setMethod] = useState('Mobile Money')
   const [amount, setAmount] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [receiptId, setReceiptId] = useState('')
 
-  const tenant = tenants.find((t) => t.id === selected)
-  const due = tenant ? tenant.rent + tenant.lateFee : 0
+  const tenant = tenants.find((t) => t.name === selected)
+  const due = tenant ? parseInt(tenant.rent.replace(/[^0-9]/g, ''), 10) : 0
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -17,27 +17,14 @@ export default function RentCollection() {
     setSubmitted(true)
   }
 
-  const resetForm = () => {
-    setAmount('')
-    setSubmitted(false)
-    setReceiptId('')
-  }
-
   return (
     <div className="p-6 md:p-8 space-y-6">
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Today's Collection", value: collectionStats.today },
-          { label: 'This Week', value: collectionStats.week },
-          { label: 'Monthly Total', value: collectionStats.month },
-          { label: 'Pending Payments', value: collectionStats.pending },
-        ].map((s) => (
-          <div key={s.label} className="bg-white rounded-lg border border-gray-200 p-5">
-            <p className="text-xs text-gray-500 font-medium mb-0.5">{s.label}</p>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-          </div>
-        ))}
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-2 h-2 rounded-full bg-green-500" />
+        <p className="text-sm text-gray-500">
+          <span className="font-semibold text-gray-900">{building.name}</span> &mdash; Rent Collection
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -61,7 +48,6 @@ export default function RentCollection() {
                   { label: 'Amount', value: `UGX ${Number(amount || due).toLocaleString()}` },
                   { label: 'Method', value: method },
                   { label: 'Date', value: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) },
-                  { label: 'Status', value: 'Completed' },
                 ].map((r) => (
                   <div key={r.label} className="flex justify-between">
                     <span className="text-gray-400">{r.label}</span>
@@ -69,7 +55,8 @@ export default function RentCollection() {
                   </div>
                 ))}
               </div>
-              <button onClick={resetForm} className="w-full border border-gray-200 text-gray-600 font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+              <button onClick={() => { setAmount(''); setSubmitted(false); setReceiptId('') }}
+                className="w-full border border-gray-200 text-gray-600 font-medium py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
                 Record Another Payment
               </button>
             </div>
@@ -77,29 +64,21 @@ export default function RentCollection() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Tenant</label>
-                <select
-                  value={selected}
-                  onChange={(e) => { setSelected(Number(e.target.value)); setSubmitted(false) }}
-                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all"
-                >
+                <select value={selected} onChange={(e) => { setSelected(e.target.value); setSubmitted(false) }}
+                  className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all">
                   {tenants.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} &mdash; {t.unit}
-                    </option>
+                    <option key={t.name} value={t.name}>{t.name} &mdash; {t.unit}</option>
                   ))}
                 </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-1">Amount Due</p>
-                  <p className="text-xl font-bold text-gray-900">UGX {due.toLocaleString()}</p>
-                  {tenant && tenant.lateFee > 0 && (
-                    <p className="text-xs text-red-500 mt-1">Includes UGX {tenant.lateFee.toLocaleString()} late fee</p>
-                  )}
+                  <p className="text-xs text-gray-400 font-medium mb-1">Monthly Rent</p>
+                  <p className="text-xl font-bold text-gray-900">{tenant?.rent || 'UGX 0'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount Paying</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
                   <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)}
                     className="w-full border border-gray-200 rounded-lg px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-50 outline-none transition-all" placeholder="Enter amount..." />
                 </div>
@@ -111,12 +90,8 @@ export default function RentCollection() {
                   {paymentMethods.map((m) => (
                     <button key={m} type="button" onClick={() => setMethod(m)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        method === m
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
-                      }`}>
-                      {m}
-                    </button>
+                        method === m ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
+                      }`}>{m}</button>
                   ))}
                 </div>
               </div>

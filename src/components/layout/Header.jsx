@@ -1,13 +1,13 @@
 import { useLocation } from 'react-router-dom'
 
 const titles = {
-  '/dashboard': { title: 'Executive Dashboard', subtitle: 'Reporting period: Oct 2023 - Mar 2024' },
-  '/properties': { title: 'Property & Shop Management', subtitle: 'Oversee all buildings, floors, and shop units' },
-  '/tenants': { title: 'Tenant Directory', subtitle: 'Manage all tenant profiles across properties' },
-  '/rent-collection': { title: 'Rent Collection', subtitle: 'Record payments, print receipts, track balances' },
-  '/financial-reports': { title: 'Financial Reports', subtitle: 'Revenue insights, collection rates, and cash flow' },
-  '/maintenance-board': { title: 'Maintenance Board', subtitle: 'Track and manage maintenance requests' },
-  '/maintenance-requests': { title: 'Maintenance Requests', subtitle: 'Alternate Kanban view of all requests' },
+  '/dashboard': { title: 'Dashboard', subtitle: 'City Plaza &mdash; Nakasero, Kampala' },
+  '/properties': { title: 'Building Overview', subtitle: 'City Plaza &mdash; Floors, units and occupancy' },
+  '/tenants': { title: 'Tenants', subtitle: 'City Plaza &mdash; Manage all tenants' },
+  '/rent-collection': { title: 'Rent Collection', subtitle: 'City Plaza &mdash; Record payments and track balances' },
+  '/financial-reports': { title: 'Financial Reports', subtitle: 'City Plaza &mdash; Revenue and cash flow' },
+  '/maintenance-board': { title: 'Maintenance Board', subtitle: 'City Plaza &mdash; Track maintenance requests' },
+  '/maintenance-requests': { title: 'Maintenance Requests', subtitle: 'City Plaza &mdash; All requests' },
 }
 
 export default function Header() {
