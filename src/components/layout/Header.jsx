@@ -3,8 +3,7 @@ import { building } from '../../data/currentBuilding'
 
 const titles = {
   '/dashboard': { title: 'Dashboard', subtitle: `${building.name} &mdash; ${building.location}` },
-  '/properties': { title: 'Building Overview', subtitle: `${building.name} &mdash; Floors, units and occupancy` },
-  '/tenants': { title: 'Tenants', subtitle: `${building.name} &mdash; Manage all tenants` },
+  '/properties': { title: 'Tenants', subtitle: `${building.name} &mdash; Browse tenants by floor` },
   '/rent-collection': { title: 'Rent Collection', subtitle: `${building.name} &mdash; Record payments and track balances` },
   '/financial-reports': { title: 'Financial Reports', subtitle: `${building.name} &mdash; Revenue and cash flow` },
   '/maintenance-board': { title: 'Maintenance Board', subtitle: `${building.name} &mdash; Track maintenance requests` },
