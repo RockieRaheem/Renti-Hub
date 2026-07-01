@@ -4,6 +4,7 @@ import { useBuilding } from '../context/BuildingContext'
 import { floorSlug } from '../data/currentBuilding'
 import StatusBadge from '../components/ui/StatusBadge'
 import TenantFormModal from '../components/TenantFormModal'
+import FloorFormModal from '../components/FloorFormModal'
 
 const floorStyles = [
   {
@@ -33,12 +34,40 @@ const floorStyles = [
     accent: 'text-rose-700',
     chipFloor: 'bg-rose-100 text-rose-800',
   },
+  {
+    icon: 'layers',
+    gradient: 'from-emerald-800 to-emerald-600',
+    lightBg: 'bg-emerald-50',
+    iconBg: 'bg-white/15',
+    iconShadow: 'shadow-emerald-800/15',
+    accent: 'text-emerald-700',
+    chipFloor: 'bg-emerald-100 text-emerald-800',
+  },
+  {
+    icon: 'stacked_line_chart',
+    gradient: 'from-cyan-800 to-cyan-600',
+    lightBg: 'bg-cyan-50',
+    iconBg: 'bg-white/15',
+    iconShadow: 'shadow-cyan-800/15',
+    accent: 'text-cyan-700',
+    chipFloor: 'bg-cyan-100 text-cyan-800',
+  },
+  {
+    icon: 'grid_view',
+    gradient: 'from-orange-800 to-orange-600',
+    lightBg: 'bg-orange-50',
+    iconBg: 'bg-white/15',
+    iconShadow: 'shadow-orange-800/15',
+    accent: 'text-orange-700',
+    chipFloor: 'bg-orange-100 text-orange-800',
+  },
 ]
 
 export default function Properties() {
   const { building, floors, totalUnits, occupiedUnits, monthlyRevenue } = useBuilding()
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(null)
+  const [floorModal, setFloorModal] = useState(null)
 
   const q = search.toLowerCase().trim()
 
@@ -95,8 +124,8 @@ export default function Properties() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300 text-lg pointer-events-none">search</span>
           <input
             value={search}
@@ -110,13 +139,22 @@ export default function Properties() {
             </button>
           )}
         </div>
-        <button
-          onClick={() => setModal({ mode: 'add' })}
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
-        >
-          <span className="material-symbols-outlined text-lg">person_add</span>
-          Add Tenant
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFloorModal({ mode: 'add' })}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 text-sm font-semibold rounded-xl transition-colors"
+          >
+            <span className="material-symbols-outlined text-lg">add_business</span>
+            Add Floor
+          </button>
+          <button
+            onClick={() => setModal({ mode: 'add' })}
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
+          >
+            <span className="material-symbols-outlined text-lg">person_add</span>
+            Add Tenant
+          </button>
+        </div>
         {q && (
           <span className="text-xs text-gray-400">
             {filteredFloors.reduce((s, f) => s + f.units.length, 0)} result{(filteredFloors.reduce((s, f) => s + f.units.length, 0)) !== 1 ? 's' : ''}
@@ -134,24 +172,34 @@ export default function Properties() {
 
           return (
             <div key={floor.name} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-              <Link to={`/properties/floor/${floorSlug(floor.name)}`} className="block">
-                <div className={`bg-gradient-to-r ${style.gradient} p-5 pb-6 relative overflow-hidden`}>
-                  <div className="absolute inset-0 opacity-10" style={{
-                    backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px)',
-                    backgroundSize: '16px 16px',
-                  }} />
-                  <div className="flex items-start justify-between relative">
-                    <div className={`w-12 h-12 rounded-2xl ${style.iconBg} backdrop-blur-sm flex items-center justify-center shadow-lg ${style.iconShadow}`}>
-                      <span className="material-symbols-outlined text-white text-2xl" style={{ fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24" }}>{style.icon}</span>
+              <div className="relative">
+                <Link to={`/properties/floor/${floorSlug(floor.name)}`} className="block">
+                  <div className={`bg-gradient-to-r ${style.gradient} p-5 pb-6 relative overflow-hidden`}>
+                    <div className="absolute inset-0 opacity-10" style={{
+                      backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px)',
+                      backgroundSize: '16px 16px',
+                    }} />
+                    <div className="flex items-start justify-between relative">
+                      <div className={`w-12 h-12 rounded-2xl ${style.iconBg} backdrop-blur-sm flex items-center justify-center shadow-lg ${style.iconShadow}`}>
+                        <span className="material-symbols-outlined text-white text-2xl" style={{ fontVariationSettings: "'FILL' 1, 'wght' 300, 'GRAD' 0, 'opsz' 24" }}>{style.icon}</span>
+                      </div>
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-[11px] font-semibold text-white tracking-wide">
+                        {pct}% occupied
+                      </div>
                     </div>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-[11px] font-semibold text-white tracking-wide">
-                      {pct}% occupied
-                    </div>
+                    <h3 className="text-white text-xl font-bold mt-4 relative">{floor.name}</h3>
+                    <p className="text-white/70 text-sm mt-0.5 relative">{floor.units.length} units &middot; {building.name}</p>
                   </div>
-                  <h3 className="text-white text-xl font-bold mt-4 relative">{floor.name}</h3>
-                  <p className="text-white/70 text-sm mt-0.5 relative">{floor.units.length} units &middot; {building.name}</p>
-                </div>
-              </Link>
+                </Link>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setFloorModal({ mode: 'edit', floorName: floor.name }) }}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center bg-white/20 backdrop-blur-sm text-white/80 hover:bg-white/30 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
+                  title="Edit floor"
+                >
+                  <span className="material-symbols-outlined text-lg">edit</span>
+                </button>
+              </div>
 
               <div className="p-5 -mt-2 relative z-10">
                 <div className="flex items-center justify-between mb-4">
@@ -271,6 +319,13 @@ export default function Properties() {
           floorName={modal.floorName}
           unitId={modal.unitId}
           onClose={closeModal}
+        />
+      )}
+      {floorModal && (
+        <FloorFormModal
+          mode={floorModal.mode}
+          floorName={floorModal.floorName}
+          onClose={() => setFloorModal(null)}
         />
       )}
     </div>

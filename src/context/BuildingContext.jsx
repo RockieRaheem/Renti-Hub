@@ -82,6 +82,31 @@ export function BuildingProvider({ children }) {
     )
   }, [])
 
+  const addFloor = useCallback((name, unitCount) => {
+    const prefix = name === 'Ground Floor' ? 'G' : name.startsWith('1st') ? '1' : name[0]
+    const units = Array.from({ length: unitCount }, (_, i) => ({
+      id: `${prefix}${i + 1}`,
+      name: `Unit ${i + 1}`,
+      type: 'Retail',
+      size: 'TBD',
+      rent: 'TBD',
+      monthlyRent: 0,
+      status: 'vacant',
+      tenant: null,
+    }))
+    setFloors((prev) => [...prev, { name, units }])
+  }, [])
+
+  const updateFloor = useCallback((oldName, newName) => {
+    setFloors((prev) =>
+      prev.map((f) => (f.name !== oldName ? f : { ...f, name: newName })),
+    )
+  }, [])
+
+  const deleteFloor = useCallback((name) => {
+    setFloors((prev) => prev.filter((f) => f.name !== name))
+  }, [])
+
   const deleteTenant = useCallback((floorName, unitId) => {
     setFloors((prev) =>
       prev.map((floor) => {
@@ -117,8 +142,8 @@ export function BuildingProvider({ children }) {
   )
 
   const value = useMemo(
-    () => ({ building, floors, totalUnits, occupiedUnits, monthlyRevenue, addTenant, updateTenant, deleteTenant }),
-    [floors, totalUnits, occupiedUnits, monthlyRevenue, addTenant, updateTenant, deleteTenant],
+    () => ({ building, floors, totalUnits, occupiedUnits, monthlyRevenue, addTenant, updateTenant, deleteTenant, addFloor, updateFloor, deleteFloor }),
+    [floors, totalUnits, occupiedUnits, monthlyRevenue, addTenant, updateTenant, deleteTenant, addFloor, updateFloor, deleteFloor],
   )
 
   return <BuildingContext.Provider value={value}>{children}</BuildingContext.Provider>
