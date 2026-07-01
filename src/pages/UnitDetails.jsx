@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
+import TenantFormModal from '../components/TenantFormModal'
 
 export default function UnitDetails() {
   const { floorName, unitId } = useParams()
-  const { building, getUnitByFloorAndId, maintenance, getAvatarColor } = useBuilding()
+  const { building, getUnitByFloorAndId, maintenance, getAvatarColor, deleteTenant } = useBuilding()
   const unit = getUnitByFloorAndId(floorName, unitId)
   const t = unit?.tenant
+  const [showTenantModal, setShowTenantModal] = useState(false)
 
   const unitMaintenance = [
     ...maintenance.pending.filter((m) => m.floor === unit?.floor && m.unit === unit?.name),
@@ -67,7 +70,21 @@ export default function UnitDetails() {
 
               {t ? (
                 <div className="space-y-4">
-                  <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider">Tenant Details</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider">Tenant Details</h3>
+                    <div className="flex gap-1">
+                      <button onClick={() => setShowTenantModal(true)}
+                        className="px-2.5 py-1.5 text-xs font-medium text-primary hover:bg-primary-50 rounded-lg transition-colors inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">edit</span>
+                        Edit
+                      </button>
+                      <button onClick={() => { if (window.confirm(`Remove ${t.name} from ${unit.name}?`)) deleteTenant(unit.floor, unit.id) }}
+                        className="px-2.5 py-1.5 text-xs font-medium text-status-unpaid hover:bg-red-50 rounded-lg transition-colors inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">person_remove</span>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-3 mb-4 p-3 bg-surface-container rounded-lg">
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold ${getAvatarColor(t.initials)}`}>
                       {t.initials}
@@ -188,6 +205,16 @@ export default function UnitDetails() {
           </div>
         </div>
       </div>
+
+      {showTenantModal && (
+        <TenantFormModal
+          mode="edit"
+          floorName={unit.floor}
+          unitId={unit.id}
+          initialData={t}
+          onClose={() => setShowTenantModal(false)}
+        />
+      )}
     </div>
   )
 }
