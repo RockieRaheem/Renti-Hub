@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import FloorFormModal from '../components/FloorFormModal'
 import TenantFormModal from '../components/TenantFormModal'
 
 export default function Properties() {
-  const { floors } = useBuilding()
+  const { floors, floorSlug } = useBuilding()
   const [expandedFloor, setExpandedFloor] = useState(null)
   const [floorModal, setFloorModal] = useState(false)
   const [tenantModal, setTenantModal] = useState(null)
@@ -51,16 +52,16 @@ export default function Properties() {
 
           return (
             <div key={floor.name} className="bg-surface rounded-card border border-outline overflow-hidden shadow-card hover:shadow-card-hover transition-shadow">
-              <button
-                onClick={() => setExpandedFloor(isExpanded ? null : floor.name)}
-                className="w-full flex items-center justify-between p-5 text-left hover:bg-surface-container transition-colors"
+              <Link
+                to={`/properties/floor/${floorSlug(floor.name)}`}
+                className="w-full flex items-center justify-between p-5 text-left hover:bg-surface-container transition-colors group"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center text-primary shrink-0">
                     <span className="material-symbols-outlined text-xl">layers</span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-on-surface">{floor.name}</h3>
+                    <h3 className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors">{floor.name}</h3>
                     <p className="text-xs text-on-surface-muted">{occ} occupied &middot; {vac} vacant &middot; {floor.units.length} units</p>
                   </div>
                 </div>
@@ -71,9 +72,13 @@ export default function Properties() {
                     </div>
                     <span className="text-xs font-semibold text-on-surface-muted">{pct}%</span>
                   </div>
-                  <span className={`material-symbols-outlined text-on-surface-dim transition-transform ${isExpanded ? 'rotate-180' : ''}`}>expand_more</span>
+                  <button onClick={(e) => { e.preventDefault(); setExpandedFloor(isExpanded ? null : floor.name) }}
+                    className="material-symbols-outlined text-on-surface-dim hover:text-on-surface transition-all p-1 rounded-lg hover:bg-surface-container"
+                    title="Quick view units">
+                    {isExpanded ? 'expand_less' : 'expand_more'}
+                  </button>
                 </div>
-              </button>
+              </Link>
 
               {isExpanded && (
                 <div className="border-t border-outline p-5 bg-surface-container/50">
@@ -81,8 +86,11 @@ export default function Properties() {
                     {floor.units.map((unit) => {
                       const occupied = unit.status === 'occupied'
                       return (
-                        <div key={unit.id}
-                          className={`relative rounded-lg border p-3 text-center transition-all ${occupied ? 'bg-surface border-primary/20' : 'bg-surface-container border-outline'}`}>
+                        <Link
+                          key={unit.id}
+                          to={`/properties/floor/${floorSlug(floor.name)}/unit/${unit.id}`}
+                          className={`block rounded-lg border p-3 text-center transition-all hover:shadow-md hover:-translate-y-0.5 ${occupied ? 'bg-surface border-primary/20 hover:border-primary/40' : 'bg-surface-container border-outline hover:border-primary/30'}`}
+                        >
                           <div className={`w-2 h-2 rounded-full mx-auto mb-2 ${occupied ? 'bg-status-paid' : 'bg-status-vacant'}`} />
                           <p className={`text-xs font-semibold ${occupied ? 'text-on-surface' : 'text-on-surface-muted'}`}>{unit.name}</p>
                           {occupied && unit.tenant ? (
@@ -90,11 +98,16 @@ export default function Properties() {
                           ) : (
                             <p className="text-[10px] text-on-surface-dim mt-0.5">Vacant</p>
                           )}
-                        </div>
+                        </Link>
                       )
                     })}
                   </div>
-                  <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-outline">
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-outline">
+                    <Link to={`/properties/floor/${floorSlug(floor.name)}`}
+                      className="text-xs font-medium text-primary hover:text-primary-600 transition-colors inline-flex items-center gap-1">
+                      View floor details
+                      <span className="material-symbols-outlined text-sm">chevron_right</span>
+                    </Link>
                     <button onClick={() => setTenantModal({ floor: floor.name })}
                       className="px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary-50 rounded-lg transition-colors inline-flex items-center gap-1">
                       <span className="material-symbols-outlined text-sm">person_add</span>

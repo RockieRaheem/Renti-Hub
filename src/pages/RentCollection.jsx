@@ -1,13 +1,13 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
 
 export default function RentCollection() {
-  const { floors, payments, addPayment } = useBuilding()
+  const { floors, floorSlug, payments, addPayment } = useBuilding()
   const [filterFloor, setFilterFloor] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ tenantName: '', unit: '', floor: '', amount: '', status: 'Paid', date: new Date().toISOString().slice(0, 10) })
-  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const allTenants = floors.flatMap((f) =>
     f.units.filter((u) => u.tenant).map((u) => ({ ...u.tenant, unit: u.name, floor: f.name, unitId: u.id, monthlyRent: u.monthlyRent }))
@@ -92,16 +92,22 @@ export default function RentCollection() {
               </thead>
               <tbody className="divide-y divide-outline">
                 {filtered.map((t) => (
-                  <tr key={`${t.floor}-${t.unit}`} className="hover:bg-surface-container transition-colors">
+                  <tr key={`${t.floor}-${t.unit}`} className="hover:bg-surface-container transition-colors group">
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <Link to={`/properties/floor/${floorSlug(t.floor)}/unit/${t.unitId}`}
+                        className="flex items-center gap-2.5 group/link">
                         <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${t.paymentStatus === 'Good Payer' ? 'bg-green-50 text-green-700' : t.paymentStatus === 'Neutral Payer' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
                           {t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
-                        <span className="font-medium text-on-surface">{t.name}</span>
-                      </div>
+                        <span className="font-medium text-on-surface group-hover/link:text-primary transition-colors">{t.name}</span>
+                      </Link>
                     </td>
-                    <td className="px-5 py-3 text-on-surface-muted">{t.unit}</td>
+                    <td className="px-5 py-3">
+                      <Link to={`/properties/floor/${floorSlug(t.floor)}/unit/${t.unitId}`}
+                        className="text-on-surface-muted hover:text-primary transition-colors">
+                        {t.unit}
+                      </Link>
+                    </td>
                     <td className="px-5 py-3 text-on-surface-muted">{t.floor}</td>
                     <td className="px-5 py-3 font-medium text-on-surface">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
                     <td className="px-5 py-3"><StatusBadge status={t.paid ? 'Paid' : 'Overdue'} /></td>

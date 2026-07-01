@@ -25,12 +25,20 @@ function KpiCard({ icon, label, value, trend, sub }) {
 }
 
 export default function Dashboard() {
-  const { building, floors, maintenance, maintenanceStats, monthlyRevenue, payments } = useBuilding()
+  const { building, floors, floorSlug, maintenance, maintenanceStats, monthlyRevenue, payments } = useBuilding()
   const [period, setPeriod] = useState('month')
   const totalUnits = floors.reduce((s, f) => s + f.units.length, 0)
   const occupiedUnits = floors.reduce((s, f) => s + f.units.filter(u => u.status === 'occupied').length, 0)
   const recentPayments = [...payments].reverse().slice(0, 5)
   const pendingMaint = maintenanceStats.pending + maintenanceStats.inProgress
+
+  function paymentLink(p) {
+    const floor = floors.find(f => f.name === p.floor)
+    if (!floor) return null
+    const unit = floor.units.find(u => u.name === p.unit)
+    if (!unit) return null
+    return `/properties/floor/${floorSlug(floor.name)}/unit/${unit.id}`
+  }
 
   const hasData = totalUnits > 0
 
@@ -95,14 +103,29 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline">
-                  {recentPayments.map((p) => (
-                    <tr key={p.id} className="hover:bg-surface-container transition-colors">
-                      <td className="px-5 py-3 font-medium text-on-surface">{p.tenantName}</td>
-                      <td className="px-5 py-3 text-on-surface-muted">{p.unit}</td>
-                      <td className="px-5 py-3 font-medium text-on-surface">UGX {(p.amount || 0).toLocaleString()}</td>
-                      <td className="px-5 py-3"><StatusBadge status={p.status || 'Paid'} /></td>
-                    </tr>
-                  ))}
+                  {recentPayments.map((p) => {
+                    const link = paymentLink(p)
+                    return (
+                      <tr key={p.id} className="hover:bg-surface-container transition-colors group">
+                        <td className="px-5 py-3">
+                          {link ? (
+                            <Link to={link} className="font-medium text-on-surface group-hover/link:text-primary transition-colors">{p.tenantName}</Link>
+                          ) : (
+                            <span className="font-medium text-on-surface">{p.tenantName}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3">
+                          {link ? (
+                            <Link to={link} className="text-on-surface-muted hover:text-primary transition-colors">{p.unit}</Link>
+                          ) : (
+                            <span className="text-on-surface-muted">{p.unit}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 font-medium text-on-surface">UGX {(p.amount || 0).toLocaleString()}</td>
+                        <td className="px-5 py-3"><StatusBadge status={p.status || 'Paid'} /></td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -119,20 +142,20 @@ export default function Dashboard() {
           <div className="bg-surface rounded-card border border-outline p-5 shadow-card">
             <h3 className="text-sm font-semibold text-on-surface mb-4">Occupancy by Floor</h3>
             <div className="space-y-3">
-              {floors.slice(0, 5).map((f) => {
+                {floors.slice(0, 5).map((f) => {
                 const occ = f.units.filter(u => u.status === 'occupied').length
                 const total = f.units.length
                 const pct = Math.round((occ / total) * 100)
                 return (
-                  <div key={f.name}>
+                  <Link key={f.name} to={`/properties/floor/${floorSlug(f.name)}`} className="block hover:bg-surface-container rounded-lg p-1.5 -mx-1.5 transition-colors group">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-on-surface-muted">{f.name}</span>
+                      <span className="text-on-surface-muted group-hover:text-primary transition-colors">{f.name}</span>
                       <span className="font-semibold text-on-surface">{occ}/{total}</span>
                     </div>
                     <div className="h-1.5 bg-surface-container-highest rounded-full">
                       <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>
