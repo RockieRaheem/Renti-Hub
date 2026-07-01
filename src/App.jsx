@@ -3,6 +3,8 @@ import AppLayout from './components/layout/AppLayout'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Properties from './pages/Properties'
+import FloorDetails from './pages/FloorDetails'
+import UnitDetails from './pages/UnitDetails'
 import Tenants from './pages/Tenants'
 import RentCollection from './pages/RentCollection'
 import FinancialReports from './pages/FinancialReports'
@@ -20,6 +22,8 @@ export default function App() {
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/properties" element={<Properties />} />
+        <Route path="/properties/floor/:floorName" element={<FloorDetails />} />
+        <Route path="/properties/floor/:floorName/unit/:unitId" element={<UnitDetails />} />
         <Route path="/tenants" element={<Tenants />} />
         <Route path="/rent-collection" element={<RentCollection />} />
         <Route path="/financial-reports" element={<FinancialReports />} />

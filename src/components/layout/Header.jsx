@@ -1,18 +1,25 @@
 import { useLocation } from 'react-router-dom'
+import { building } from '../../data/currentBuilding'
 
 const titles = {
-  '/dashboard': { title: 'Dashboard', subtitle: 'City Plaza &mdash; Nakasero, Kampala' },
-  '/properties': { title: 'Building Overview', subtitle: 'City Plaza &mdash; Floors, units and occupancy' },
-  '/tenants': { title: 'Tenants', subtitle: 'City Plaza &mdash; Manage all tenants' },
-  '/rent-collection': { title: 'Rent Collection', subtitle: 'City Plaza &mdash; Record payments and track balances' },
-  '/financial-reports': { title: 'Financial Reports', subtitle: 'City Plaza &mdash; Revenue and cash flow' },
-  '/maintenance-board': { title: 'Maintenance Board', subtitle: 'City Plaza &mdash; Track maintenance requests' },
-  '/maintenance-requests': { title: 'Maintenance Requests', subtitle: 'City Plaza &mdash; All requests' },
+  '/dashboard': { title: 'Dashboard', subtitle: `${building.name} &mdash; ${building.location}` },
+  '/properties': { title: 'Building Overview', subtitle: `${building.name} &mdash; Floors, units and occupancy` },
+  '/tenants': { title: 'Tenants', subtitle: `${building.name} &mdash; Manage all tenants` },
+  '/rent-collection': { title: 'Rent Collection', subtitle: `${building.name} &mdash; Record payments and track balances` },
+  '/financial-reports': { title: 'Financial Reports', subtitle: `${building.name} &mdash; Revenue and cash flow` },
+  '/maintenance-board': { title: 'Maintenance Board', subtitle: `${building.name} &mdash; Track maintenance requests` },
+  '/maintenance-requests': { title: 'Maintenance Requests', subtitle: `${building.name} &mdash; All requests` },
+}
+
+function titleForPath(path) {
+  if (path.startsWith('/properties/floor/') && path.includes('/unit/')) return { title: 'Unit Details', subtitle: `${building.name} &mdash; Shop information and tenant details` }
+  if (path.startsWith('/properties/floor/')) return { title: 'Floor Overview', subtitle: `${building.name} &mdash; Shops and units on this floor` }
+  return titles[path] || { title: 'RentiHub', subtitle: '' }
 }
 
 export default function Header() {
   const { pathname } = useLocation()
-  const info = titles[pathname] || { title: 'RentiHub', subtitle: '' }
+  const info = titleForPath(pathname)
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
