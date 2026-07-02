@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
+import { downloadCSV } from '../utils/csv'
 
 export default function RentCollection() {
   const { floors, floorSlug, payments, addPayment } = useBuilding()
@@ -10,7 +11,7 @@ export default function RentCollection() {
   const [form, setForm] = useState({ tenantName: '', unit: '', floor: '', amount: '', status: 'Paid', date: new Date().toISOString().slice(0, 10) })
 
   const allTenants = floors.flatMap((f) =>
-    f.units.filter((u) => u.tenant).map((u) => ({ ...u.tenant, unit: u.name, floor: f.name, unitId: u.id, monthlyRent: u.monthlyRent }))
+    f.units.filter((u) => u.tenant).map((u) => ({ ...u.tenant, unit: u.name, floor: f.name, unitId: u.id, monthlyRent: u.monthlyRent, outstandingBalance: u.tenant.outstandingBalance || 0 }))
   )
   const filtered = filterFloor === 'all' ? allTenants : allTenants.filter((t) => t.floor === filterFloor)
 
@@ -18,6 +19,7 @@ export default function RentCollection() {
   const totalExpected = allTenants.reduce((s, t) => s + (t.monthlyRent || 0), 0)
   const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0
   const overdueCount = allTenants.filter((t) => !t.paid).length
+  const totalOutstanding = allTenants.reduce((s, t) => s + (t.outstandingBalance || 0), 0)
 
   const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
 
@@ -41,7 +43,7 @@ export default function RentCollection() {
           { icon: 'payments', label: 'Total Collected', value: `UGX ${(totalCollected / 1000000).toFixed(1)}M` },
           { icon: 'account_balance', label: 'Expected Revenue', value: `UGX ${(totalExpected / 1000000).toFixed(1)}M` },
           { icon: 'pie_chart', label: 'Collection Rate', value: `${collectionRate}%`, sub: `${payments.length} payments` },
-          { icon: 'warning', label: 'Overdue Tenants', value: overdueCount, sub: 'Need follow-up' },
+          { icon: 'warning', label: 'Outstanding / Overdue', value: `UGX ${(totalOutstanding / 1000000).toFixed(1)}M`, sub: `${overdueCount} tenant${overdueCount !== 1 ? 's' : ''}` },
         ].map((s) => (
           <div key={s.label} className="bg-surface rounded-card border border-outline p-5 shadow-card">
             <div className="flex items-center gap-3 mb-3">
@@ -85,7 +87,7 @@ export default function RentCollection() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-outline bg-surface-container/50">
-                  {['Tenant', 'Unit', 'Floor', 'Monthly Rent', 'Status', 'Last Payment', ''].map((h) => (
+                  {['Tenant', 'Unit', 'Floor', 'Monthly Rent', 'Status', 'Outstanding', 'Last Payment', ''].map((h) => (
                     <th key={h} className="text-left px-5 py-3 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -111,6 +113,9 @@ export default function RentCollection() {
                     <td className="px-5 py-3 text-on-surface-muted">{t.floor}</td>
                     <td className="px-5 py-3 font-medium text-on-surface">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
                     <td className="px-5 py-3"><StatusBadge status={t.paid ? 'Paid' : 'Overdue'} /></td>
+                    <td className={`px-5 py-3 text-xs font-medium ${t.outstandingBalance > 0 ? 'text-status-unpaid' : 'text-on-surface-muted'}`}>
+                      {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` : '—'}
+                    </td>
                     <td className="px-5 py-3 text-on-surface-muted text-xs">{t.lastPaymentDate || '—'}</td>
                     <td className="px-5 py-3">
                       <button onClick={() => {

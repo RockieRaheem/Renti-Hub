@@ -182,6 +182,7 @@ export function BuildingProvider({ children }) {
                 leaseTerm: tenantData.leaseTerm || '',
                 paymentStatus: tenantData.paymentStatus || 'Good Payer',
                 paid: true,
+                outstandingBalance: 0,
                 lastPayment: '',
                 lastPaymentDate: '',
               },
@@ -280,11 +281,14 @@ export function BuildingProvider({ children }) {
           ...f,
           units: f.units.map((u) => {
             if (u.name !== unit || !u.tenant) return u
+            const currentOutstanding = u.tenant.outstandingBalance || 0
+            const newOutstanding = Math.max(0, currentOutstanding - rawAmount)
             return {
               ...u,
               tenant: {
                 ...u.tenant,
-                paid: true,
+                outstandingBalance: newOutstanding,
+                paid: newOutstanding <= 0,
                 lastPayment: `UGX ${rawAmount.toLocaleString()}`,
                 lastPaymentDate: new Date().toLocaleDateString('en-GB', {
                   day: 'numeric', month: 'short', year: 'numeric',
@@ -311,6 +315,7 @@ export function BuildingProvider({ children }) {
         ...u.tenant,
         unit: u.name,
         floor: f.name,
+        monthlyRent: u.monthlyRent,
         rent: `UGX ${u.monthlyRent.toLocaleString()}/mo`,
         unitType: u.type,
         unitSize: u.size,
@@ -325,26 +330,19 @@ export function BuildingProvider({ children }) {
     latePayers: tenants.filter((t) => !t.paid).length,
     arrears: `UGX ${tenants
       .filter((t) => !t.paid)
-      .reduce((s, t) => s + parseInt(t.rent.replace(/[^0-9]/g, ''), 10), 0)
+      .reduce((s, t) => s + (t.outstandingBalance || 0), 0)
       .toLocaleString()}`,
     activeLeases: tenants.filter((t) => t.paid).length,
   }), [tenants])
 
   const transactions = useMemo(() => {
-    const t = floors.flatMap((f) =>
-      f.units.filter((u) => u.tenant && u.tenant.paid).map((u) => ({
+    return floors.flatMap((f) =>
+      f.units.filter((u) => u.tenant).map((u) => ({
         unit: u.name, floor: f.name, tenant: u.tenant.name, initials: u.tenant.initials,
-        badge: 'Paid', amount: `UGX ${u.monthlyRent.toLocaleString()}`,
+        badge: (u.tenant.outstandingBalance || 0) <= 0 ? 'Paid' : (u.tenant.lastPayment ? 'Partial' : 'Overdue'),
+        amount: `UGX ${(u.monthlyRent || 0).toLocaleString()}`,
       })),
     )
-    const tenant = floors.flatMap((f) => f.units).find((u) => u.id === '2A')?.tenant
-    if (tenant) {
-      t.push({
-        unit: 'Conference Centre', floor: '2nd Floor', tenant: tenant.name, initials: tenant.initials,
-        badge: 'Partial', amount: 'UGX 375,000',
-      })
-    }
-    return t
   }, [floors])
 
   const alerts = useMemo(
@@ -372,15 +370,13 @@ export function BuildingProvider({ children }) {
 
   const upcomingPayments = useMemo(
     () =>
-      tenants
-        .filter((t) => t.paid)
-        .map((t) => ({
-          tenant: t.name,
-          unit: t.unit,
-          floor: t.floor,
-          amount: `UGX ${parseInt(t.rent.replace(/[^0-9]/g, ''), 10).toLocaleString()}`,
-          due: 'Next cycle',
-        })),
+      tenants.map((t) => ({
+        tenant: t.name,
+        unit: t.unit,
+        floor: t.floor,
+        amount: `UGX ${(t.monthlyRent || 0).toLocaleString()}`,
+        due: (t.outstandingBalance || 0) > 0 ? `${(t.outstandingBalance || 0).toLocaleString()} UGX outstanding` : 'Next cycle',
+      })),
     [tenants],
   )
 

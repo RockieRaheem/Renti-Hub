@@ -1,12 +1,69 @@
+import { useMemo } from 'react'
 import { useBuilding } from '../context/BuildingContext'
 import DonutChart from '../components/charts/DonutChart'
 
+const MONTHS = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
+const TYPE_COLORS = { Retail: '#0037b0', Office: '#F97316', 'Event Space': '#22c55e' }
+
+function getMonthLabel(dateStr) {
+  const d = new Date(dateStr)
+  return MONTHS[d.getMonth()]
+}
+
+function getMonthIndex(label) {
+  return MONTHS.indexOf(label)
+}
+
 export default function FinancialReports() {
-  const { building, floors, monthlyRevenue, cashFlowData, revenueMix } = useBuilding()
-  const maxCashFlow = Math.max(...cashFlowData.flatMap((d) => [d.income, d.expenses]))
+  const { floors, payments, monthlyRevenue } = useBuilding()
+
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const last6 = Array.from({ length: 6 }, (_, i) => {
+    const idx = (currentMonth - 5 + i + 12) % 12
+    return MONTHS[idx]
+  })
+
+  const cashFlow = useMemo(() => {
+    const monthlyPayments = {}
+    payments.forEach((p) => {
+      const label = p.date ? getMonthLabel(p.date) : null
+      if (label && last6.includes(label)) {
+        monthlyPayments[label] = (monthlyPayments[label] || 0) + (p.amount || 0)
+      }
+    })
+    const occupiedTotal = floors.reduce((s, f) =>
+      s + f.units.filter((u) => u.status === 'occupied').reduce((us, u) => us + (u.monthlyRent || 0), 0), 0
+    )
+    return last6.map((m) => ({
+      month: m,
+      income: monthlyPayments[m] || 0,
+      expected: occupiedTotal,
+    }))
+  }, [payments, floors, last6])
+
+  const maxCashFlow = Math.max(...cashFlow.flatMap((d) => [d.income, d.expected]), 1)
+  const totalIncome = cashFlow.reduce((s, d) => s + d.income, 0)
+  const totalExpected = cashFlow.reduce((s, d) => s + d.expected, 0)
+
+  const revenueMix = useMemo(() => {
+    const byType = {}
+    floors.forEach((f) =>
+      f.units.filter((u) => u.tenant).forEach((u) => {
+        const type = u.type || 'Other'
+        byType[type] = (byType[type] || 0) + (u.monthlyRent || 0)
+      })
+    )
+    const total = Object.values(byType).reduce((s, v) => s + v, 0)
+    if (total === 0) return []
+    return Object.entries(byType).map(([label, value]) => ({
+      label,
+      value: Math.round((value / total) * 100),
+      color: TYPE_COLORS[label] || '#9aa0a6',
+    })).sort((a, b) => b.value - a.value)
+  }, [floors])
+
   const totalMix = revenueMix.reduce((s, item) => s + item.value, 0)
-  const totalIncome = cashFlowData.reduce((s, d) => s + d.income, 0)
-  const totalExpenses = cashFlowData.reduce((s, d) => s + d.expenses, 0)
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -16,29 +73,29 @@ export default function FinancialReports() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-sm font-semibold text-on-surface">Cash Flow</h3>
-              <p className="text-xs text-on-surface-muted mt-0.5">Income vs expenses over time</p>
+              <p className="text-xs text-on-surface-muted mt-0.5">Actual collections vs expected revenue</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded bg-primary" />
-                <span className="text-xs text-on-surface-muted">Income</span>
+                <span className="text-xs text-on-surface-muted">Collected</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded bg-status-partial" />
-                <span className="text-xs text-on-surface-muted">Expenses</span>
+                <span className="text-xs text-on-surface-muted">Expected</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-end gap-3 h-56 border-b border-outline pb-1">
-            {cashFlowData.map((d) => {
+            {cashFlow.map((d) => {
               const incomeH = maxCashFlow > 0 ? (d.income / maxCashFlow) * 90 : 0
-              const expenseH = maxCashFlow > 0 ? (d.expenses / maxCashFlow) * 90 : 0
+              const expenseH = maxCashFlow > 0 ? (d.expected / maxCashFlow) * 90 : 0
               return (
                 <div key={d.month} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
                   <div className="flex items-end gap-0.5 w-full justify-center transition-all" style={{ height: `${Math.max(incomeH, expenseH) || 4}%` }}>
-                    <div className="w-[40%] bg-primary rounded-t-sm transition-all hover:opacity-80 min-h-[4px]" style={{ height: `${incomeH || 4}%` }} title={`Income: UGX ${(d.income / 1000000).toFixed(1)}M`} />
-                    <div className="w-[40%] bg-status-partial rounded-t-sm transition-all hover:opacity-80 min-h-[4px]" style={{ height: `${expenseH || 4}%` }} title={`Expenses: UGX ${(d.expenses / 1000000).toFixed(1)}M`} />
+                    <div className="w-[40%] bg-primary rounded-t-sm transition-all hover:opacity-80 min-h-[4px]" style={{ height: `${incomeH || 4}%` }} title={`Collected: UGX ${(d.income / 1000000).toFixed(1)}M`} />
+                    <div className="w-[40%] bg-status-partial rounded-t-sm transition-all hover:opacity-80 min-h-[4px]" style={{ height: `${expenseH || 4}%` }} title={`Expected: UGX ${(d.expected / 1000000).toFixed(1)}M`} />
                   </div>
                   <span className="text-[10px] text-on-surface-muted font-medium pt-1">{d.month}</span>
                 </div>
@@ -48,17 +105,17 @@ export default function FinancialReports() {
 
           <div className="flex items-center justify-between mt-4 text-sm">
             <div>
-              <p className="text-on-surface-muted text-xs">Total Income</p>
+              <p className="text-on-surface-muted text-xs">Total Collected (6mo)</p>
               <p className="font-bold text-on-surface">UGX {(totalIncome / 1000000).toFixed(1)}M</p>
             </div>
             <div className="text-center">
-              <p className="text-on-surface-muted text-xs">Total Expenses</p>
-              <p className="font-bold text-on-surface">UGX {(totalExpenses / 1000000).toFixed(1)}M</p>
+              <p className="text-on-surface-muted text-xs">Avg Monthly Expected</p>
+              <p className="font-bold text-on-surface">UGX {(monthlyRevenue / 1000000).toFixed(1)}M</p>
             </div>
             <div className="text-right">
-              <p className="text-on-surface-muted text-xs">Net Margin</p>
-              <p className={`font-bold ${totalIncome > 0 ? 'text-status-paid' : 'text-status-unpaid'}`}>
-                {totalIncome > 0 ? `${Math.round(((totalIncome - totalExpenses) / totalIncome) * 100)}%` : '—'}
+              <p className="text-on-surface-muted text-xs">Collection Rate</p>
+              <p className={`font-bold ${totalExpected > 0 ? 'text-status-paid' : 'text-on-surface-muted'}`}>
+                {totalExpected > 0 ? `${Math.round((totalIncome / totalExpected) * 100)}%` : '—'}
               </p>
             </div>
           </div>

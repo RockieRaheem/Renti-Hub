@@ -15,7 +15,7 @@ export const floors = [
         tenant: {
           name: 'Mukwano Industries', initials: 'MI', email: 'accounts@mukwano.com', phone: '+256 700 123456',
           leaseStart: 'Jan 2025', leaseEnd: 'Dec 2027', leaseTerm: '3 years',
-          paymentStatus: 'Good Payer', paid: true, lastPayment: 'UGX 1,000,000', lastPaymentDate: 'Jul 1, 2026',
+          paymentStatus: 'Good Payer', paid: true, outstandingBalance: 0, lastPayment: 'UGX 1,000,000', lastPaymentDate: 'Jul 1, 2026',
         },
       },
       {
@@ -24,7 +24,7 @@ export const floors = [
         tenant: {
           name: 'Centenary Bank ATM', initials: 'CB', email: 'facilities@centenarybank.co.ug', phone: '+256 712 345678',
           leaseStart: 'Jun 2024', leaseEnd: 'Jun 2029', leaseTerm: '5 years',
-          paymentStatus: 'Good Payer', paid: true, lastPayment: 'UGX 667,000', lastPaymentDate: 'Jun 28, 2026',
+          paymentStatus: 'Good Payer', paid: true, outstandingBalance: 0, lastPayment: 'UGX 667,000', lastPaymentDate: 'Jun 28, 2026',
         },
       },
       {
@@ -33,7 +33,7 @@ export const floors = [
         tenant: {
           name: 'Airtel Uganda', initials: 'AU', email: 'property@airtel.co.ug', phone: '+256 755 987654',
           leaseStart: 'Mar 2024', leaseEnd: 'Mar 2028', leaseTerm: '4 years',
-          paymentStatus: 'Good Payer', paid: true, lastPayment: 'UGX 1,000,000', lastPaymentDate: 'Jul 2, 2026',
+          paymentStatus: 'Good Payer', paid: true, outstandingBalance: 0, lastPayment: 'UGX 1,000,000', lastPaymentDate: 'Jul 2, 2026',
         },
       },
     ],
@@ -47,7 +47,7 @@ export const floors = [
         tenant: {
           name: 'Uganda Telecom Ltd', initials: 'UT', email: 'facilities@utl.co.ug', phone: '+256 754 444555',
           leaseStart: 'Oct 2024', leaseEnd: 'Oct 2027', leaseTerm: '3 years',
-          paymentStatus: 'Good Payer', paid: true, lastPayment: 'UGX 1,500,000', lastPaymentDate: 'Jul 1, 2026',
+          paymentStatus: 'Good Payer', paid: true, outstandingBalance: 0, lastPayment: 'UGX 1,500,000', lastPaymentDate: 'Jul 1, 2026',
         },
       },
       {
@@ -66,7 +66,7 @@ export const floors = [
         tenant: {
           name: 'Events Uganda', initials: 'EU', email: 'bookings@eventsuganda.com', phone: '+256 772 333444',
           leaseStart: 'Aug 2024', leaseEnd: 'Aug 2026', leaseTerm: '2 years',
-          paymentStatus: 'Neutral Payer', paid: false, lastPayment: 'UGX 375,000', lastPaymentDate: 'Jun 15, 2026',
+          paymentStatus: 'Neutral Payer', paid: false, outstandingBalance: 375000, lastPayment: 'UGX 375,000', lastPaymentDate: 'Jun 15, 2026',
         },
       },
     ],
