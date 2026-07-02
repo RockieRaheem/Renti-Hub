@@ -65,21 +65,25 @@ export function BuildingProvider({ children }) {
 
     init()
 
-    const { data: listener } = supabase.auth.onAuthStateChanged(async (event, session) => {
-      if (cancelled) return
-      if (event === 'SIGNED_OUT') {
-        setAuth(null); setUserId(null); setBuilding(null)
-        setFloors([]); setPayments([])
-        setMaintenance({ pending: [], inProgress: [], resolved: [] })
-      } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-        const { data: userData } = await q.getCurrentUser()
-        if (userData) {
-          setAuth({ name: userData.name, email: userData.email })
-          setUserId(userData.id)
-          await loadAllData(userData.id)
+    let listener
+    if (configured) {
+      const sub = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (cancelled) return
+        if (event === 'SIGNED_OUT') {
+          setAuth(null); setUserId(null); setBuilding(null)
+          setFloors([]); setPayments([])
+          setMaintenance({ pending: [], inProgress: [], resolved: [] })
+        } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+          const { data: userData } = await q.getCurrentUser()
+          if (userData) {
+            setAuth({ name: userData.name, email: userData.email })
+            setUserId(userData.id)
+            await loadAllData(userData.id)
+          }
         }
-      }
-    })
+      })
+      listener = sub.data
+    }
 
     return () => { cancelled = true; listener?.subscription?.unsubscribe() }
   }, [])
