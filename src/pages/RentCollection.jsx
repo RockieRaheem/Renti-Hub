@@ -116,9 +116,9 @@ export default function RentCollection() {
                       <Link to={`/properties/floor/${floorSlug(t.floor)}/unit/${t.unitId}`}
                         className="flex items-center gap-2.5 group/link">
                         <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${t.paymentStatus === 'Good Payer' ? 'bg-green-50 text-green-700' : t.paymentStatus === 'Neutral Payer' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
-                          {t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                          {t.name ? t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '?'}
                         </div>
-                        <span className="font-medium text-on-surface group-hover/link:text-primary transition-colors">{t.name}</span>
+                        <span className="font-medium text-on-surface group-hover/link:text-primary transition-colors">{t.name || 'Unknown'}</span>
                       </Link>
                     </td>
                     <td className="px-5 py-3">
