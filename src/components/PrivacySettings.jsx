@@ -67,7 +67,7 @@ function PrivacyOverview({ maskMode, toggleMask }) {
       <div className="bg-surface-container rounded-xl p-5">
         <h3 className="text-sm font-semibold text-on-surface mb-1">Where your data lives</h3>
         <p className="text-xs text-on-surface-muted leading-relaxed">
-          RentiHub stores all your data locally in your browser using <strong>localStorage</strong>. Nothing is ever sent to a server, cloud, or third party. Your tenant information, payment records, and financial data never leave this device.
+          RentiHub stores your data securely in <strong>PostgreSQL via Supabase</strong>. All data is encrypted in transit (TLS) and at rest. Row-level security ensures that you can only access your own data. You retain full control — export or delete your data at any time.
         </p>
       </div>
 

@@ -16,7 +16,7 @@ export default function Register() {
   const [showPw, setShowPw] = useState(false)
   const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     if (password.length < 6) {
@@ -32,15 +32,18 @@ export default function Register() {
       return
     }
     setLoading(true)
-    setTimeout(() => {
-      if (register(name, email, password)) {
+    try {
+      const success = await register(name, email, password)
+      if (success) {
         recordPrivacyConsent()
         navigate('/dashboard')
       } else {
         setError('An account with this email already exists')
-        setLoading(false)
       }
-    }, 400)
+    } catch (err) {
+      setError(err.message || 'Registration failed')
+    }
+    setLoading(false)
   }
 
   const pwStrength = password.length >= 8 ? 'Strong' : password.length >= 6 ? 'Good' : ''
@@ -123,7 +126,7 @@ export default function Register() {
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5 text-xs text-amber-800 flex items-start gap-2">
                 <span className="material-symbols-outlined text-base shrink-0 mt-0.5">security</span>
                 <p className="leading-relaxed">
-                  Your password should be at least 6 characters. All data is stored locally in your browser — nothing is sent to our servers. You can export or delete your data at any time from the Privacy settings.
+                  Your password should be at least 6 characters. Your data is encrypted in transit and at rest via Supabase (PostgreSQL). Row-level security ensures you can only access your own data. You can export or delete your data at any time from the Privacy settings.
                 </p>
               </div>
 
@@ -140,7 +143,7 @@ export default function Register() {
           </div>
 
           <p className="text-xs text-on-surface-dim text-center mt-6">
-            RentiHub stores all data locally in your browser. Read our{' '}
+            RentiHub stores your data securely in the cloud via Supabase. Read our{' '}
             <a href="#" className="underline hover:text-on-surface">Privacy Policy</a> to learn more.
           </p>
         </div>

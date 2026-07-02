@@ -1,46 +1,25 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
-import { building as seedBuilding, floors as seedFloors } from '../data/currentBuilding'
 import { logAudit } from '../utils/audit'
+import { supabase } from '../lib/supabase'
+import * as q from '../lib/queries'
 
-const STORAGE_KEY = 'rentihub_floors'
-const PAYMENTS_KEY = 'rentihub_payments'
-const MAINTENANCE_KEY = 'rentihub_maintenance'
-const AUTH_KEY = 'rentihub_auth'
+import {
+  revenueMonthly, revenueMix, cashFlowData, paymentMethods, tenantFilters,
+  statusBorders, priorityBorders, floorSlug,
+} from '../data/currentBuilding'
 
-function clone(obj) {
-  return JSON.parse(JSON.stringify(obj))
-}
-
-function load(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch {
-    return fallback
-  }
-}
+const BuildingContext = createContext()
 
 function computeInitials(name) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+  return name.split(' ').filter(Boolean).map((w) => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 const CHIP_COLORS = [
-  'bg-blue-100 text-blue-700',
-  'bg-green-100 text-green-700',
-  'bg-purple-100 text-purple-700',
-  'bg-teal-100 text-teal-700',
-  'bg-orange-100 text-orange-700',
-  'bg-pink-100 text-pink-700',
-  'bg-cyan-100 text-cyan-700',
-  'bg-rose-100 text-rose-700',
-  'bg-amber-100 text-amber-700',
-  'bg-lime-100 text-lime-700',
+  'bg-blue-100 text-blue-700', 'bg-green-100 text-green-700',
+  'bg-purple-100 text-purple-700', 'bg-teal-100 text-teal-700',
+  'bg-orange-100 text-orange-700', 'bg-pink-100 text-pink-700',
+  'bg-cyan-100 text-cyan-700', 'bg-rose-100 text-rose-700',
+  'bg-amber-100 text-amber-700', 'bg-lime-100 text-lime-700',
 ]
 
 function hashColor(initials) {
@@ -52,343 +31,332 @@ function hashColor(initials) {
   return CHIP_COLORS[Math.abs(hash) % CHIP_COLORS.length]
 }
 
-function makeId(name) {
-  return name
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .slice(0, 3)
-    .toUpperCase() || 'FL'
-}
-
-const BuildingContext = createContext()
-
-// Static data that never changes
-import {
-  revenueMonthly, revenueMix, cashFlowData, seedMaintenance, paymentMethods,
-  tenantFilters, statusBorders, priorityBorders, floorSlug,
-} from '../data/currentBuilding'
-
-const maintenanceSeed = clone(seedMaintenance)
-
 export function BuildingProvider({ children }) {
-  const [floors, setFloors] = useState(() => load(STORAGE_KEY, clone(seedFloors)))
-  const [payments, setPayments] = useState(() => load(PAYMENTS_KEY, []))
-  const [auth, setAuth] = useState(() => load(AUTH_KEY, null))
+  const [floors, setFloors] = useState([])
+  const [payments, setPayments] = useState([])
+  const [maintenance, setMaintenance] = useState({ pending: [], inProgress: [], resolved: [] })
+  const [auth, setAuth] = useState(null)
+  const [userId, setUserId] = useState(null)
+  const [building, setBuilding] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [supabaseReady, setSupabaseReady] = useState(false)
 
+  // ── Init ──
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(floors))
-  }, [floors])
+    let cancelled = false
+    const configured = q.isSupabaseConfigured()
+    setSupabaseReady(configured)
 
-  useEffect(() => {
-    localStorage.setItem(PAYMENTS_KEY, JSON.stringify(payments))
-  }, [payments])
+    async function init() {
+      if (!configured) { setLoading(false); return }
 
-  // ---- Cross-tab Sync ----
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try { setFloors(JSON.parse(e.newValue)) } catch { /* ignore */ }
-      }
-      if (e.key === PAYMENTS_KEY && e.newValue) {
-        try { setPayments(JSON.parse(e.newValue)) } catch { /* ignore */ }
-      }
-      if (e.key === MAINTENANCE_KEY && e.newValue) {
-        try { setMaintenance(JSON.parse(e.newValue)) } catch { /* ignore */ }
-      }
-      if (e.key === AUTH_KEY) {
-        try { setAuth(e.newValue ? JSON.parse(e.newValue) : null) } catch { /* ignore */ }
-      }
+      const { data: session } = await q.getSession()
+      if (cancelled || !session?.user) { setLoading(false); return }
+
+      const { data: userData } = await q.getCurrentUser()
+      if (cancelled || !userData) { setLoading(false); return }
+
+      setAuth({ name: userData.name, email: userData.email })
+      setUserId(userData.id)
+      await loadAllData(userData.id)
+      if (!cancelled) setLoading(false)
     }
-    window.addEventListener('storage', handler)
-    return () => window.removeEventListener('storage', handler)
+
+    init()
+
+    const { data: listener } = supabase.auth.onAuthStateChanged(async (event, session) => {
+      if (cancelled) return
+      if (event === 'SIGNED_OUT') {
+        setAuth(null); setUserId(null); setBuilding(null)
+        setFloors([]); setPayments([])
+        setMaintenance({ pending: [], inProgress: [], resolved: [] })
+      } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+        const { data: userData } = await q.getCurrentUser()
+        if (userData) {
+          setAuth({ name: userData.name, email: userData.email })
+          setUserId(userData.id)
+          await loadAllData(userData.id)
+        }
+      }
+    })
+
+    return () => { cancelled = true; listener?.subscription?.unsubscribe() }
   }, [])
 
-  // ---- Auth ----
-  const login = useCallback((email, password) => {
-    const users = load('rentihub_users', [])
-    const user = users.find((u) => u.email === email && u.password === password)
-    if (user) {
-      const session = { name: user.name, email: user.email }
-      setAuth(session)
-      localStorage.setItem(AUTH_KEY, JSON.stringify(session))
-      logAudit('User logged in', user.name)
+  async function loadAllData(uid) {
+    const { data: bld } = await q.fetchBuilding(uid)
+    setBuilding(bld || null)
+    if (!bld) return
+
+    const [fr, pr, mr] = await Promise.all([
+      q.fetchFloorsWithUnits(bld.id),
+      q.fetchPayments(bld.id),
+      q.fetchMaintenance(bld.id),
+    ])
+    if (fr.data) setFloors(fr.data)
+    if (pr.data) setPayments(pr.data)
+    if (mr.data) setMaintenance(mr.data)
+  }
+
+  const refreshData = useCallback(async () => {
+    if (!building || !userId) return
+    setLoading(true)
+    await loadAllData(userId)
+    setLoading(false)
+  }, [building, userId])
+
+  // ── Building ──
+  const createBuilding = useCallback(async (name, location, type) => {
+    const result = await q.createBuilding({ name, location, type })
+    if (result.data) {
+      setBuilding(result.data)
+      setFloors([])
+      setPayments([])
+      setMaintenance({ pending: [], inProgress: [], resolved: [] })
+      logAudit('Building created', name)
+      return true
     }
-    return !!user
+    setError(result.error || 'Failed to create building')
+    return false
   }, [])
 
-  const register = useCallback((name, email, password) => {
-    const users = load('rentihub_users', [])
-    if (users.find((u) => u.email === email)) return false
-    users.push({ name, email, password })
-    localStorage.setItem('rentihub_users', JSON.stringify(users))
-    const session = { name, email }
-    setAuth(session)
-    localStorage.setItem(AUTH_KEY, JSON.stringify(session))
+  // ── Auth ──
+  const login = useCallback(async (email, password) => {
+    const result = await q.signIn(email, password)
+    if (result.error) return false
+    logAudit('User logged in', email)
+    return true
+  }, [])
+
+  const register = useCallback(async (name, email, password) => {
+    const result = await q.signUp(email, password, name)
+    if (result.error) return false
     logAudit('User registered', name)
     return true
   }, [])
 
-  const logout = useCallback(() => {
-    setAuth(null)
-    localStorage.removeItem(AUTH_KEY)
-  }, [])
+  const logout = useCallback(async () => {
+    logAudit('User logged out', auth?.name || '')
+    await q.signOut()
+  }, [auth])
 
-  // ---- Maintenance State ----
-  const [maintenance, setMaintenance] = useState(() => load(MAINTENANCE_KEY, clone(maintenanceSeed)))
+  // ── Helpers ──
+  const findTenantId = useCallback((floorName, unitId) => {
+    const floor = floors.find((f) => f.name === floorName)
+    if (!floor) return null
+    const unit = floor.units.find((u) => u.id === unitId)
+    return unit?.tenant?.id || null
+  }, [floors])
 
-  useEffect(() => {
-    localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(maintenance))
-  }, [maintenance])
+  // ── Tenant ──
+  const addTenant = useCallback(async (floorName, unitId, tenantData, monthlyRent) => {
+    if (!building) return
+    const result = await q.addTenant(unitId, building.id, tenantData)
+    if (result.error) { setError(result.error); return }
 
-  const maintenanceStats = useMemo(() => ({
-    pending: maintenance.pending.length,
-    inProgress: maintenance.inProgress.length,
-    resolved: maintenance.resolved.length,
-  }), [maintenance])
+    if (monthlyRent) {
+      await q.updateUnit(unitId, { monthlyRent: Number(monthlyRent) })
+    }
+    await refreshData()
+    logAudit('Tenant added', `${tenantData.name} → ${floorName} / ${unitId}`)
+  }, [building, refreshData])
 
-  const addMaintenance = useCallback((item) => {
-    const newItem = { id: Date.now(), ...item }
-    setMaintenance((prev) => ({ ...prev, pending: [newItem, ...prev.pending] }))
-    logAudit('Maintenance request created', item.title)
-  }, [])
+  const updateTenant = useCallback(async (floorName, unitId, updates) => {
+    const tenantId = findTenantId(floorName, unitId)
+    if (!tenantId) return
 
-  const updateMaintenance = useCallback((id, updates) => {
-    setMaintenance((prev) => {
-      const update = (arr) => arr.map((m) => m.id === id ? { ...m, ...updates } : m)
-      const keys = Object.keys(updates).filter((k) => k !== 'showAssign' && k !== 'showEdit' && k !== 'showResolve')
-      if (keys.length) logAudit('Maintenance updated', `#${id} fields: ${keys.join(', ')}`)
-      return {
-        pending: update(prev.pending),
-        inProgress: update(prev.inProgress),
-        resolved: update(prev.resolved),
-      }
-    })
-  }, [])
-
-  const moveMaintenance = useCallback((id, from, to) => {
-    setMaintenance((prev) => {
-      const item = prev[from].find((m) => m.id === id)
-      if (!item) return prev
-      const remove = (arr) => arr.filter((m) => m.id !== id)
-      logAudit('Maintenance moved', `${item.title}: ${from} → ${to}`)
-      return {
-        ...prev,
-        [from]: remove(prev[from]),
-        [to]: [{ ...item, assignee: to === 'pending' ? null : item.assignee }, ...prev[to]],
-      }
-    })
-  }, [])
-
-  const deleteMaintenance = useCallback((id) => {
-    setMaintenance((prev) => {
-      const remove = (arr) => arr.filter((m) => m.id !== id)
-      logAudit('Maintenance deleted', `#${id}`)
-      return { pending: remove(prev.pending), inProgress: remove(prev.inProgress), resolved: remove(prev.resolved) }
-    })
-  }, [])
-
-  // ---- CRUD: Tenant ----
-  const addTenant = useCallback((floorName, unitId, tenantData, monthlyRent) => {
-    const initials = computeInitials(tenantData.name)
-    setFloors((prev) =>
-      prev.map((floor) => {
-        if (floor.name !== floorName) return floor
-        logAudit('Tenant added', `${tenantData.name} → ${floorName} / ${unitId}`)
-        return {
-          ...floor,
-          units: floor.units.map((unit) => {
-            if (unit.id !== unitId) return unit
-            return {
-              ...unit,
-              status: 'occupied',
-              monthlyRent: Number(monthlyRent) || 0,
-              tenant: {
-                name: tenantData.name,
-                initials,
-                email: tenantData.email || '',
-                phone: tenantData.phone || '',
-                leaseStart: tenantData.leaseStart || '',
-                leaseEnd: tenantData.leaseEnd || '',
-                leaseTerm: tenantData.leaseTerm || '',
-                paymentStatus: tenantData.paymentStatus || 'Good Payer',
-                paid: true,
-                outstandingBalance: 0,
-                lastPayment: '',
-                lastPaymentDate: '',
-              },
-            }
-          }),
-        }
-      }),
-    )
-  }, [])
-
-  const updateTenant = useCallback((floorName, unitId, updates) => {
     const { monthlyRent, ...tenantUpdates } = updates
-    setFloors((prev) =>
-      prev.map((floor) => {
-        if (floor.name !== floorName) return floor
-        logAudit('Tenant updated', `${floorName} / ${unitId}`)
-        return {
-          ...floor,
-          units: floor.units.map((unit) => {
-            if (unit.id !== unitId) return unit
-            const updated = { ...unit }
-            if (monthlyRent !== undefined) updated.monthlyRent = Number(monthlyRent)
-            if (unit.tenant) {
-              const initials =
-                tenantUpdates.name && tenantUpdates.name !== unit.tenant.name
-                  ? computeInitials(tenantUpdates.name)
-                  : unit.tenant.initials
-              updated.tenant = { ...unit.tenant, ...tenantUpdates, initials }
-            }
-            return updated
-          }),
-        }
-      }),
-    )
-  }, [])
+    if (Object.keys(tenantUpdates).length > 0) {
+      await q.updateTenant(tenantId, tenantUpdates)
+    }
+    if (monthlyRent !== undefined) {
+      await q.updateUnit(unitId, { monthlyRent: Number(monthlyRent) })
+    }
+    await refreshData()
+    logAudit('Tenant updated', `${floorName} / ${unitId}`)
+  }, [findTenantId, refreshData])
 
-  const deleteTenant = useCallback((floorName, unitId) => {
-    setFloors((prev) =>
-      prev.map((floor) => {
-        if (floor.name !== floorName) return floor
-        const unit = floor.units.find((u) => u.id === unitId)
-        logAudit('Tenant removed', `${unit?.tenant?.name || 'unknown'} from ${floorName} / ${unitId}`)
-        return {
-          ...floor,
-          units: floor.units.map((unit) => {
-            if (unit.id !== unitId) return unit
-            return { ...unit, status: 'vacant', monthlyRent: 0, tenant: null }
-          }),
-        }
-      }),
-    )
-  }, [])
+  const deleteTenant = useCallback(async (floorName, unitId) => {
+    const tenantId = findTenantId(floorName, unitId)
+    if (!tenantId) return
+    await q.deleteTenant(tenantId)
+    await refreshData()
+    logAudit('Tenant removed', `${floorName} / ${unitId}`)
+  }, [findTenantId, refreshData])
 
-  // ---- CRUD: Floor ----
-  const addFloor = useCallback((name, unitCount) => {
-    const prefix = makeId(name)
-    const units = Array.from({ length: unitCount }, (_, i) => ({
-      id: `${prefix}${i + 1}`,
-      name: `Unit ${i + 1}`,
-      type: 'Retail',
-      size: 'TBD',
-      rent: 'TBD',
-      monthlyRent: 0,
-      status: 'vacant',
-      tenant: null,
-    }))
-    setFloors((prev) => [...prev, { name, units }])
-    logAudit('Floor added', `${name} (${unitCount} units)`)
-  }, [])
+  // ── Floor ──
+  const addFloor = useCallback(async (name, unitCount) => {
+    if (!building) return
+    const result = await q.addFloorWithUnits(building.id, name, unitCount)
+    if (result.data) {
+      setFloors(result.data)
+      logAudit('Floor added', `${name} (${unitCount} units)`)
+    } else {
+      setError(result.error || 'Failed to add floor')
+    }
+  }, [building])
 
-  const updateFloor = useCallback((oldName, newName) => {
-    setFloors((prev) =>
-      prev.map((f) => (f.name !== oldName ? f : { ...f, name: newName })),
-    )
+  const updateFloor = useCallback(async (oldName, newName) => {
+    const floor = floors.find((f) => f.name === oldName)
+    if (!floor?.id) return
+    await q.renameFloor(floor.id, newName)
+    setFloors((prev) => prev.map((f) => f.name === oldName ? { ...f, name: newName } : f))
     logAudit('Floor renamed', `${oldName} → ${newName}`)
-  }, [])
+  }, [floors])
 
-  const deleteFloor = useCallback((name) => {
+  const deleteFloor = useCallback(async (name) => {
+    const floor = floors.find((f) => f.name === name)
+    if (!floor?.id) return
+    await q.deleteFloor(floor.id)
     setFloors((prev) => prev.filter((f) => f.name !== name))
     logAudit('Floor deleted', name)
-  }, [])
+  }, [floors])
 
-  // ---- CRUD: Unit ----
-  const updateUnit = useCallback((floorName, unitId, updates) => {
+  // ── Unit ──
+  const updateUnit = useCallback(async (floorName, unitId, updates) => {
+    await q.updateUnit(unitId, updates)
     setFloors((prev) =>
       prev.map((f) => {
         if (f.name !== floorName) return f
-        logAudit('Unit updated', `${floorName} / ${unitId}`)
         return {
           ...f,
           units: f.units.map((u) => {
             if (u.id !== unitId) return u
-            const newMonthlyRent = updates.monthlyRent !== undefined ? Number(updates.monthlyRent) : u.monthlyRent
+            const newRent = updates.monthlyRent !== undefined ? Number(updates.monthlyRent) : u.monthlyRent
             return {
-              ...u,
-              ...updates,
-              monthlyRent: newMonthlyRent,
-              rent: updates.monthlyRent !== undefined ? `UGX ${(newMonthlyRent * 12).toLocaleString()}/yr` : u.rent,
+              ...u, ...updates,
+              monthlyRent: newRent,
+              rent: updates.monthlyRent !== undefined ? `UGX ${newRent.toLocaleString()}/mo` : u.rent,
             }
           }),
         }
       }),
     )
+    logAudit('Unit updated', `${floorName} / ${unitId}`)
   }, [])
 
-  const deleteUnit = useCallback((floorName, unitId) => {
+  const deleteUnit = useCallback(async (floorName, unitId) => {
+    await q.deleteUnit(unitId)
     setFloors((prev) =>
       prev.map((f) => {
         if (f.name !== floorName) return f
-        logAudit('Unit deleted', `${floorName} / ${unitId}`)
         return { ...f, units: f.units.filter((u) => u.id !== unitId) }
       }),
     )
+    logAudit('Unit deleted', `${floorName} / ${unitId}`)
   }, [])
 
-  // ---- Record Payment ----
-  const addPayment = useCallback(({ floor, unit, amount, method, tenantName, status, date }) => {
-    const rawAmount = Number(amount) || 0
-    logAudit('Payment recorded', `${tenantName} UGX ${rawAmount.toLocaleString()} (${status})`)
-    setPayments((prev) => [
-      {
-        id: Date.now().toString(),
-        floor, unit, amount: rawAmount,
-        method: method || 'Cash',
-        status: status || 'Paid',
-        tenantName: tenantName || '',
-        date: date || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-      },
-      ...prev,
-    ])
-    setFloors((prev) =>
-      prev.map((f) => {
-        if (f.name !== floor) return f
-        return {
-          ...f,
-          units: f.units.map((u) => {
-            if (u.name !== unit || !u.tenant) return u
-            const currentOutstanding = u.tenant.outstandingBalance || 0
-            const newOutstanding = Math.max(0, currentOutstanding - rawAmount)
-            return {
-              ...u,
-              tenant: {
-                ...u.tenant,
-                outstandingBalance: newOutstanding,
-                paid: newOutstanding <= 0,
-                lastPayment: `UGX ${rawAmount.toLocaleString()}`,
-                lastPaymentDate: new Date().toLocaleDateString('en-GB', {
-                  day: 'numeric', month: 'short', year: 'numeric',
-                }),
-              },
-            }
-          }),
-        }
-      }),
-    )
+  // ── Payment ──
+  const addPayment = useCallback(async ({ floor: floorName, unit: unitName, amount, method, tenantName, status, date }) => {
+    if (!building) return
+    const floor = floors.find((f) => f.name === floorName)
+    if (!floor) return
+    const unit = floor.units.find((u) => u.name === unitName)
+    if (!unit) return
+
+    const result = await q.addPayment({
+      unitId: unit.id, floorId: floor.id, buildingId: building.id,
+      amount, method: method || 'Cash', status: status || 'Paid',
+      tenantName: tenantName || '', date,
+    })
+    if (result.data) {
+      setPayments((prev) => [result.data, ...prev])
+    }
+
+    if (unit.tenant) {
+      const rawAmount = Number(amount) || 0
+      const newOutstanding = Math.max(0, (unit.tenant.outstandingBalance || 0) - rawAmount)
+      await q.updateTenant(unit.tenant.id, {
+        paid: newOutstanding <= 0,
+        outstandingBalance: newOutstanding,
+        lastPayment: `UGX ${rawAmount.toLocaleString()}`,
+        lastPaymentDate: new Date().toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric',
+        }),
+      })
+    }
+
+    await refreshData()
+    logAudit('Payment recorded', `${tenantName} UGX ${(Number(amount) || 0).toLocaleString()} (${status})`)
+  }, [building, floors, refreshData])
+
+  // ── Maintenance ──
+  const addMaintenance = useCallback(async (item) => {
+    if (!building) return
+    const result = await q.addMaintenanceRequest(building.id, item)
+    if (result.data) {
+      setMaintenance((prev) => ({ ...prev, pending: [result.data, ...prev.pending] }))
+    }
+    logAudit('Maintenance request created', item.title)
+  }, [building])
+
+  const updateMaintenance = useCallback(async (id, updates) => {
+    await q.updateMaintenanceRequest(id, updates)
+    setMaintenance((prev) => {
+      const updateArr = (arr) => arr.map((m) => m.id === id ? { ...m, ...updates } : m)
+      const keys = Object.keys(updates).filter(
+        (k) => k !== 'showAssign' && k !== 'showEdit' && k !== 'showResolve',
+      )
+      if (keys.length) logAudit('Maintenance updated', `#${id} fields: ${keys.join(', ')}`)
+      return {
+        pending: updateArr(prev.pending),
+        inProgress: updateArr(prev.inProgress),
+        resolved: updateArr(prev.resolved),
+      }
+    })
   }, [])
 
-  // ---- Computed ----
+  const moveMaintenance = useCallback(async (id, from, to) => {
+    const statusMap = { pending: 'pending', inProgress: 'in_progress', resolved: 'resolved' }
+    await q.updateMaintenanceRequest(id, { status: statusMap[to] || 'pending' })
+
+    setMaintenance((prev) => {
+      const item = prev[from].find((m) => m.id === id)
+      if (!item) return prev
+      logAudit('Maintenance moved', `${item.title}: ${from} → ${to}`)
+      return {
+        ...prev,
+        [from]: prev[from].filter((m) => m.id !== id),
+        [to]: [{ ...item, status: to, assignee: to === 'pending' ? null : item.assignee }, ...prev[to]],
+      }
+    })
+  }, [])
+
+  const deleteMaintenance = useCallback(async (id) => {
+    await q.deleteMaintenanceRequest(id)
+    setMaintenance((prev) => {
+      logAudit('Maintenance deleted', `#${id}`)
+      return {
+        pending: prev.pending.filter((m) => m.id !== id),
+        inProgress: prev.inProgress.filter((m) => m.id !== id),
+        resolved: prev.resolved.filter((m) => m.id !== id),
+      }
+    })
+  }, [])
+
+  // ── Computed ──
   const totalUnits = useMemo(() => floors.reduce((s, f) => s + f.units.length, 0), [floors])
-  const occupiedUnits = useMemo(() => floors.reduce((s, f) => s + f.units.filter((u) => u.status === 'occupied').length, 0), [floors])
-  const monthlyRevenue = useMemo(
-    () => floors.reduce((s, f) => s + f.units.reduce((us, u) => us + (u.status === 'occupied' ? u.monthlyRent : 0), 0), 0),
+  const occupiedUnits = useMemo(
+    () => floors.reduce((s, f) => s + f.units.filter((u) => u.status === 'occupied').length, 0),
     [floors],
   )
+  const monthlyRevenue = useMemo(
+    () => floors.reduce(
+      (s, f) => s + f.units.reduce((us, u) => us + (u.status === 'occupied' ? u.monthlyRent : 0), 0),
+      0,
+    ),
+    [floors],
+  )
+  const hasBuilding = !!building
 
   const tenants = useMemo(
     () => floors.flatMap((f) =>
       f.units.filter((u) => u.tenant).map((u) => ({
         ...u.tenant,
-        unit: u.name,
-        floor: f.name,
-        monthlyRent: u.monthlyRent,
+        unit: u.name, floor: f.name, monthlyRent: u.monthlyRent,
         rent: `UGX ${u.monthlyRent.toLocaleString()}/mo`,
-        unitType: u.type,
-        unitSize: u.size,
-        unitRent: u.rent,
+        unitType: u.type, unitSize: u.size, unitRent: u.rent,
       })),
     ),
     [floors],
@@ -404,59 +372,56 @@ export function BuildingProvider({ children }) {
     activeLeases: tenants.filter((t) => t.paid).length,
   }), [tenants])
 
-  const transactions = useMemo(() => {
-    return floors.flatMap((f) =>
+  const transactions = useMemo(() =>
+    floors.flatMap((f) =>
       f.units.filter((u) => u.tenant).map((u) => ({
-        unit: u.name, floor: f.name, tenant: u.tenant.name, initials: u.tenant.initials,
-        badge: (u.tenant.outstandingBalance || 0) <= 0 ? 'Paid' : (u.tenant.lastPayment ? 'Partial' : 'Overdue'),
+        unit: u.name, floor: f.name, tenant: u.tenant.name,
+        initials: u.tenant.initials,
+        badge: (u.tenant.outstandingBalance || 0) <= 0
+          ? 'Paid'
+          : (u.tenant.lastPayment ? 'Partial' : 'Overdue'),
         amount: `UGX ${(u.monthlyRent || 0).toLocaleString()}`,
       })),
-    )
-  }, [floors])
+    ),
+    [floors],
+  )
 
   const alerts = useMemo(
     () => [
-      { type: 'Maintenance', issue: 'Water pipe burst - Ground Floor Shop 1', urgency: 'Urgent', due: 'Today' },
-      ...tenants
-        .filter((t) => !t.paid)
-        .map((t) => ({
-          type: 'Payment',
-          issue: `${t.name} payment pending (${t.floor} - ${t.unit})`,
-          urgency: 'Overdue',
-          due: 'Requires attention',
-        })),
-      ...tenants
-        .filter((t) => t.leaseEnd)
-        .map((t) => ({
-          type: 'Lease',
-          issue: `${t.name} lease ends ${t.leaseEnd} (${t.floor} - ${t.unit})`,
-          urgency: 'Upcoming',
-          due: t.leaseEnd,
-        })),
+      ...tenants.filter((t) => !t.paid).map((t) => ({
+        type: 'Payment',
+        issue: `${t.name} payment pending (${t.floor} - ${t.unit})`,
+        urgency: 'Overdue',
+        due: 'Requires attention',
+      })),
+      ...tenants.filter((t) => t.leaseEnd).map((t) => ({
+        type: 'Lease',
+        issue: `${t.name} lease ends ${t.leaseEnd} (${t.floor} - ${t.unit})`,
+        urgency: 'Upcoming',
+        due: t.leaseEnd,
+      })),
     ],
     [tenants],
   )
 
   const upcomingPayments = useMemo(
-    () =>
-      tenants.map((t) => ({
-        tenant: t.name,
-        unit: t.unit,
-        floor: t.floor,
-        amount: `UGX ${(t.monthlyRent || 0).toLocaleString()}`,
-        due: (t.outstandingBalance || 0) > 0 ? `${(t.outstandingBalance || 0).toLocaleString()} UGX outstanding` : 'Next cycle',
-      })),
+    () => tenants.map((t) => ({
+      tenant: t.name, unit: t.unit, floor: t.floor,
+      amount: `UGX ${(t.monthlyRent || 0).toLocaleString()}`,
+      due: (t.outstandingBalance || 0) > 0
+        ? `${(t.outstandingBalance || 0).toLocaleString()} UGX outstanding`
+        : 'Next cycle',
+    })),
     [tenants],
   )
 
-  const combinedActivityLog = useMemo(() => {
-    const staticLog = [
-      { time: '09:15 AM', tenant: 'Mukwano Industries', unit: 'Shop 1', floor: 'Ground Floor', amount: 'UGX 1,000,000', method: 'Bank Transfer', status: 'completed' },
-      { time: '11:45 AM', tenant: 'Centenary Bank ATM', unit: 'Shop 2', floor: 'Ground Floor', amount: 'UGX 667,000', method: 'Mobile Money', status: 'completed' },
-      { time: '14:00 PM', tenant: 'Uganda Telecom Ltd', unit: 'Office Suite A', floor: '1st Floor', amount: 'UGX 1,500,000', method: 'Bank Transfer', status: 'completed' },
-    ]
-    return [...payments, ...staticLog]
-  }, [payments])
+  const combinedActivityLog = useMemo(() => [...payments], [payments])
+
+  const maintenanceStats = useMemo(() => ({
+    pending: maintenance.pending.length,
+    inProgress: maintenance.inProgress.length,
+    resolved: maintenance.resolved.length,
+  }), [maintenance])
 
   const getFloorBySlug = useCallback(
     (slug) => floors.find((f) => floorSlug(f.name) === slug) || null,
@@ -477,8 +442,7 @@ export function BuildingProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      building: seedBuilding, floors, payments,
-      totalUnits, occupiedUnits, monthlyRevenue,
+      building, floors, payments, totalUnits, occupiedUnits, monthlyRevenue,
       tenants, tenantStats, transactions, alerts, upcomingPayments,
       revenueMonthly, revenueMix, cashFlowData, maintenance, maintenanceStats,
       paymentMethods, tenantFilters, statusBorders, priorityBorders,
@@ -488,18 +452,18 @@ export function BuildingProvider({ children }) {
       updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
-      auth, login, register, logout,
+      auth, login, register, logout, loading, error, hasBuilding, createBuilding, supabaseReady,
     }),
     [
-      floors, payments, maintenance, totalUnits, occupiedUnits, monthlyRevenue,
-      tenants, tenantStats, transactions, alerts, upcomingPayments,
+      building, floors, payments, maintenance, totalUnits, occupiedUnits,
+      monthlyRevenue, tenants, tenantStats, transactions, alerts, upcomingPayments,
       getFloorBySlug, getUnitByFloorAndId, getAvatarColor,
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,
       updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
-      auth, login, register, logout,
+      auth, login, register, logout, loading, error, hasBuilding, createBuilding, supabaseReady,
     ],
   )
 

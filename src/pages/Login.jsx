@@ -11,18 +11,21 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-    setTimeout(() => {
-      if (login(email, password)) {
+    try {
+      const success = await login(email, password)
+      if (success) {
         navigate('/dashboard')
       } else {
         setError('Invalid email or password. Try again.')
-        setLoading(false)
       }
-    }, 400)
+    } catch (err) {
+      setError(err.message || 'Login failed')
+    }
+    setLoading(false)
   }
 
   return (

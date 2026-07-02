@@ -76,6 +76,10 @@ function mapPayment(data) {
 }
 
 function mapMaintenanceItem(data) {
+  const floorName = data.floor_name || ''
+  const unitName = data.unit_name || ''
+  const tenantName = data.tenant_name || ''
+  const createdAt = data.created_at
   return {
     id: data.id,
     title: data.title,
@@ -83,10 +87,19 @@ function mapMaintenanceItem(data) {
     status: data.status,
     assignee: data.assignee,
     resolution: data.resolution,
-    floorName: data.floor_name || '',
-    unitName: data.unit_name || '',
-    tenantName: data.tenant_name || '',
-    createdAt: data.created_at,
+    floorName,
+    unitName,
+    tenantName,
+    createdAt,
+    // Aliases for component compatibility
+    floor: floorName,
+    unit: unitName,
+    tenant: tenantName,
+    date: createdAt
+      ? new Date(createdAt).toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric',
+        })
+      : '',
   }
 }
 

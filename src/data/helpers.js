@@ -16,7 +16,8 @@ export function getAssigneeColor(name) {
 }
 
 export function statusLabel(item) {
-  if (item.resolution) return { label: 'Resolved', class: 'bg-green-50 text-green-700' }
-  if (item.assignee) return { label: 'In Progress', class: 'bg-blue-50 text-blue-700' }
+  const s = item.status
+  if (s === 'resolved' || item.resolution) return { label: 'Resolved', class: 'bg-green-50 text-green-700' }
+  if (s === 'in_progress' || item.assignee) return { label: 'In Progress', class: 'bg-blue-50 text-blue-700' }
   return { label: 'Pending', class: 'bg-yellow-50 text-yellow-700' }
 }

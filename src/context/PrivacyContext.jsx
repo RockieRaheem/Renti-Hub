@@ -1,12 +1,15 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import { useBuilding } from './BuildingContext'
+import { logAuditAsync } from '../utils/audit'
+import { supabase } from '../lib/supabase'
+import { isSupabaseConfigured, exportAllData as supabaseExport, deleteAllUserData, fetchAuditLog } from '../lib/queries'
 
 const SESSION_KEY = 'rentihub_session_timeout'
 const AUDIT_KEY = 'rentihub_audit_log'
 const MASK_KEY = 'rentihub_mask_mode'
 const PRIVACY_KEY = 'rentihub_privacy_consent'
-const SESSION_DURATION_MS = 30 * 60 * 1000 // 30 minutes
-const WARNING_BEFORE_MS = 60 * 1000 // warn 1 minute before
+const SESSION_DURATION_MS = 30 * 60 * 1000
+const WARNING_BEFORE_MS = 60 * 1000
 
 function load(key, fallback) {
   try {
@@ -20,12 +23,28 @@ const PrivacyContext = createContext()
 export function PrivacyProvider({ children }) {
   const { logout, auth } = useBuilding()
   const [maskMode, setMaskMode] = useState(() => load(MASK_KEY, false))
-  const [auditLog, setAuditLog] = useState(() => load(AUDIT_KEY, []))
+  const [auditLog, setAuditLog] = useState([])
   const [blurred, setBlurred] = useState(false)
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false)
   const lastActivity = useRef(Date.now())
   const warningTimer = useRef(null)
   const timeoutTimer = useRef(null)
+
+  // ── Load audit log ──
+  useEffect(() => {
+    async function loadAudit() {
+      const local = load(AUDIT_KEY, [])
+      if (isSupabaseConfigured()) {
+        const { data } = await fetchAuditLog()
+        if (data && data.length > 0) {
+          setAuditLog(data)
+          return
+        }
+      }
+      setAuditLog(local)
+    }
+    loadAudit()
+  }, [])
 
   // ── Mask mode ──
   const toggleMask = useCallback(() => {
@@ -48,7 +67,7 @@ export function PrivacyProvider({ children }) {
     }
   }, [])
 
-  // ── Session timeout (only when authenticated) ──
+  // ── Session timeout ──
   useEffect(() => {
     if (!auth) return
 
@@ -93,7 +112,7 @@ export function PrivacyProvider({ children }) {
     }
   }, [auth, logout])
 
-  // ── Audit log (last 500 entries) ──
+  // ── Audit log (immediate React state update, async persistence) ──
   const logAudit = useCallback((action, details) => {
     const entry = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
@@ -102,15 +121,30 @@ export function PrivacyProvider({ children }) {
       user: auth?.name || 'anonymous',
       timestamp: new Date().toISOString(),
     }
-    setAuditLog((prev) => {
-      const updated = [entry, ...prev].slice(0, 500)
-      localStorage.setItem(AUDIT_KEY, JSON.stringify(updated))
-      return updated
-    })
+    setAuditLog((prev) => [entry, ...prev].slice(0, 500))
+    logAuditAsync(action, details)
   }, [auth])
 
-  // ── Data export (GDPR right to data portability) ──
-  const exportAllData = useCallback(() => {
+  // ── Data export ──
+  const exportAllData = useCallback(async () => {
+    if (isSupabaseConfigured()) {
+      const { data: userData } = await supabase.auth.getSession()
+      if (userData?.session?.user?.id) {
+        const exportData = await supabaseExport(userData.session.user.id)
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `rentihub_export_${new Date().toISOString().slice(0, 10)}.json`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(link.href)
+        logAuditAsync('Exported all data')
+        return
+      }
+    }
+
+    // Fallback to localStorage
     const exportData = {
       exportedAt: new Date().toISOString(),
       exportedBy: auth?.name || 'unknown',
@@ -123,24 +157,30 @@ export function PrivacyProvider({ children }) {
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    const dateStr = new Date().toISOString().slice(0, 10)
-    link.download = `rentihub_export_${dateStr}.json`
+    link.download = `rentihub_export_${new Date().toISOString().slice(0, 10)}.json`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(link.href)
-    logAudit('Exported all data')
-  }, [auth, logAudit])
+    logAuditAsync('Exported all data')
+  }, [auth])
 
-  // ── Delete all data (GDPR right to erasure) ──
-  const deleteAllData = useCallback(() => {
+  // ── Delete all data ──
+  const deleteAllData = useCallback(async () => {
+    if (isSupabaseConfigured()) {
+      const { data: userData } = await supabase.auth.getSession()
+      if (userData?.session?.user?.id) {
+        await deleteAllUserData(userData.session.user.id)
+      }
+    }
+
+    // Clear all localStorage
     const keys = ['rentihub_floors', 'rentihub_payments', 'rentihub_maintenance',
       'rentihub_users', 'rentihub_auth', AUDIT_KEY, MASK_KEY, PRIVACY_KEY,
       'rentihub_session_timeout']
     keys.forEach((k) => localStorage.removeItem(k))
-    logAudit('Deleted all data')
     window.location.href = '/'
-  }, [logAudit])
+  }, [])
 
   // ── Privacy consent ──
   const recordPrivacyConsent = useCallback(() => {
