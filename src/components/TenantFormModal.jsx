@@ -32,6 +32,10 @@ export default function TenantFormModal({ mode, initialData, floorName, unitId, 
   const availableUnits = isAdd
     ? (currentFloor?.units || []).filter((u) => u.status === 'vacant')
     : []
+  const preSelected = isAdd && floorName && unitId
+  const selectedUnitName = preSelected
+    ? currentFloor?.units?.find((u) => u.id === unitId)?.name || unitId
+    : null
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -74,24 +78,38 @@ export default function TenantFormModal({ mode, initialData, floorName, unitId, 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {isAdd && (
             <>
-              <div>
-                <label className={labelClass}>Floor</label>
-                <select autoFocus value={selectedFloor} onChange={(e) => { setSelectedFloor(e.target.value); setSelectedUnit('') }} className={inputClass} required>
-                  <option value="">Select floor</option>
-                  {floors.map((f) => (
-                    <option key={f.name} value={f.name}>{f.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Unit</label>
-                <select value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)} className={inputClass} required disabled={!selectedFloor}>
-                  <option value="">{selectedFloor ? 'No vacant units' : 'Select a floor first'}</option>
-                  {availableUnits.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.type})</option>
-                  ))}
-                </select>
-              </div>
+              {preSelected ? (
+                <div className="bg-primary-50/50 rounded-lg border border-primary/10 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="material-symbols-outlined text-primary text-base">check_circle</span>
+                    <span className="font-medium text-on-surface">{selectedFloor}</span>
+                    <span className="text-on-surface-muted">&rarr;</span>
+                    <span className="font-medium text-on-surface">{selectedUnitName}</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-muted pl-7">Adding tenant to this vacant unit</p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className={labelClass}>Floor</label>
+                    <select autoFocus value={selectedFloor} onChange={(e) => { setSelectedFloor(e.target.value); setSelectedUnit('') }} className={inputClass} required>
+                      <option value="">Select floor</option>
+                      {floors.map((f) => (
+                        <option key={f.name} value={f.name}>{f.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Unit</label>
+                    <select value={selectedUnit} onChange={(e) => setSelectedUnit(e.target.value)} className={inputClass} required disabled={!selectedFloor}>
+                      <option value="">{selectedFloor ? 'No vacant units' : 'Select a floor first'}</option>
+                      {availableUnits.map((u) => (
+                        <option key={u.id} value={u.id}>{u.name} ({u.type})</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
               <hr className="border-gray-100" />
             </>
           )}

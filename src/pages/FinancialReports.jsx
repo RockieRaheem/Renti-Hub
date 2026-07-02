@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useBuilding } from '../context/BuildingContext'
 import DonutChart from '../components/charts/DonutChart'
 import { downloadCSV } from '../utils/csv'
+import { downloadRevenuePDF } from '../utils/pdf'
 
 const MONTHS = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
 const TYPE_COLORS = { Retail: '#0037b0', Office: '#F97316', 'Event Space': '#22c55e' }
@@ -151,20 +152,20 @@ export default function FinancialReports() {
       <div className="bg-surface rounded-card border border-outline p-6 shadow-card">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-sm font-semibold text-on-surface">Revenue by Floor</h3>
-          <button onClick={() => {
-            const data = floors.flatMap((f) =>
-              f.units.filter((u) => u.tenant).map((u) => ({
-                Floor: f.name, Unit: u.name, Tenant: u.tenant.name,
-                'Monthly Rent UGX': u.monthlyRent || 0,
-                Status: u.tenant.outstandingBalance > 0 ? 'Outstanding' : 'Paid',
-              }))
-            )
-            downloadCSV(data, 'rentihub_revenue_by_floor.csv')
-          }}
-            className="text-xs font-medium text-primary hover:bg-primary-50 px-2.5 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
-            <span className="material-symbols-outlined text-sm">download</span>
-            Export CSV
-          </button>
+          <ExportMenuFinancial
+            floors={floors}
+            onCSV={() => {
+              const data = floors.flatMap((f) =>
+                f.units.filter((u) => u.tenant).map((u) => ({
+                  Floor: f.name, Unit: u.name, Tenant: u.tenant.name,
+                  'Monthly Rent UGX': u.monthlyRent || 0,
+                  Status: u.tenant.outstandingBalance > 0 ? 'Outstanding' : 'Paid',
+                }))
+              )
+              downloadCSV(data, 'rentihub_revenue_by_floor.csv')
+            }}
+            onPDF={() => downloadRevenuePDF(floors)}
+          />
         </div>
         {floors.length > 0 ? (
           <div className="space-y-4">
@@ -191,6 +192,48 @@ export default function FinancialReports() {
           <p className="text-sm text-on-surface-muted text-center py-6">Add floors to see revenue breakdown</p>
         )}
       </div>
+    </div>
+  )
+}
+
+function ExportMenuFinancial({ floors, onCSV, onPDF }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen((v) => !v)}
+        className="text-xs font-medium text-primary hover:bg-primary-50 px-2.5 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
+        <span className="material-symbols-outlined text-sm">download</span>
+        Export
+        <span className="material-symbols-outlined text-sm">{open ? 'expand_less' : 'expand_more'}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-52 bg-surface rounded-xl border border-outline shadow-lg z-20 py-1">
+          <button onClick={() => { onCSV(); setOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container transition-colors text-left">
+            <span className="material-symbols-outlined text-lg text-on-surface-muted">table_chart</span>
+            <div>
+              <p className="font-medium text-on-surface">Export CSV</p>
+              <p className="text-[11px] text-on-surface-dim">Spreadsheet format</p>
+            </div>
+          </button>
+          <button onClick={() => { onPDF(); setOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container transition-colors text-left">
+            <span className="material-symbols-outlined text-lg text-status-unpaid">picture_as_pdf</span>
+            <div>
+              <p className="font-medium text-on-surface">Revenue Report (PDF)</p>
+              <p className="text-[11px] text-on-surface-dim">Revenue by floor breakdown</p>
+            </div>
+          </button>
+        </div>
+      )}
     </div>
   )
 }

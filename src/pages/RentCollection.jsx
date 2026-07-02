@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
 import { downloadCSV } from '../utils/csv'
+import { downloadTenantPDF, downloadPaymentPDF } from '../utils/pdf'
 
 export default function RentCollection() {
   const { floors, floorSlug, payments, addPayment } = useBuilding()
@@ -76,20 +77,20 @@ export default function RentCollection() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => {
-              const data = allTenants.map((t) => ({
-                Tenant: t.name, Unit: t.unit, Floor: t.floor,
-                'Monthly Rent': t.monthlyRent || 0,
-                Status: t.paid ? 'Paid' : 'Overdue',
-                'Outstanding UGX': t.outstandingBalance || 0,
-                'Last Payment': t.lastPaymentDate || '',
-              }))
-              downloadCSV(data, 'rentihub_tenants.csv')
-            }}
-              className="px-3.5 py-2 border border-outline text-on-surface-muted text-xs font-semibold rounded-lg hover:bg-surface-container transition-colors inline-flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-base">download</span>
-              Export
-            </button>
+            <ExportMenu
+              onCSV={() => {
+                const data = allTenants.map((t) => ({
+                  Tenant: t.name, Unit: t.unit, Floor: t.floor,
+                  'Monthly Rent': t.monthlyRent || 0,
+                  Status: t.paid ? 'Paid' : 'Overdue',
+                  'Outstanding UGX': t.outstandingBalance || 0,
+                  'Last Payment': t.lastPaymentDate || '',
+                }))
+                downloadCSV(data, 'rentihub_tenants.csv')
+              }}
+              onPDF={() => downloadTenantPDF(allTenants)}
+              onPDFPayments={() => downloadPaymentPDF(payments)}
+            />
             <button onClick={() => setShowModal(true)}
               className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
               <span className="material-symbols-outlined text-base">add</span>
@@ -234,6 +235,56 @@ export default function RentCollection() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ExportMenu({ onCSV, onPDF, onPDFPayments }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen((v) => !v)}
+        className="px-3.5 py-2 border border-outline text-on-surface-muted text-xs font-semibold rounded-lg hover:bg-surface-container transition-colors inline-flex items-center gap-1.5">
+        <span className="material-symbols-outlined text-base">download</span>
+        Export
+        <span className="material-symbols-outlined text-sm">{open ? 'expand_less' : 'expand_more'}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-52 bg-surface rounded-xl border border-outline shadow-lg z-20 py-1">
+          <button onClick={() => { onCSV(); setOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container transition-colors text-left">
+            <span className="material-symbols-outlined text-lg text-on-surface-muted">table_chart</span>
+            <div>
+              <p className="font-medium text-on-surface">Export CSV</p>
+              <p className="text-[11px] text-on-surface-dim">Spreadsheet format</p>
+            </div>
+          </button>
+          <button onClick={() => { onPDF(); setOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container transition-colors text-left">
+            <span className="material-symbols-outlined text-lg text-status-unpaid">picture_as_pdf</span>
+            <div>
+              <p className="font-medium text-on-surface">Tenants Report (PDF)</p>
+              <p className="text-[11px] text-on-surface-dim">Tenant list with balances</p>
+            </div>
+          </button>
+          <button onClick={() => { onPDFPayments(); setOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-on-surface hover:bg-surface-container transition-colors text-left">
+            <span className="material-symbols-outlined text-lg text-primary">receipt_long</span>
+            <div>
+              <p className="font-medium text-on-surface">Payments Report (PDF)</p>
+              <p className="text-[11px] text-on-surface-dim">All recorded payments</p>
+            </div>
+          </button>
         </div>
       )}
     </div>

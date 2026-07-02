@@ -131,13 +131,13 @@ export default function Properties() {
                       return (
                         <div key={unit.id} className="relative group/unit">
                           <Link to={`/properties/floor/${floorSlug(floor.name)}/unit/${unit.id}`}
-                            className={`block rounded-lg border p-3 text-center transition-all hover:shadow-md hover:-translate-y-0.5 ${occupied ? 'bg-surface border-primary/20 hover:border-primary/40' : 'bg-surface-container border-outline hover:border-primary/30'}`}>
+                            className={`block rounded-lg border p-3 text-center transition-all hover:shadow-md hover:-translate-y-0.5 ${occupied ? 'bg-surface border-primary/20 hover:border-primary/40' : 'bg-surface-container border-dashed border-outline hover:border-primary/30'}`}>
                             <div className={`w-2 h-2 rounded-full mx-auto mb-2 ${occupied ? 'bg-status-paid' : 'bg-status-vacant'}`} />
                             <p className={`text-xs font-semibold ${occupied ? 'text-on-surface' : 'text-on-surface-muted'}`}>{unit.name}</p>
                             {occupied && unit.tenant ? (
                               <p className="text-[10px] text-on-surface-muted mt-0.5 truncate">{unit.tenant.name}</p>
                             ) : (
-                              <p className="text-[10px] text-on-surface-dim mt-0.5">Vacant</p>
+                              <p className="text-[10px] text-primary/70 mt-0.5 font-medium">Click to add tenant</p>
                             )}
                           </Link>
                           {occupied && unit.tenant && (
@@ -153,6 +153,13 @@ export default function Properties() {
                                 <span className="material-symbols-outlined text-[12px]">close</span>
                               </button>
                             </div>
+                          )}
+                          {!occupied && (
+                            <button onClick={(e) => { e.preventDefault(); setTenantModal({ mode: 'add', floor: floor.name, unit: unit.id }) }}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px] hover:bg-primary-600 shadow-sm opacity-0 group-hover/unit:opacity-100 transition-opacity"
+                              title="Add tenant to this unit">
+                              <span className="material-symbols-outlined text-[12px]">add</span>
+                            </button>
                           )}
                         </div>
                       )
