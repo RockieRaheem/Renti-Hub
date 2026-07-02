@@ -3,6 +3,7 @@ import { building as seedBuilding, floors as seedFloors } from '../data/currentB
 
 const STORAGE_KEY = 'rentihub_floors'
 const PAYMENTS_KEY = 'rentihub_payments'
+const MAINTENANCE_KEY = 'rentihub_maintenance'
 const AUTH_KEY = 'rentihub_auth'
 
 function clone(obj) {
@@ -61,15 +62,11 @@ const BuildingContext = createContext()
 
 // Static data that never changes
 import {
-  revenueMonthly, revenueMix, cashFlowData, maintenance, paymentMethods,
+  revenueMonthly, revenueMix, cashFlowData, seedMaintenance, paymentMethods,
   tenantFilters, statusBorders, priorityBorders, floorSlug,
 } from '../data/currentBuilding'
 
-const maintenanceStats = {
-  pending: maintenance.pending.length,
-  inProgress: maintenance.inProgress.length,
-  resolved: maintenance.resolved.length,
-}
+const maintenanceSeed = clone(seedMaintenance)
 
 export function BuildingProvider({ children }) {
   const [floors, setFloors] = useState(() => load(STORAGE_KEY, clone(seedFloors)))
@@ -110,6 +107,55 @@ export function BuildingProvider({ children }) {
   const logout = useCallback(() => {
     setAuth(null)
     localStorage.removeItem(AUTH_KEY)
+  }, [])
+
+  // ---- Maintenance State ----
+  const [maintenance, setMaintenance] = useState(() => load(MAINTENANCE_KEY, clone(maintenanceSeed)))
+
+  useEffect(() => {
+    localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(maintenance))
+  }, [maintenance])
+
+  const maintenanceStats = useMemo(() => ({
+    pending: maintenance.pending.length,
+    inProgress: maintenance.inProgress.length,
+    resolved: maintenance.resolved.length,
+  }), [maintenance])
+
+  const addMaintenance = useCallback((item) => {
+    const newItem = { id: Date.now(), ...item }
+    setMaintenance((prev) => ({ ...prev, pending: [newItem, ...prev.pending] }))
+  }, [])
+
+  const updateMaintenance = useCallback((id, updates) => {
+    setMaintenance((prev) => {
+      const update = (arr) => arr.map((m) => m.id === id ? { ...m, ...updates } : m)
+      return {
+        pending: update(prev.pending),
+        inProgress: update(prev.inProgress),
+        resolved: update(prev.resolved),
+      }
+    })
+  }, [])
+
+  const moveMaintenance = useCallback((id, from, to) => {
+    setMaintenance((prev) => {
+      const item = prev[from].find((m) => m.id === id)
+      if (!item) return prev
+      const remove = (arr) => arr.filter((m) => m.id !== id)
+      return {
+        ...prev,
+        [from]: remove(prev[from]),
+        [to]: [{ ...item, assignee: to === 'pending' ? null : item.assignee }, ...prev[to]],
+      }
+    })
+  }, [])
+
+  const deleteMaintenance = useCallback((id) => {
+    setMaintenance((prev) => {
+      const remove = (arr) => arr.filter((m) => m.id !== id)
+      return { pending: remove(prev.pending), inProgress: remove(prev.inProgress), resolved: remove(prev.resolved) }
+    })
   }, [])
 
   // ---- CRUD: Tenant ----
@@ -375,15 +421,17 @@ export function BuildingProvider({ children }) {
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,
       addPayment, combinedActivityLog,
+      addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
       auth, login, register, logout,
     }),
     [
-      floors, payments, totalUnits, occupiedUnits, monthlyRevenue,
+      floors, payments, maintenance, totalUnits, occupiedUnits, monthlyRevenue,
       tenants, tenantStats, transactions, alerts, upcomingPayments,
       getFloorBySlug, getUnitByFloorAndId, getAvatarColor,
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,
       addPayment, combinedActivityLog,
+      addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
       auth, login, register, logout,
     ],
   )

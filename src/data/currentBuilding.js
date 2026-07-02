@@ -164,7 +164,7 @@ export const activityLog = [
 
 export const paymentMethods = ['Cash', 'Mobile Money', 'Bank Transfer', 'Cheque']
 
-export const maintenance = {
+export const seedMaintenance = {
   pending: [
     { id: 1, title: 'Water pipe burst', floor: 'Ground Floor', unit: 'Shop 1', priority: 'Critical', tenant: 'Mukwano Industries', date: '2 hours ago', assignee: null },
     { id: 2, title: 'Lighting replacement', floor: '1st Floor', unit: 'Office Suite A', priority: 'Low', tenant: 'Uganda Telecom', date: '3 days ago', assignee: 'Sarah Nabatanzi' },
@@ -179,9 +179,9 @@ export const maintenance = {
 }
 
 export const maintenanceStats = {
-  pending: maintenance.pending.length,
-  inProgress: maintenance.inProgress.length,
-  resolved: maintenance.resolved.length,
+  pending: seedMaintenance.pending.length,
+  inProgress: seedMaintenance.inProgress.length,
+  resolved: seedMaintenance.resolved.length,
 }
 
 const avatarColors = {
