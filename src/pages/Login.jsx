@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
+import { isSupabaseConfigured } from '../lib/queries'
+
+const configured = isSupabaseConfigured()
 
 export default function Login() {
   const navigate = useNavigate()
@@ -67,6 +70,15 @@ export default function Login() {
                   </button>
                 </div>
               </div>
+
+              {!configured && (
+                <div className="flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5">construction</span>
+                  <p className="leading-relaxed">
+                    Supabase not configured. Set <code className="bg-amber-100 px-1 rounded text-xs font-mono">VITE_SUPABASE_URL</code> and <code className="bg-amber-100 px-1 rounded text-xs font-mono">VITE_SUPABASE_ANON_KEY</code> in <code className="bg-amber-100 px-1 rounded text-xs font-mono">.env</code>.
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <div className="flex items-center gap-2 text-sm text-status-unpaid bg-red-50 border border-red-100 rounded-lg px-3.5 py-2.5">

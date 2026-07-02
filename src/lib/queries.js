@@ -310,6 +310,10 @@ export async function updateTenant(tenantId, updates) {
   if (updates.leaseEnd !== undefined) db.lease_end = updates.leaseEnd
   if (updates.leaseTerm !== undefined) db.lease_term = updates.leaseTerm
   if (updates.paymentStatus !== undefined) db.payment_status = updates.paymentStatus
+  if (updates.paid !== undefined) db.paid = updates.paid
+  if (updates.outstandingBalance !== undefined) db.outstanding_balance = updates.outstandingBalance
+  if (updates.lastPayment !== undefined) db.last_payment = updates.lastPayment
+  if (updates.lastPaymentDate !== undefined) db.last_payment_date = updates.lastPaymentDate
   if (Object.keys(db).length === 0) return {}
   const { error } = await supabase.from('tenants').update(db).eq('id', tenantId)
   if (error) return { error: error.message }

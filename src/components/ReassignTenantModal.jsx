@@ -27,15 +27,14 @@ export default function ReassignTenantModal({ floorName, unit, onClose }) {
 
   const oldTenant = unit?.tenant
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!confirmPhase) {
       setConfirmPhase(true)
       return
     }
-    // Phase 2: remove old, add new
-    deleteTenant(floorName, unit.id)
-    addTenant(floorName, unit.id, form, form.monthlyRent)
+    await deleteTenant(floorName, unit.id)
+    await addTenant(floorName, unit.id, form, form.monthlyRent)
     onClose()
   }
 

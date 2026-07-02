@@ -16,18 +16,18 @@ export default function FloorFormModal({ mode, floorName, onClose }) {
   const [unitCount, setUnitCount] = useState(4)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (isAdd) {
-      addFloor(name, unitCount)
+      await addFloor(name, unitCount)
     } else {
-      updateFloor(floorName, name)
+      await updateFloor(floorName, name)
     }
     onClose()
   }
 
-  const handleDelete = () => {
-    deleteFloor(floorName)
+  const handleDelete = async () => {
+    await deleteFloor(floorName)
     onClose()
   }
 

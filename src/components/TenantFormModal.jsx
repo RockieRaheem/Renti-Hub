@@ -37,18 +37,18 @@ export default function TenantFormModal({ mode, initialData, floorName, unitId, 
     ? currentFloor?.units?.find((u) => u.id === unitId)?.name || unitId
     : null
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (isAdd) {
-      addTenant(selectedFloor, selectedUnit, form, form.monthlyRent)
+      await addTenant(selectedFloor, selectedUnit, form, form.monthlyRent)
     } else {
-      updateTenant(floorName, unitId, form)
+      await updateTenant(floorName, unitId, form)
     }
     onClose()
   }
 
-  const handleDelete = () => {
-    deleteTenant(floorName, unitId)
+  const handleDelete = async () => {
+    await deleteTenant(floorName, unitId)
     onClose()
   }
 

@@ -19,14 +19,14 @@ export default function UnitFormModal({ floorName, unit, onClose }) {
   const [monthlyRent, setMonthlyRent] = useState(unit?.monthlyRent || 0)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    updateUnit(floorName, unit.id, { name, type, size, monthlyRent: Number(monthlyRent) || 0 })
+    await updateUnit(floorName, unit.id, { name, type, size, monthlyRent: Number(monthlyRent) || 0 })
     onClose()
   }
 
-  const handleDelete = () => {
-    deleteUnit(floorName, unit.id)
+  const handleDelete = async () => {
+    await deleteUnit(floorName, unit.id)
     onClose()
   }
 

@@ -24,9 +24,9 @@ export default function RentCollection() {
 
   const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
 
-  const handleRecordPayment = (e) => {
+  const handleRecordPayment = async (e) => {
     e.preventDefault()
-    addPayment({
+    await addPayment({
       floor: form.floor, unit: form.unit, amount: parseFloat(form.amount),
       method: 'Cash', tenantName: form.tenantName, status: form.status, date: form.date,
     })
