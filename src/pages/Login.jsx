@@ -19,14 +19,14 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const success = await login(email, password)
-      if (success) {
-        navigate('/dashboard')
+      const err = await login(email, password)
+      if (err) {
+        setError(err)
       } else {
-        setError('Invalid email or password. Try again.')
+        navigate('/dashboard')
       }
-    } catch (err) {
-      setError(err.message || 'Login failed')
+    } catch (ex) {
+      setError(ex.message || 'Login failed')
     }
     setLoading(false)
   }

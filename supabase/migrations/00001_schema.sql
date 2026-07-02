@@ -270,3 +270,20 @@ $$ language plpgsql security definer;
 create trigger trg_units_set_rent_display
   before insert or update of monthly_rent on public.units
   for each row execute function public.set_rent_display();
+
+-- 11. Auto-create profile on signup
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, name)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1))
+  );
+  return new;
+end;
+$$ language plpgsql security definer;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();

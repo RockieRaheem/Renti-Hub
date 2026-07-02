@@ -128,16 +128,16 @@ export function BuildingProvider({ children }) {
   // ── Auth ──
   const login = useCallback(async (email, password) => {
     const result = await q.signIn(email, password)
-    if (result.error) return false
+    if (result.error) return result.error
     logAudit('User logged in', email)
-    return true
+    return null
   }, [])
 
   const register = useCallback(async (name, email, password) => {
     const result = await q.signUp(email, password, name)
-    if (result.error) return false
+    if (result.error) return result.error
     logAudit('User registered', name)
-    return true
+    return null
   }, [])
 
   const logout = useCallback(async () => {

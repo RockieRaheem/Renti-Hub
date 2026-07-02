@@ -54,7 +54,7 @@ export default function Header() {
               <span className="w-2 h-2 rounded-full bg-amber-600" title="Privacy mode active" />
             )}
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
-              {building.name ? building.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'RH'}
+              {building?.name ? building.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'RH'}
             </div>
           </div>
         </div>

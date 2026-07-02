@@ -36,15 +36,15 @@ export default function Register() {
     }
     setLoading(true)
     try {
-      const success = await register(name, email, password)
-      if (success) {
+      const err = await register(name, email, password)
+      if (err) {
+        setError(err)
+      } else {
         recordPrivacyConsent()
         navigate('/dashboard')
-      } else {
-        setError('An account with this email already exists')
       }
-    } catch (err) {
-      setError(err.message || 'Registration failed')
+    } catch (ex) {
+      setError(ex.message || 'Registration failed')
     }
     setLoading(false)
   }

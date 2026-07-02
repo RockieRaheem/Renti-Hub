@@ -115,21 +115,13 @@ function mapMaintenanceBoard(data) {
 // ── Auth ─────────────────────────────────────────────────────────────────
 
 export async function signUp(email, password, name) {
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  })
-  if (authError) return { error: authError.message }
-  if (!authData.user) return { error: 'Registration failed' }
-
-  const { error: profileError } = await supabase.from('profiles').insert({
-    id: authData.user.id,
-    name,
-  })
-  if (profileError) {
-    return { error: profileError.message }
-  }
-  return { data: authData }
+  const { data, error } = await supabase.auth.signUp(
+    { email, password },
+    { data: { name } }
+  )
+  if (error) return { error: error.message }
+  if (!data?.user) return { error: 'Registration failed. Check if email confirmation is required.' }
+  return { data }
 }
 
 export async function signIn(email, password) {
