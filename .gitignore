@@ -12,3 +12,7 @@ Thumbs.db
 # Server
 *.log
 node_modules/
+
+# Environment
+.env
+.env.local
