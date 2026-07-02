@@ -91,7 +91,18 @@ export default function FloorDetails() {
 
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs font-semibold text-on-surface uppercase tracking-wider">Units</p>
-            <Link to="/properties" className="text-xs font-medium text-primary hover:text-primary-600 transition-colors">Back to overview</Link>
+            <div className="flex items-center gap-2">
+              {vac > 0 ? (
+                <button onClick={() => setTenantModal({ mode: 'add', floor: floor.name })}
+                  className="px-3.5 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[15px]">person_add</span>
+                  Add Tenant
+                </button>
+              ) : (
+                <span className="text-[11px] text-on-surface-dim italic">All units occupied</span>
+              )}
+              <Link to="/properties" className="text-xs font-medium text-primary hover:text-primary-600 transition-colors">Back to overview</Link>
+            </div>
           </div>
 
           <div className="grid gap-3">

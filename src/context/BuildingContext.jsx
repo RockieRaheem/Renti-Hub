@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react'
 import { building as seedBuilding, floors as seedFloors } from '../data/currentBuilding'
+import { logAudit } from '../utils/audit'
 
 const STORAGE_KEY = 'rentihub_floors'
 const PAYMENTS_KEY = 'rentihub_payments'
@@ -109,6 +110,7 @@ export function BuildingProvider({ children }) {
       const session = { name: user.name, email: user.email }
       setAuth(session)
       localStorage.setItem(AUTH_KEY, JSON.stringify(session))
+      logAudit('User logged in', user.name)
     }
     return !!user
   }, [])
@@ -121,6 +123,7 @@ export function BuildingProvider({ children }) {
     const session = { name, email }
     setAuth(session)
     localStorage.setItem(AUTH_KEY, JSON.stringify(session))
+    logAudit('User registered', name)
     return true
   }, [])
 
@@ -145,11 +148,14 @@ export function BuildingProvider({ children }) {
   const addMaintenance = useCallback((item) => {
     const newItem = { id: Date.now(), ...item }
     setMaintenance((prev) => ({ ...prev, pending: [newItem, ...prev.pending] }))
+    logAudit('Maintenance request created', item.title)
   }, [])
 
   const updateMaintenance = useCallback((id, updates) => {
     setMaintenance((prev) => {
       const update = (arr) => arr.map((m) => m.id === id ? { ...m, ...updates } : m)
+      const keys = Object.keys(updates).filter((k) => k !== 'showAssign' && k !== 'showEdit' && k !== 'showResolve')
+      if (keys.length) logAudit('Maintenance updated', `#${id} fields: ${keys.join(', ')}`)
       return {
         pending: update(prev.pending),
         inProgress: update(prev.inProgress),
@@ -163,6 +169,7 @@ export function BuildingProvider({ children }) {
       const item = prev[from].find((m) => m.id === id)
       if (!item) return prev
       const remove = (arr) => arr.filter((m) => m.id !== id)
+      logAudit('Maintenance moved', `${item.title}: ${from} → ${to}`)
       return {
         ...prev,
         [from]: remove(prev[from]),
@@ -174,6 +181,7 @@ export function BuildingProvider({ children }) {
   const deleteMaintenance = useCallback((id) => {
     setMaintenance((prev) => {
       const remove = (arr) => arr.filter((m) => m.id !== id)
+      logAudit('Maintenance deleted', `#${id}`)
       return { pending: remove(prev.pending), inProgress: remove(prev.inProgress), resolved: remove(prev.resolved) }
     })
   }, [])
@@ -184,6 +192,7 @@ export function BuildingProvider({ children }) {
     setFloors((prev) =>
       prev.map((floor) => {
         if (floor.name !== floorName) return floor
+        logAudit('Tenant added', `${tenantData.name} → ${floorName} / ${unitId}`)
         return {
           ...floor,
           units: floor.units.map((unit) => {
@@ -218,6 +227,7 @@ export function BuildingProvider({ children }) {
     setFloors((prev) =>
       prev.map((floor) => {
         if (floor.name !== floorName) return floor
+        logAudit('Tenant updated', `${floorName} / ${unitId}`)
         return {
           ...floor,
           units: floor.units.map((unit) => {
@@ -242,6 +252,8 @@ export function BuildingProvider({ children }) {
     setFloors((prev) =>
       prev.map((floor) => {
         if (floor.name !== floorName) return floor
+        const unit = floor.units.find((u) => u.id === unitId)
+        logAudit('Tenant removed', `${unit?.tenant?.name || 'unknown'} from ${floorName} / ${unitId}`)
         return {
           ...floor,
           units: floor.units.map((unit) => {
@@ -267,16 +279,19 @@ export function BuildingProvider({ children }) {
       tenant: null,
     }))
     setFloors((prev) => [...prev, { name, units }])
+    logAudit('Floor added', `${name} (${unitCount} units)`)
   }, [])
 
   const updateFloor = useCallback((oldName, newName) => {
     setFloors((prev) =>
       prev.map((f) => (f.name !== oldName ? f : { ...f, name: newName })),
     )
+    logAudit('Floor renamed', `${oldName} → ${newName}`)
   }, [])
 
   const deleteFloor = useCallback((name) => {
     setFloors((prev) => prev.filter((f) => f.name !== name))
+    logAudit('Floor deleted', name)
   }, [])
 
   // ---- CRUD: Unit ----
@@ -284,6 +299,7 @@ export function BuildingProvider({ children }) {
     setFloors((prev) =>
       prev.map((f) => {
         if (f.name !== floorName) return f
+        logAudit('Unit updated', `${floorName} / ${unitId}`)
         return {
           ...f,
           units: f.units.map((u) => {
@@ -305,6 +321,7 @@ export function BuildingProvider({ children }) {
     setFloors((prev) =>
       prev.map((f) => {
         if (f.name !== floorName) return f
+        logAudit('Unit deleted', `${floorName} / ${unitId}`)
         return { ...f, units: f.units.filter((u) => u.id !== unitId) }
       }),
     )
@@ -313,6 +330,7 @@ export function BuildingProvider({ children }) {
   // ---- Record Payment ----
   const addPayment = useCallback(({ floor, unit, amount, method, tenantName, status, date }) => {
     const rawAmount = Number(amount) || 0
+    logAudit('Payment recorded', `${tenantName} UGX ${rawAmount.toLocaleString()} (${status})`)
     setPayments((prev) => [
       {
         id: Date.now().toString(),

@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useBuilding } from '../../context/BuildingContext'
+import PrivacySettings from '../PrivacySettings'
 
 const links = [
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
@@ -22,6 +24,7 @@ function computeInitials(name) {
 export default function Sidebar({ collapsed, onToggle }) {
   const { auth, logout } = useBuilding()
   const navigate = useNavigate()
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const initials = auth?.name ? computeInitials(auth.name) : '?'
   const displayName = auth?.name || 'Guest'
   const role = auth?.name ? 'Portfolio Manager' : 'Not signed in'
@@ -61,7 +64,23 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
 
-      <div className="px-2 py-3 border-t border-outline">
+      <div className="px-2 pt-2 border-t border-outline">
+        {!collapsed && (
+          <button onClick={() => setShowPrivacy(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors mb-1">
+            <span className="material-symbols-outlined text-lg">shield</span>
+            <span className="truncate">Privacy & Security</span>
+          </button>
+        )}
+        {collapsed && (
+          <button onClick={() => setShowPrivacy(true)}
+            className="w-full flex justify-center py-2 text-on-surface-muted hover:text-on-surface hover:bg-surface-container rounded-lg transition-colors"
+            title="Privacy & Security">
+            <span className="material-symbols-outlined text-lg">shield</span>
+          </button>
+        )}
+      </div>
+      <div className="px-2 py-1.5">
         {!collapsed ? (
           <div className="flex items-center justify-between gap-1 px-3 py-2 rounded-lg hover:bg-surface-container transition-colors group">
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -92,6 +111,8 @@ export default function Sidebar({ collapsed, onToggle }) {
           </div>
         )}
       </div>
+
+      {showPrivacy && <PrivacySettings onClose={() => setShowPrivacy(false)} />}
 
       <button onClick={onToggle} className="hidden lg:flex items-center justify-center h-9 text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors border-t border-outline text-sm">
         <span className="material-symbols-outlined text-lg">{collapsed ? 'chevron_right' : 'chevron_left'}</span>

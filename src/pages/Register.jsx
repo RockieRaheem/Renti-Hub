@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
+import { usePrivacy } from '../context/PrivacyContext'
 
 export default function Register() {
   const navigate = useNavigate()
   const { register } = useBuilding()
+  const { recordPrivacyConsent } = usePrivacy()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -12,6 +14,7 @@ export default function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPw, setShowPw] = useState(false)
+  const [privacyAccepted, setPrivacyAccepted] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -24,9 +27,14 @@ export default function Register() {
       setError('Passwords do not match')
       return
     }
+    if (!privacyAccepted) {
+      setError('You must agree to the Privacy Policy to create an account')
+      return
+    }
     setLoading(true)
     setTimeout(() => {
       if (register(name, email, password)) {
+        recordPrivacyConsent()
         navigate('/dashboard')
       } else {
         setError('An account with this email already exists')
@@ -101,7 +109,25 @@ export default function Register() {
                 </div>
               )}
 
-              <button type="submit" disabled={loading}
+              <label className="flex items-start gap-2.5 cursor-pointer group">
+                <input type="checkbox" checked={privacyAccepted} onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-outline text-primary focus:ring-primary/20" />
+                <span className="text-xs text-on-surface-muted leading-relaxed group-hover:text-on-surface transition-colors">
+                  I acknowledge that my data is stored locally in this browser and may include personally identifiable information (PII) such as tenant names, contact details, and financial records. I have read and agree to the{' '}
+                  <a href="#" className="text-primary underline hover:text-primary-600">Privacy Policy</a>
+                  {' '}and{' '}
+                  <a href="#" className="text-primary underline hover:text-primary-600">Terms of Service</a>.
+                </span>
+              </label>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3.5 py-2.5 text-xs text-amber-800 flex items-start gap-2">
+                <span className="material-symbols-outlined text-base shrink-0 mt-0.5">security</span>
+                <p className="leading-relaxed">
+                  Your password should be at least 6 characters. All data is stored locally in your browser — nothing is sent to our servers. You can export or delete your data at any time from the Privacy settings.
+                </p>
+              </div>
+
+              <button type="submit" disabled={loading || !privacyAccepted}
                 className="w-full h-10 bg-primary text-white font-semibold rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm flex items-center justify-center gap-2 shadow-card">
                 {loading ? <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> : 'Create Account'}
               </button>
@@ -114,9 +140,8 @@ export default function Register() {
           </div>
 
           <p className="text-xs text-on-surface-dim text-center mt-6">
-            By creating an account, you agree to our{' '}
-            <a href="#" className="underline hover:text-on-surface">Terms</a> and{' '}
-            <a href="#" className="underline hover:text-on-surface">Privacy Policy</a>
+            RentiHub stores all data locally in your browser. Read our{' '}
+            <a href="#" className="underline hover:text-on-surface">Privacy Policy</a> to learn more.
           </p>
         </div>
       </div>
