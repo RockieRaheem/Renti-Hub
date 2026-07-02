@@ -149,19 +149,27 @@ export async function getCurrentUser() {
   const { data: sessionData } = await supabase.auth.getSession()
   if (!sessionData?.session?.user) return { data: null }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name')
-    .eq('id', sessionData.session.user.id)
-    .single()
+  const u = sessionData.session.user
+  let profile = null
 
-  return {
-    data: {
-      id: sessionData.session.user.id,
-      email: sessionData.session.user.email,
-      name: profile?.name || sessionData.session.user.email?.split('@')[0] || 'User',
-    },
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('id', u.id)
+      .limit(1)
+    profile = data?.[0] || null
+  } catch { /* profile table might not exist yet */ }
+
+  if (!profile) {
+    const name = u.user_metadata?.name || u.email?.split('@')[0] || 'User'
+    try {
+      await supabase.from('profiles').insert({ id: u.id, name })
+    } catch { /* ignore — trigger may create it */ }
+    return { data: { id: u.id, email: u.email, name } }
   }
+
+  return { data: { id: u.id, email: u.email, name: profile.name } }
 }
 
 // ── Buildings ────────────────────────────────────────────────────────────
@@ -178,9 +186,17 @@ export async function fetchBuilding(userId) {
 }
 
 export async function createBuilding({ name, location, type }) {
+  const { data: sessionData } = await supabase.auth.getSession()
+  if (!sessionData?.session?.user) return { error: 'Not authenticated' }
+
   const { data, error } = await supabase
     .from('buildings')
-    .insert({ name, location: location || '', type: type || 'Mixed-Use' })
+    .insert({
+      name,
+      location: location || '',
+      type: type || 'Mixed-Use',
+      user_id: sessionData.session.user.id,
+    })
     .select()
     .single()
   if (error) return { error: error.message }
