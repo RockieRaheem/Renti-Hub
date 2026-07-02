@@ -279,6 +279,37 @@ export function BuildingProvider({ children }) {
     setFloors((prev) => prev.filter((f) => f.name !== name))
   }, [])
 
+  // ---- CRUD: Unit ----
+  const updateUnit = useCallback((floorName, unitId, updates) => {
+    setFloors((prev) =>
+      prev.map((f) => {
+        if (f.name !== floorName) return f
+        return {
+          ...f,
+          units: f.units.map((u) => {
+            if (u.id !== unitId) return u
+            const newMonthlyRent = updates.monthlyRent !== undefined ? Number(updates.monthlyRent) : u.monthlyRent
+            return {
+              ...u,
+              ...updates,
+              monthlyRent: newMonthlyRent,
+              rent: updates.monthlyRent !== undefined ? `UGX ${(newMonthlyRent * 12).toLocaleString()}/yr` : u.rent,
+            }
+          }),
+        }
+      }),
+    )
+  }, [])
+
+  const deleteUnit = useCallback((floorName, unitId) => {
+    setFloors((prev) =>
+      prev.map((f) => {
+        if (f.name !== floorName) return f
+        return { ...f, units: f.units.filter((u) => u.id !== unitId) }
+      }),
+    )
+  }, [])
+
   // ---- Record Payment ----
   const addPayment = useCallback(({ floor, unit, amount, method, tenantName, status, date }) => {
     const rawAmount = Number(amount) || 0
@@ -436,6 +467,7 @@ export function BuildingProvider({ children }) {
       floorSlug, getFloorBySlug, getUnitByFloorAndId, getAvatarColor,
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,
+      updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
       auth, login, register, logout,
@@ -446,6 +478,7 @@ export function BuildingProvider({ children }) {
       getFloorBySlug, getUnitByFloorAndId, getAvatarColor,
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,
+      updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
       auth, login, register, logout,

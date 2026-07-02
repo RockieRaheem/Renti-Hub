@@ -4,14 +4,18 @@ import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
 import FloorFormModal from '../components/FloorFormModal'
 import TenantFormModal from '../components/TenantFormModal'
+import UnitFormModal from '../components/UnitFormModal'
+import ReassignTenantModal from '../components/ReassignTenantModal'
 
 export default function FloorDetails() {
   const { floorName } = useParams()
   const navigate = useNavigate()
-  const { building, floorSlug, getFloorBySlug, getAvatarColor, deleteFloor, deleteTenant } = useBuilding()
+  const { building, floorSlug, getFloorBySlug, getAvatarColor, deleteFloor, deleteTenant, deleteUnit } = useBuilding()
   const floor = getFloorBySlug(floorName)
   const [showFloorModal, setShowFloorModal] = useState(false)
   const [tenantModal, setTenantModal] = useState(null)
+  const [unitModal, setUnitModal] = useState(null)
+  const [reassignModal, setReassignModal] = useState(null)
 
   if (!floor) {
     return (
@@ -90,15 +94,16 @@ export default function FloorDetails() {
             <Link to="/properties" className="text-xs font-medium text-primary hover:text-primary-600 transition-colors">Back to overview</Link>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {floor.units.map((unit) => {
               const t = unit.tenant
+              const occupied = unit.status === 'occupied'
               return (
-                <div key={unit.id} className="bg-surface rounded-lg border border-outline hover:border-primary/30 hover:shadow-card-hover transition-all group">
+                <div key={unit.id} className={`rounded-lg border transition-all group ${occupied ? 'bg-surface border-outline hover:border-primary/30 hover:shadow-card-hover' : 'bg-surface-container/30 border-dashed border-outline hover:border-primary/30 hover:shadow-card-hover'}`}>
                   <div className="flex items-center justify-between p-4">
                     <Link to={`/properties/floor/${floorName}/unit/${unit.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold shrink-0 ${unit.status === 'occupied' ? 'bg-primary-50 text-primary' : 'bg-surface-container text-on-surface-dim'}`}>
-                        <span className="material-symbols-outlined text-xl">{unit.status === 'occupied' ? 'store' : 'meeting_room'}</span>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold shrink-0 ${occupied ? 'bg-primary-50 text-primary' : 'bg-surface-container text-on-surface-dim'}`}>
+                        <span className="material-symbols-outlined text-xl">{occupied ? 'store' : 'meeting_room'}</span>
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -108,33 +113,33 @@ export default function FloorDetails() {
                         <p className="text-xs text-on-surface-muted">{unit.type} &middot; {unit.size}</p>
                       </div>
                     </Link>
-                    <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       {t ? (
                         <div className="flex items-center gap-2">
                           <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold ${getAvatarColor(t.initials)}`}>
                             {t.initials}
                           </div>
-                          <span className="text-sm text-on-surface-muted hidden sm:inline">{t.name}</span>
+                          <span className="text-sm text-on-surface-muted hidden sm:inline max-w-[120px] truncate">{t.name}</span>
                         </div>
                       ) : (
-                        <span className="text-xs text-on-surface-dim italic">Vacant</span>
+                        <span className="text-xs text-on-surface-dim italic hidden sm:inline">Vacant</span>
                       )}
-                      <div className="text-right">
+                      <div className="text-right min-w-[80px]">
                         <p className="text-sm font-semibold text-on-surface">{unit.rent}</p>
                       </div>
-                      <div className="flex gap-1">
-                        {t && (
+                      <div className="flex items-center gap-0.5">
+                        {occupied && (
                           <>
-                            <button onClick={() => setTenantModal({ mode: 'edit', data: t })}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-primary hover:bg-primary-50 transition-colors"
-                              title="Edit tenant">
-                              <span className="material-symbols-outlined text-base">edit</span>
-                            </button>
-                            <button onClick={() => { deleteTenant(floor.name, unit.id) }}
-                              className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-status-unpaid hover:bg-red-50 transition-colors"
-                              title="Remove tenant">
-                              <span className="material-symbols-outlined text-base">person_remove</span>
-                            </button>
+                            <IconBtn icon="edit" title="Edit tenant" onClick={() => setTenantModal({ mode: 'edit', data: t })} color="primary" />
+                            <IconBtn icon="swap_horiz" title="Reassign to new tenant" onClick={() => setReassignModal({ unit })} color="amber" />
+                            <IconBtn icon="person_remove" title="Remove tenant" onClick={() => { if (window.confirm(`Remove ${t.name} from ${unit.name}?`)) deleteTenant(floor.name, unit.id) }} color="red" />
+                          </>
+                        )}
+                        {!occupied && (
+                          <>
+                            <IconBtn icon="person_add" title="Add tenant" onClick={() => setTenantModal({ mode: 'add', floor: floor.name, unit: unit.id })} color="primary" />
+                            <IconBtn icon="edit" title="Edit unit" onClick={() => setUnitModal({ unit })} color="primary" />
+                            <IconBtn icon="delete" title="Delete unit" onClick={() => { if (window.confirm(`Delete ${unit.name} from ${floor.name}?`)) deleteUnit(floor.name, unit.id) }} color="red" />
                           </>
                         )}
                         <Link to={`/properties/floor/${floorName}/unit/${unit.id}`}
@@ -152,24 +157,46 @@ export default function FloorDetails() {
         </div>
       </div>
 
-      {showFloorModal && (
-        <FloorFormModal mode="edit" floorName={floor.name} onClose={() => setShowFloorModal(false)} />
-      )}
+      {showFloorModal && <FloorFormModal mode="edit" floorName={floor.name} onClose={() => setShowFloorModal(false)} />}
+
       {tenantModal && (
         <TenantFormModal
           mode={tenantModal.mode}
-          floorName={floor.name}
-          unitId={unitIdForTenant(floor, tenantModal.data)}
+          floorName={tenantModal.floor || floor.name}
+          unitId={tenantModal.unit || (tenantModal.data ? findUnitId(floor, tenantModal.data) : null)}
           initialData={tenantModal.data}
           onClose={() => setTenantModal(null)}
         />
+      )}
+
+      {unitModal && (
+        <UnitFormModal floorName={floor.name} unit={unitModal.unit} onClose={() => setUnitModal(null)} />
+      )}
+
+      {reassignModal && (
+        <ReassignTenantModal floorName={floor.name} unit={reassignModal.unit} onClose={() => setReassignModal(null)} />
       )}
     </div>
   )
 }
 
-function unitIdForTenant(floor, tenant) {
+function findUnitId(floor, tenant) {
   if (!floor || !tenant) return null
   const unit = floor.units.find(u => u.tenant && u.tenant.name === tenant.name)
   return unit ? unit.id : null
+}
+
+function IconBtn({ icon, title, onClick, color }) {
+  const colorMap = {
+    primary: 'text-on-surface-muted hover:text-primary hover:bg-primary-50',
+    red: 'text-on-surface-muted hover:text-status-unpaid hover:bg-red-50',
+    amber: 'text-on-surface-muted hover:text-amber-600 hover:bg-amber-50',
+  }
+  return (
+    <button onClick={onClick}
+      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${colorMap[color] || colorMap.primary}`}
+      title={title}>
+      <span className="material-symbols-outlined text-base">{icon}</span>
+    </button>
+  )
 }
