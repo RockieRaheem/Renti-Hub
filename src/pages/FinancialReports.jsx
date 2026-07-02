@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useBuilding } from '../context/BuildingContext'
 import DonutChart from '../components/charts/DonutChart'
+import { downloadCSV } from '../utils/csv'
 
 const MONTHS = ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
 const TYPE_COLORS = { Retail: '#0037b0', Office: '#F97316', 'Event Space': '#22c55e' }
@@ -148,7 +149,23 @@ export default function FinancialReports() {
       </div>
 
       <div className="bg-surface rounded-card border border-outline p-6 shadow-card">
-        <h3 className="text-sm font-semibold text-on-surface mb-5">Revenue by Floor</h3>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-semibold text-on-surface">Revenue by Floor</h3>
+          <button onClick={() => {
+            const data = floors.flatMap((f) =>
+              f.units.filter((u) => u.tenant).map((u) => ({
+                Floor: f.name, Unit: u.name, Tenant: u.tenant.name,
+                'Monthly Rent UGX': u.monthlyRent || 0,
+                Status: u.tenant.outstandingBalance > 0 ? 'Outstanding' : 'Paid',
+              }))
+            )
+            downloadCSV(data, 'rentihub_revenue_by_floor.csv')
+          }}
+            className="text-xs font-medium text-primary hover:bg-primary-50 px-2.5 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">download</span>
+            Export CSV
+          </button>
+        </div>
         {floors.length > 0 ? (
           <div className="space-y-4">
             {floors.map((f) => {

@@ -75,11 +75,27 @@ export default function RentCollection() {
               ))}
             </div>
           </div>
-          <button onClick={() => setShowModal(true)}
-            className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-base">add</span>
-            Record Payment
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => {
+              const data = allTenants.map((t) => ({
+                Tenant: t.name, Unit: t.unit, Floor: t.floor,
+                'Monthly Rent': t.monthlyRent || 0,
+                Status: t.paid ? 'Paid' : 'Overdue',
+                'Outstanding UGX': t.outstandingBalance || 0,
+                'Last Payment': t.lastPaymentDate || '',
+              }))
+              downloadCSV(data, 'rentihub_tenants.csv')
+            }}
+              className="px-3.5 py-2 border border-outline text-on-surface-muted text-xs font-semibold rounded-lg hover:bg-surface-container transition-colors inline-flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-base">download</span>
+              Export
+            </button>
+            <button onClick={() => setShowModal(true)}
+              className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-base">add</span>
+              Record Payment
+            </button>
+          </div>
         </div>
 
         {filtered.length > 0 ? (
