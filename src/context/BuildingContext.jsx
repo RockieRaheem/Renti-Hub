@@ -81,6 +81,26 @@ export function BuildingProvider({ children }) {
     localStorage.setItem(PAYMENTS_KEY, JSON.stringify(payments))
   }, [payments])
 
+  // ---- Cross-tab Sync ----
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try { setFloors(JSON.parse(e.newValue)) } catch { /* ignore */ }
+      }
+      if (e.key === PAYMENTS_KEY && e.newValue) {
+        try { setPayments(JSON.parse(e.newValue)) } catch { /* ignore */ }
+      }
+      if (e.key === MAINTENANCE_KEY && e.newValue) {
+        try { setMaintenance(JSON.parse(e.newValue)) } catch { /* ignore */ }
+      }
+      if (e.key === AUTH_KEY) {
+        try { setAuth(e.newValue ? JSON.parse(e.newValue) : null) } catch { /* ignore */ }
+      }
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [])
+
   // ---- Auth ----
   const login = useCallback((email, password) => {
     const users = load('rentihub_users', [])
