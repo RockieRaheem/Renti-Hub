@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
@@ -75,7 +75,9 @@ export default function RentCollection() {
         floor: form.floor, unit: form.unit, amount: parseFloat(form.amount) || 0,
         method: form.method, tenantName: form.tenantName, status: form.status, date: form.date,
       })
-      if (result) {
+      if (result?.error) {
+        setSubmitError(result.error)
+      } else if (result) {
         setReceipt({
           ...result,
           previousBalance: allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)?.outstandingBalance || 0,
@@ -85,8 +87,6 @@ export default function RentCollection() {
           date: new Date().toISOString().slice(0, 10),
         })
         setShowModal(false)
-      } else {
-        setSubmitError('Payment failed — no response from server. Check that the tenant, floor, and unit are valid.')
       }
     } catch (err) {
       setSubmitError(err?.message || 'An unexpected error occurred while recording payment.')
@@ -193,8 +193,8 @@ export default function RentCollection() {
                   const days = agingDays(t.lastPaymentDate)
                   const history = tenantPayments(t)
                   return (
-                    <>
-                      <tr key={`${t.floor}-${t.unit}`} className="hover:bg-surface-container transition-colors group">
+                    <React.Fragment key={`${t.floor}-${t.unit}`}>
+                      <tr className="hover:bg-surface-container transition-colors group">
                         <td className="px-4 py-3">
                           <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
                             className="flex items-center gap-2.5 group/link text-left">
@@ -281,7 +281,7 @@ export default function RentCollection() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   )
                 })}
                 <tr className="bg-surface-container/30 font-medium text-sm">

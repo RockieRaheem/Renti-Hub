@@ -29,6 +29,7 @@ function naturalSort(a, b) {
 
 function mapFloor(data) {
   return {
+    id: data.id,
     name: data.name,
     units: (data.units || []).sort(naturalSort).map(mapUnit),
   }
@@ -85,7 +86,7 @@ function mapPayment(data) {
     status: data.status,
     tenantName: data.tenant_name || '',
     date: data.date,
-    receiptId: data.receipt_id || `RCP-${data.id?.substring(0, 4).toUpperCase()}-${data.id?.substring(4, 8).toUpperCase()}`,
+    receiptId: `RCP-${(data.id || '').substring(0, 4).toUpperCase()}-${(data.id || '').substring(4, 8).toUpperCase()}`,
     time: new Date(data.created_at).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -365,12 +366,14 @@ export async function fetchPayments(buildingId) {
 }
 
 export async function addPayment(paymentData) {
-  const stamp = Date.now().toString(36).slice(-4).toUpperCase()
-  const receiptId = `RCP-${new Date().toISOString().slice(2, 4)}${new Date().toISOString().slice(5, 7)}-${stamp}`
+  const { data: sessionData } = await supabase.auth.getSession()
+  const userId = sessionData?.session?.user?.id
+  if (!userId) return { error: 'Not authenticated' }
 
   const { data, error } = await supabase
     .from('payments')
     .insert({
+      user_id: userId,
       tenant_id: paymentData.tenantId || null,
       unit_id: paymentData.unitId,
       floor_id: paymentData.floorId,
@@ -380,11 +383,11 @@ export async function addPayment(paymentData) {
       status: paymentData.status || 'Paid',
       tenant_name: paymentData.tenantName || '',
       date: paymentData.date || new Date().toISOString().split('T')[0],
-      receipt_id: receiptId,
     })
     .select()
     .single()
   if (error) return { error: error.message }
+  const receiptId = `RCP-${data.id.substring(0, 4).toUpperCase()}-${data.id.substring(4, 8).toUpperCase()}`
   return {
     data: {
       id: data.id,

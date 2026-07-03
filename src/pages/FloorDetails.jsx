@@ -27,7 +27,9 @@ export default function FloorDetails() {
       tenantName: tenant.name, status: 'Paid',
       date: new Date().toISOString().slice(0, 10),
     })
-    if (result) {
+    if (result?.error) {
+      alert(result.error)
+    } else if (result) {
       setPaymentReceipt({ ...result, previousBalance: tenant.outstandingBalance || 0 })
       setPaymentModal(null)
     }

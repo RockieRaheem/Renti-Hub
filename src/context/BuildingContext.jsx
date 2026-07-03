@@ -302,11 +302,11 @@ export function BuildingProvider({ children }) {
 
   // ── Payment ──
   const addPayment = useCallback(async ({ floor: floorName, unit: unitName, amount, method, tenantName, status, date }) => {
-    if (!building) { setError('Building not loaded'); return null }
+    if (!building) { return { error: 'Building not loaded' } }
     const floor = floors.find((f) => f.name === floorName)
-    if (!floor) { setError(`Floor "${floorName}" not found`); return null }
+    if (!floor) { return { error: `Floor "${floorName}" not found` } }
     const unit = floor.units.find((u) => u.name === unitName)
-    if (!unit) { setError(`Unit "${unitName}" not found on ${floorName}`); return null }
+    if (!unit) { return { error: `Unit "${unitName}" not found on ${floorName}` } }
 
     const result = await q.addPayment({
       unitId: unit.id, floorId: floor.id, buildingId: building.id,
@@ -315,7 +315,7 @@ export function BuildingProvider({ children }) {
       amount, method: method || 'Cash', status: status || 'Paid',
       tenantName: tenantName || '', date,
     })
-    if (result.error) { setError(result.error); return null }
+    if (result.error) { return { error: result.error } }
 
     const paymentRecord = result.data
 
