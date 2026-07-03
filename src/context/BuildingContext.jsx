@@ -318,10 +318,16 @@ export function BuildingProvider({ children }) {
     if (result.error) { return { error: result.error } }
 
     const paymentRecord = result.data
+    const monthlyRent = unit.monthlyRent || 0
+    const currentOutstanding = unit.tenant?.outstandingBalance || 0
+    // If no outstanding debt recorded, the tenant owes this period's monthly rent.
+    // If outstanding exists, that's what they owe (accumulated from prior periods).
+    const oldBalance = currentOutstanding > 0 ? currentOutstanding : monthlyRent
+    const rawAmount = Number(amount) || 0
+    paymentRecord.previousBalance = oldBalance
 
     if (unit.tenant) {
-      const rawAmount = Number(amount) || 0
-      const newOutstanding = Math.max(0, (unit.tenant.outstandingBalance || 0) - rawAmount)
+      const newOutstanding = Math.max(0, oldBalance - rawAmount)
       const tenantResult = await q.updateTenant(unit.tenant.id, {
         paid: newOutstanding <= 0,
         outstandingBalance: newOutstanding,
@@ -336,7 +342,7 @@ export function BuildingProvider({ children }) {
     setPayments((prev) => [paymentRecord, ...prev])
 
     await refreshData()
-    logAudit('Payment recorded', `${tenantName} UGX ${(Number(amount) || 0).toLocaleString()} (${status})`)
+    logAudit('Payment recorded', `${tenantName} UGX ${rawAmount.toLocaleString()} (${status})`)
     return paymentRecord
   }, [building, floors, refreshData])
 

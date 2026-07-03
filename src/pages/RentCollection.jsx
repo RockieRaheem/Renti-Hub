@@ -78,10 +78,7 @@ export default function RentCollection() {
       if (result?.error) {
         setSubmitError(result.error)
       } else if (result) {
-        setReceipt({
-          ...result,
-          previousBalance: allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)?.outstandingBalance || 0,
-        })
+        setReceipt(result)
         setForm({
           tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid',
           date: new Date().toISOString().slice(0, 10),

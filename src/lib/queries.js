@@ -40,6 +40,7 @@ function mapUnit(data) {
   const t = raw || data.tenant
   const tenant = t
     ? {
+        id: t.id,
         name: t.name,
         initials: t.initials,
         email: t.email || '',

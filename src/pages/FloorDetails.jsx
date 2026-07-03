@@ -30,7 +30,7 @@ export default function FloorDetails() {
     if (result?.error) {
       alert(result.error)
     } else if (result) {
-      setPaymentReceipt({ ...result, previousBalance: tenant.outstandingBalance || 0 })
+      setPaymentReceipt(result)
       setPaymentModal(null)
     }
   }
