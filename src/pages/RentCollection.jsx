@@ -2,18 +2,58 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
+import PaymentReceipt from '../components/PaymentReceipt'
 import { downloadCSV } from '../utils/csv'
 import { downloadTenantPDF, downloadPaymentPDF } from '../utils/pdf'
+
+function initials(name) {
+  return (name || '').split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
+}
+
+function statusColor(ps) {
+  if (ps === 'Good Payer') return 'bg-green-50 text-green-700'
+  if (ps === 'Neutral Payer') return 'bg-yellow-50 text-yellow-700'
+  if (ps === 'Bad Payer') return 'bg-red-50 text-red-700'
+  return 'bg-gray-100 text-gray-600'
+}
+
+function agingDays(lastPaymentDate) {
+  if (!lastPaymentDate) return 90
+  const parts = lastPaymentDate.split(/[/\s,]+/)
+  if (parts.length < 3) return 0
+  const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
+  const d = parseInt(parts[0], 10)
+  const m = months[parts[1]] ?? (parseInt(parts[1], 10) - 1)
+  const y = parseInt(parts[2], 10)
+  if (isNaN(d) || isNaN(m) || isNaN(y)) return 0
+  const then = new Date(y, m, d)
+  return Math.floor((Date.now() - then.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function AgingIndicator({ days }) {
+  if (days <= 0) return null
+  const color = days <= 30 ? 'text-yellow-600 bg-yellow-50' : days <= 60 ? 'text-orange-600 bg-orange-50' : 'text-red-600 bg-red-50'
+  return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${color}`}>{days}d</span>
+}
+
+const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
 
 export default function RentCollection() {
   const { floors, floorSlug, payments, addPayment } = useBuilding()
   const [filterFloor, setFilterFloor] = useState('all')
   const [showModal, setShowModal] = useState(false)
+  const [receipt, setReceipt] = useState(null)
   const [search, setSearch] = useState('')
-  const [form, setForm] = useState({ tenantName: '', unit: '', floor: '', amount: '', status: 'Paid', date: new Date().toISOString().slice(0, 10) })
+  const [expandedTenant, setExpandedTenant] = useState(null)
+  const [form, setForm] = useState({
+    tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid', date: new Date().toISOString().slice(0, 10),
+  })
 
   const allTenants = floors.flatMap((f) =>
-    f.units.filter((u) => u.tenant).map((u) => ({ ...u.tenant, unit: u.name, floor: f.name, unitId: u.id, monthlyRent: u.monthlyRent, outstandingBalance: u.tenant.outstandingBalance || 0 }))
+    f.units.filter((u) => u.tenant).map((u) => ({
+      ...u.tenant, unit: u.name, floor: f.name, unitId: u.id, monthlyRent: u.monthlyRent,
+      outstandingBalance: u.tenant.outstandingBalance || 0,
+    }))
   )
   const filtered = (filterFloor === 'all' ? allTenants : allTenants.filter((t) => t.floor === filterFloor))
     .filter((t) => !search || t.name?.toLowerCase().includes(search.toLowerCase()) || t.unit?.toLowerCase().includes(search.toLowerCase()))
@@ -24,39 +64,58 @@ export default function RentCollection() {
   const overdueCount = allTenants.filter((t) => !t.paid).length
   const totalOutstanding = allTenants.reduce((s, t) => s + (t.outstandingBalance || 0), 0)
 
-  const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
-
   const handleRecordPayment = async (e) => {
     e.preventDefault()
-    await addPayment({
-      floor: form.floor, unit: form.unit, amount: parseFloat(form.amount),
-      method: 'Cash', tenantName: form.tenantName, status: form.status, date: form.date,
+    const result = await addPayment({
+      floor: form.floor, unit: form.unit, amount: parseFloat(form.amount) || 0,
+      method: form.method, tenantName: form.tenantName, status: form.status, date: form.date,
     })
-    setForm({ tenantName: '', unit: '', floor: '', amount: '', status: 'Paid', date: new Date().toISOString().slice(0, 10) })
-    setShowModal(false)
+    if (result) {
+      setReceipt({
+        ...result,
+        previousBalance: allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)?.outstandingBalance || 0,
+      })
+      setForm({
+        tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid',
+        date: new Date().toISOString().slice(0, 10),
+      })
+      setShowModal(false)
+    }
   }
+
+  const openPaymentForm = (tenant) => {
+    setForm({
+      tenantName: tenant.name, unit: tenant.unit, floor: tenant.floor,
+      amount: (tenant.monthlyRent || 0).toString(), method: 'Cash', status: 'Paid',
+      date: new Date().toISOString().slice(0, 10),
+    })
+    setShowModal(true)
+  }
+
+  const tenantPayments = (tenant) =>
+    payments.filter((p) => p.tenantName === tenant.name && p.unit === tenant.unit).slice(0, 20)
 
   const latestPayments = [...payments].reverse().slice(0, 5)
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { icon: 'payments', label: 'Total Collected', value: `UGX ${(totalCollected / 1000000).toFixed(1)}M` },
-          { icon: 'account_balance', label: 'Expected Revenue', value: `UGX ${(totalExpected / 1000000).toFixed(1)}M` },
-          { icon: 'pie_chart', label: 'Collection Rate', value: `${collectionRate}%`, sub: `${payments.length} payments` },
-          { icon: 'warning', label: 'Outstanding / Overdue', value: `UGX ${(totalOutstanding / 1000000).toFixed(1)}M`, sub: `${overdueCount} tenant${overdueCount !== 1 ? 's' : ''}` },
+          { icon: 'payments', label: 'Total Collected', value: `UGX ${(totalCollected / 1000000).toFixed(1)}M`, sub: `${payments.length} payments` },
+          { icon: 'account_balance', label: 'Expected Revenue', value: `UGX ${(totalExpected / 1000000).toFixed(1)}M`, sub: `${allTenants.length} tenants` },
+          { icon: 'pie_chart', label: 'Collection Rate', value: `${collectionRate}%`, sub: totalExpected > 0 ? `${totalCollected >= totalExpected ? 'On target' : `${((totalExpected - totalCollected) / 1000000).toFixed(1)}M short`}` : 'No data' },
+          { icon: 'warning', label: 'Outstanding', value: `UGX ${(totalOutstanding / 1000000).toFixed(1)}M`, sub: `${overdueCount} overdue tenant${overdueCount !== 1 ? 's' : ''}` },
+          { icon: 'receipt_long', label: 'Avg per Tenant', value: `UGX ${allTenants.length ? Math.round(totalCollected / allTenants.length / 1000) * 1000 : 0}`, sub: `${((collectionRate / 100) * totalExpected / (allTenants.length || 1) / 1000000).toFixed(1)}M avg rent` },
         ].map((s) => (
-          <div key={s.label} className="bg-surface rounded-card border border-outline p-5 shadow-card">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-lg bg-primary-50 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-xl">{s.icon}</span>
+          <div key={s.label} className="bg-surface rounded-card border border-outline p-4 shadow-card">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary text-lg">{s.icon}</span>
               </div>
             </div>
-            <p className="text-2xl font-bold text-on-surface mb-0.5 tracking-tight">{s.value}</p>
-            <p className="text-xs text-on-surface-muted">{s.label}</p>
-            {s.sub && <p className="text-[11px] text-on-surface-dim mt-0.5">{s.sub}</p>}
+            <p className="text-xl font-bold text-on-surface mb-0.5 tracking-tight">{s.value}</p>
+            <p className="text-[11px] text-on-surface-muted">{s.label}</p>
+            {s.sub && <p className="text-[10px] text-on-surface-dim mt-0.5">{s.sub}</p>}
           </div>
         ))}
       </div>
@@ -111,47 +170,115 @@ export default function RentCollection() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-outline bg-surface-container/50">
-                  {['Tenant', 'Unit', 'Floor', 'Monthly Rent', 'Status', 'Outstanding', 'Last Payment', ''].map((h) => (
-                    <th key={h} className="text-left px-5 py-3 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  {['Tenant', 'Unit / Floor', 'Monthly Rent', 'Status', 'Outstanding', 'Aging', 'Last Payment', ''].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline">
-                {filtered.map((t) => (
-                  <tr key={`${t.floor}-${t.unit}`} className="hover:bg-surface-container transition-colors group">
-                    <td className="px-5 py-3">
-                      <Link to={`/properties/floor/${floorSlug(t.floor)}/unit/${t.unitId}`}
-                        className="flex items-center gap-2.5 group/link">
-                        <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${t.paymentStatus === 'Good Payer' ? 'bg-green-50 text-green-700' : t.paymentStatus === 'Neutral Payer' ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}`}>
-                          {t.name ? t.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '?'}
-                        </div>
-                        <span className="font-medium text-on-surface group-hover/link:text-primary transition-colors">{t.name || 'Unknown'}</span>
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3">
-                      <Link to={`/properties/floor/${floorSlug(t.floor)}/unit/${t.unitId}`}
-                        className="text-on-surface-muted hover:text-primary transition-colors">
-                        {t.unit}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3 text-on-surface-muted">{t.floor}</td>
-                    <td className="px-5 py-3 font-medium text-on-surface">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
-                    <td className="px-5 py-3"><StatusBadge status={t.outstandingBalance > 0 ? 'Overdue' : t.lastPayment ? 'Paid' : 'No Payment'} /></td>
-                    <td className={`px-5 py-3 text-xs font-medium ${t.outstandingBalance > 0 ? 'text-status-unpaid' : 'text-on-surface-muted'}`}>
-                      {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` : '—'}
-                    </td>
-                    <td className="px-5 py-3 text-on-surface-muted text-xs">{t.lastPaymentDate || '—'}</td>
-                    <td className="px-5 py-3">
-                      <button onClick={() => {
-                        setForm({ tenantName: t.name, unit: t.unit, floor: t.floor, amount: (t.monthlyRent || 0).toString(), status: 'Paid', date: new Date().toISOString().slice(0, 10) })
-                        setShowModal(true)
-                      }}
-                        className="text-xs font-medium text-primary hover:bg-primary-50 px-2.5 py-1.5 rounded-lg transition-colors">
-                        Record
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((t) => {
+                  const isExpanded = expandedTenant === `${t.floor}|${t.unit}`
+                  const days = agingDays(t.lastPaymentDate)
+                  const history = tenantPayments(t)
+                  return (
+                    <>
+                      <tr key={`${t.floor}-${t.unit}`} className="hover:bg-surface-container transition-colors group">
+                        <td className="px-4 py-3">
+                          <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
+                            className="flex items-center gap-2.5 group/link text-left">
+                            <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${statusColor(t.paymentStatus)}`}>
+                              {initials(t.name)}
+                            </div>
+                            <div>
+                              <span className="font-medium text-on-surface group-hover/link:text-primary transition-colors text-sm">{t.name || 'Unknown'}</span>
+                              {history.length > 0 && (
+                                <span className="text-[10px] text-on-surface-dim ml-1.5">{history.length} payment{history.length !== 1 ? 's' : ''}</span>
+                              )}
+                            </div>
+                          </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link to={`/properties/floor/${floorSlug(t.floor)}/unit/${t.unitId}`}
+                            className="text-on-surface-muted hover:text-primary transition-colors">
+                            {t.unit} <span className="text-on-surface-dim text-[11px]">{t.floor}</span>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-on-surface whitespace-nowrap">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
+                        <td className="px-4 py-3"><StatusBadge status={t.outstandingBalance > 0 ? 'Overdue' : t.lastPayment ? 'Paid' : 'No Payment'} /></td>
+                        <td className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${t.outstandingBalance > 0 ? 'text-status-unpaid' : 'text-on-surface-muted'}`}>
+                          {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {t.outstandingBalance > 0 ? <AgingIndicator days={days} /> : <span className="text-[10px] text-on-surface-dim">Current</span>}
+                        </td>
+                        <td className="px-4 py-3 text-on-surface-muted text-xs whitespace-nowrap">{t.lastPaymentDate || '—'}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => openPaymentForm(t)}
+                              className="text-xs font-medium text-primary hover:bg-primary-50 px-2 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm">payments</span>
+                              Pay
+                            </button>
+                            {history.length > 0 && (
+                              <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
+                                className="text-xs font-medium text-on-surface-muted hover:bg-surface-container px-2 py-1.5 rounded-lg transition-colors">
+                                <span className="material-symbols-outlined text-sm">{isExpanded ? 'expand_less' : 'expand_more'}</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && history.length > 0 && (
+                        <tr key={`${t.floor}-${t.unit}-history`}>
+                          <td colSpan={8} className="px-4 pb-4 pt-0">
+                            <div className="bg-surface-container/50 rounded-lg border border-outline/50 overflow-hidden ml-12">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="border-b border-outline/50 bg-surface-container/30">
+                                    <th className="text-left px-4 py-2 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Receipt</th>
+                                    <th className="text-left px-4 py-2 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Date</th>
+                                    <th className="text-left px-4 py-2 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Method</th>
+                                    <th className="text-right px-4 py-2 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Amount</th>
+                                    <th className="text-center px-4 py-2 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-2"></th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-outline/30">
+                                  {history.map((p) => (
+                                    <tr key={p.id} className="hover:bg-surface-container/50">
+                                      <td className="px-4 py-2 font-mono text-[11px] text-on-surface-muted">{p.receiptId}</td>
+                                      <td className="px-4 py-2 text-on-surface-muted">{p.date || '—'}</td>
+                                      <td className="px-4 py-2 text-on-surface-muted">{p.method || 'Cash'}</td>
+                                      <td className="px-4 py-2 text-right font-medium text-on-surface">UGX {(p.amount || 0).toLocaleString()}</td>
+                                      <td className="px-4 py-2 text-center">
+                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${p.status === 'Paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
+                                          {p.status}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2 text-right">
+                                        <button onClick={() => setReceipt({ ...p, previousBalance: 0 })}
+                                          className="text-[11px] text-primary hover:underline">
+                                          Receipt
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  )
+                })}
+                <tr className="bg-surface-container/30 font-medium text-sm">
+                  <td className="px-4 py-3 text-on-surface">Total ({filtered.length} tenant{filtered.length !== 1 ? 's' : ''})</td>
+                  <td colSpan={2}></td>
+                  <td></td>
+                  <td className="px-4 py-3 font-bold text-status-unpaid">UGX {filtered.reduce((s, t) => s + (t.outstandingBalance || 0), 0).toLocaleString()}</td>
+                  <td colSpan={3}></td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -166,7 +293,7 @@ export default function RentCollection() {
 
       {latestPayments.length > 0 && (
         <div className="bg-surface rounded-card border border-outline p-5 shadow-card">
-          <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-4">Recent Activity</h3>
+          <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-4">Recent Payments</h3>
           <div className="space-y-2">
             {latestPayments.map((p) => (
               <div key={p.id} className="flex items-center justify-between py-2 border-b border-outline/50 last:border-0">
@@ -174,7 +301,7 @@ export default function RentCollection() {
                   <div className="w-2 h-2 rounded-full bg-status-paid" />
                   <div>
                     <p className="text-sm font-medium text-on-surface">{p.tenantName}</p>
-                    <p className="text-xs text-on-surface-muted">{p.unit} &middot; {p.date}</p>
+                    <p className="text-xs text-on-surface-muted">{p.unit} &middot; {p.date} &middot; <span className="font-mono text-[10px]">{p.receiptId}</span></p>
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-status-paid">UGX {(p.amount || 0).toLocaleString()}</span>
@@ -207,11 +334,11 @@ export default function RentCollection() {
                   }} className={inputClass}>
                     <option value="|">Choose a tenant...</option>
                     {floors.map((f) => {
-                      const floorTenants = allTenants.filter((t) => t.floor === f.name)
-                      if (floorTenants.length === 0) return null
+                      const ft = allTenants.filter((t) => t.floor === f.name)
+                      if (ft.length === 0) return null
                       return (
                         <optgroup key={f.name} label={f.name}>
-                          {floorTenants.map((t) => (
+                          {ft.map((t) => (
                             <option key={`${t.floor}|${t.unit}`} value={`${t.floor}|${t.unit}`}>
                               {t.name} — {t.unit} (UGX {(t.monthlyRent || 0).toLocaleString()})
                             </option>
@@ -241,7 +368,16 @@ export default function RentCollection() {
                   <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Date</label>
                   <input type="date" value={form.date} onChange={(e) => setForm(p => ({ ...p, date: e.target.value }))} className={inputClass} required />
                 </div>
-                <div className="col-span-2">
+                <div>
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Payment Method</label>
+                  <select value={form.method} onChange={(e) => setForm(p => ({ ...p, method: e.target.value }))} className={inputClass}>
+                    <option value="Cash">Cash</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cheque">Cheque</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Status</label>
                   <select value={form.status} onChange={(e) => setForm(p => ({ ...p, status: e.target.value }))} className={inputClass}>
                     <option value="Paid">Paid</option>
@@ -263,6 +399,17 @@ export default function RentCollection() {
             </form>
           </div>
         </div>
+      )}
+
+      {receipt && (
+        <PaymentReceipt
+          payment={receipt}
+          tenant={receipt.tenantName}
+          floor={receipt.floor}
+          unit={receipt.unit}
+          buildingName={useBuilding().building?.name}
+          onClose={() => setReceipt(null)}
+        />
       )}
     </div>
   )
