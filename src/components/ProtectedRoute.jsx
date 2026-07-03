@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 
 export default function ProtectedRoute() {
-  const { auth, loading, supabaseReady } = useBuilding()
+  const { auth, loading, restoringSession, supabaseReady } = useBuilding()
 
   if (loading) {
     return (
@@ -10,6 +10,18 @@ export default function ProtectedRoute() {
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
           <p className="text-sm text-on-surface-muted">Loading your data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (restoringSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm text-on-surface-muted">Restoring your session...</p>
+          <p className="text-xs text-on-surface-dim">Please wait while we reconnect</p>
         </div>
       </div>
     )

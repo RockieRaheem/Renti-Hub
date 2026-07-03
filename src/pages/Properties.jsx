@@ -26,21 +26,23 @@ export default function Properties() {
 
   if (!hasData) {
     return (
-      <div className="p-6 md:p-8 space-y-6">
-        <div className="bg-surface rounded-card border border-outline p-12 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-4">
-            <span className="material-symbols-outlined text-primary text-3xl">add_business</span>
+      <>
+        <div className="p-6 md:p-8 space-y-6">
+          <div className="bg-surface rounded-card border border-outline p-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-primary text-3xl">add_business</span>
+            </div>
+            <h2 className="text-lg font-bold text-on-surface mb-2">No floors yet</h2>
+            <p className="text-sm text-on-surface-muted mb-6 max-w-md mx-auto">Get started by adding your first floor. Each floor can contain multiple shop units that you can assign to tenants.</p>
+            <button onClick={() => setFloorModal({ mode: 'add' })}
+              className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-2">
+              <span className="material-symbols-outlined text-lg">add</span>
+              Add Your First Floor
+            </button>
           </div>
-          <h2 className="text-lg font-bold text-on-surface mb-2">No floors yet</h2>
-          <p className="text-sm text-on-surface-muted mb-6 max-w-md mx-auto">Get started by adding your first floor. Each floor can contain multiple shop units that you can assign to tenants.</p>
-          <button onClick={() => setFloorModal({ mode: 'add' })}
-            className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-2">
-            <span className="material-symbols-outlined text-lg">add</span>
-            Add Your First Floor
-          </button>
-          {floorModal && <FloorFormModal mode={floorModal.mode} floorName={floorModal.name} onClose={() => setFloorModal(null)} />}
         </div>
-      </div>
+        {floorModal && <FloorFormModal mode={floorModal.mode} floorName={floorModal.name} onClose={() => setFloorModal(null)} />}
+      </>
     )
   }
 

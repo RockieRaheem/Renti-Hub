@@ -3,6 +3,8 @@ import { logAudit } from '../utils/audit'
 import { supabase } from '../lib/supabase'
 import * as q from '../lib/queries'
 
+const SESSION_CACHE_KEY = 'rh_user_session'
+
 import {
   revenueMonthly, revenueMix, cashFlowData, paymentMethods, tenantFilters,
   statusBorders, priorityBorders, floorSlug,
@@ -31,6 +33,37 @@ function hashColor(initials) {
   return CHIP_COLORS[Math.abs(hash) % CHIP_COLORS.length]
 }
 
+function cacheUserSession(data) {
+  try { localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(data)) } catch { /* noop */ }
+}
+function loadCachedSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_CACHE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+function clearCachedSession() {
+  try { localStorage.removeItem(SESSION_CACHE_KEY) } catch { /* noop */ }
+}
+
+async function tryRestoreSession(maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const { data: session } = await q.getSession()
+      if (session?.user) {
+        const { data: userData } = await q.getCurrentUser()
+        if (userData) return userData
+      }
+    } catch { /* retry */ }
+    if (i < maxRetries - 1) await new Promise((r) => setTimeout(r, 800 * (i + 1)))
+  }
+
+  const cached = loadCachedSession()
+  if (cached) return cached
+
+  return null
+}
+
 export function BuildingProvider({ children }) {
   const [floors, setFloors] = useState([])
   const [payments, setPayments] = useState([])
@@ -39,6 +72,7 @@ export function BuildingProvider({ children }) {
   const [userId, setUserId] = useState(null)
   const [building, setBuilding] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [restoringSession, setRestoringSession] = useState(false)
   const [error, setError] = useState(null)
   const [supabaseReady, setSupabaseReady] = useState(false)
 
@@ -51,16 +85,27 @@ export function BuildingProvider({ children }) {
     async function init() {
       if (!configured) { setLoading(false); return }
 
-      const { data: session } = await q.getSession()
-      if (cancelled || !session?.user) { setLoading(false); return }
+      const cached = loadCachedSession()
+      const hasCachedAuth = !!cached
 
-      const { data: userData } = await q.getCurrentUser()
-      if (cancelled || !userData) { setLoading(false); return }
+      if (hasCachedAuth) setRestoringSession(true)
 
-      setAuth({ name: userData.name, email: userData.email })
-      setUserId(userData.id)
-      await loadAllData(userData.id)
-      if (!cancelled) setLoading(false)
+      const userData = await tryRestoreSession()
+      if (cancelled) return
+
+      if (userData) {
+        cacheUserSession(userData)
+        setAuth({ name: userData.name, email: userData.email })
+        setUserId(userData.id)
+        await loadAllData(userData.id)
+        if (!cancelled) { setLoading(false); setRestoringSession(false) }
+        return
+      }
+
+      if (cancelled) return
+      clearCachedSession()
+      setRestoringSession(false)
+      setLoading(false)
     }
 
     init()
@@ -70,12 +115,14 @@ export function BuildingProvider({ children }) {
       const sub = supabase.auth.onAuthStateChange(async (event, session) => {
         if (cancelled) return
         if (event === 'SIGNED_OUT') {
+          clearCachedSession()
           setAuth(null); setUserId(null); setBuilding(null)
           setFloors([]); setPayments([])
           setMaintenance({ pending: [], inProgress: [], resolved: [] })
         } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
           const { data: userData } = await q.getCurrentUser()
           if (userData) {
+            cacheUserSession(userData)
             setAuth({ name: userData.name, email: userData.email })
             setUserId(userData.id)
             await loadAllData(userData.id)
@@ -456,7 +503,7 @@ export function BuildingProvider({ children }) {
       updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
-      auth, login, register, logout, loading, error, hasBuilding, createBuilding, supabaseReady,
+      auth, login, register, logout, loading, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     }),
     [
       building, floors, payments, maintenance, totalUnits, occupiedUnits,
@@ -467,7 +514,7 @@ export function BuildingProvider({ children }) {
       updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
-      auth, login, register, logout, loading, error, hasBuilding, createBuilding, supabaseReady,
+      auth, login, register, logout, loading, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     ],
   )
 

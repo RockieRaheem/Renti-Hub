@@ -11,14 +11,8 @@ export default function AppLayout() {
 
   if (!loading && !hasBuilding) {
     return (
-      <div className="flex h-screen overflow-hidden bg-surface-container">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} />
-        <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <Header />
-          <div className="flex-1 overflow-y-auto scroll-smooth">
-            <Onboarding />
-          </div>
-        </main>
+      <div className="min-h-screen bg-surface-container">
+        <Onboarding />
       </div>
     )
   }
