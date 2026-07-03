@@ -45,6 +45,8 @@ export default function RentCollection() {
   const [receipt, setReceipt] = useState(null)
   const [search, setSearch] = useState('')
   const [expandedTenant, setExpandedTenant] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
   const [form, setForm] = useState({
     tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid', date: new Date().toISOString().slice(0, 10),
   })
@@ -66,20 +68,30 @@ export default function RentCollection() {
 
   const handleRecordPayment = async (e) => {
     e.preventDefault()
-    const result = await addPayment({
-      floor: form.floor, unit: form.unit, amount: parseFloat(form.amount) || 0,
-      method: form.method, tenantName: form.tenantName, status: form.status, date: form.date,
-    })
-    if (result) {
-      setReceipt({
-        ...result,
-        previousBalance: allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)?.outstandingBalance || 0,
+    setSubmitError(null)
+    setSubmitting(true)
+    try {
+      const result = await addPayment({
+        floor: form.floor, unit: form.unit, amount: parseFloat(form.amount) || 0,
+        method: form.method, tenantName: form.tenantName, status: form.status, date: form.date,
       })
-      setForm({
-        tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid',
-        date: new Date().toISOString().slice(0, 10),
-      })
-      setShowModal(false)
+      if (result) {
+        setReceipt({
+          ...result,
+          previousBalance: allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)?.outstandingBalance || 0,
+        })
+        setForm({
+          tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid',
+          date: new Date().toISOString().slice(0, 10),
+        })
+        setShowModal(false)
+      } else {
+        setSubmitError('Payment failed — no response from server. Check that the tenant, floor, and unit are valid.')
+      }
+    } catch (err) {
+      setSubmitError(err?.message || 'An unexpected error occurred while recording payment.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -386,14 +398,22 @@ export default function RentCollection() {
                   </select>
                 </div>
               </div>
+              {submitError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                  <span>{submitError}</span>
+                </div>
+              )}
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 text-sm font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors">
+                <button type="button" onClick={() => setShowModal(false)} disabled={submitting}
+                  className="px-4 py-2.5 text-sm font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors disabled:opacity-50">
                   Cancel
                 </button>
-                <button type="submit"
-                  className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors">
-                  Record Payment
+                <button type="submit" disabled={submitting}
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
+                  {submitting ? (
+                    <><span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                  ) : 'Record Payment'}
                 </button>
               </div>
             </form>

@@ -311,6 +311,7 @@ export function BuildingProvider({ children }) {
     const result = await q.addPayment({
       unitId: unit.id, floorId: floor.id, buildingId: building.id,
       tenantId: unit.tenant?.id || null,
+      floorName, unitName,
       amount, method: method || 'Cash', status: status || 'Paid',
       tenantName: tenantName || '', date,
     })

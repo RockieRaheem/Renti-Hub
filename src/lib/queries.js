@@ -382,10 +382,25 @@ export async function addPayment(paymentData) {
       date: paymentData.date || new Date().toISOString().split('T')[0],
       receipt_id: receiptId,
     })
-    .select('*, units!inner(name), floors!inner(name)')
+    .select()
     .single()
   if (error) return { error: error.message }
-  return { data: { ...mapPayment(data), receiptId } }
+  return {
+    data: {
+      id: data.id,
+      floor: paymentData.floorName || '',
+      unit: paymentData.unitName || '',
+      amount: Number(data.amount),
+      method: data.method,
+      status: data.status,
+      tenantName: data.tenant_name || '',
+      date: data.date,
+      receiptId,
+      time: new Date(data.created_at).toLocaleTimeString('en-US', {
+        hour: '2-digit', minute: '2-digit', hour12: true,
+      }),
+    },
+  }
 }
 
 export async function voidPayment(paymentId) {
