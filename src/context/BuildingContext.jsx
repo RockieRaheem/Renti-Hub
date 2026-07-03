@@ -139,13 +139,14 @@ export function BuildingProvider({ children }) {
 
   async function loadAllData(uid) {
     const { data: bld } = await q.fetchBuilding(uid)
-    setBuilding(bld || null)
-    if (!bld) return
+    const bid = bld?.id || building?.id
+    if (!bid) { setBuilding(bld || null); return }
+    setBuilding(bld || building)
 
     const [fr, pr, mr] = await Promise.all([
-      q.fetchFloorsWithUnits(bld.id),
-      q.fetchPayments(bld.id),
-      q.fetchMaintenance(bld.id),
+      q.fetchFloorsWithUnits(bid),
+      q.fetchPayments(bid),
+      q.fetchMaintenance(bid),
     ])
     if (fr.data) setFloors(fr.data)
     if (pr.data) setPayments(pr.data)
@@ -322,24 +323,55 @@ export function BuildingProvider({ children }) {
 
     const paymentRecord = result.data
     const monthlyRent = unit.monthlyRent || 0
-    const currentOutstanding = unit.tenant?.outstandingBalance || 0
-    const oldBalance = currentOutstanding > 0 ? currentOutstanding : monthlyRent
+    const currentBalance = unit.tenant?.outstandingBalance || 0
+
+    let oldBalance
+    if (currentBalance > 0) {
+      oldBalance = currentBalance
+    } else if (currentBalance < 0) {
+      oldBalance = Math.max(0, monthlyRent + currentBalance)
+    } else {
+      oldBalance = monthlyRent
+    }
+
+    const newOutstanding = oldBalance - cleaned.amount
     paymentRecord.previousBalance = oldBalance
+    paymentRecord.excess = Math.max(0, -newOutstanding)
 
     if (unit.tenant) {
-      const newOutstanding = Math.max(0, oldBalance - cleaned.amount)
       const tenantResult = await q.updateTenant(unit.tenant.id, {
         paid: newOutstanding <= 0,
         outstandingBalance: newOutstanding,
         lastPayment: `UGX ${cleaned.amount.toLocaleString()}`,
         lastPaymentDate: cleaned.date,
       })
-      if (tenantResult.error) { setError(tenantResult.error) }
-    }
+      if (tenantResult.error) {
+        await q.voidPayment(paymentRecord.id)
+        setError(tenantResult.error)
+        return { error: `Payment was recorded but tenant balance update failed and was rolled back: ${tenantResult.error}` }
+      }
 
+      setFloors((prev) =>
+        prev.map((f) => {
+          if (f.name !== floorName) return f
+          return {
+            ...f,
+            units: f.units.map((u) => {
+              if (u.name !== unitName) return u
+              return {
+                ...u,
+                tenant: u.tenant
+                  ? { ...u.tenant, outstandingBalance: newOutstanding, paid: newOutstanding <= 0, lastPayment: `UGX ${cleaned.amount.toLocaleString()}`, lastPaymentDate: cleaned.date }
+                  : null,
+              }
+            }),
+          }
+        }),
+      )
+    }
     setPayments((prev) => [paymentRecord, ...prev])
 
-    await refreshData()
+    refreshData()
     logAudit('Payment recorded', `${cleaned.tenantName} UGX ${cleaned.amount.toLocaleString()} (${cleaned.status})`)
     return paymentRecord
   }, [building, floors, refreshData])
@@ -436,6 +468,11 @@ export function BuildingProvider({ children }) {
     [floors],
   )
 
+  const totalOutstanding = useMemo(
+    () => tenants.reduce((s, t) => s + Math.max(0, t.outstandingBalance || 0), 0),
+    [tenants],
+  )
+
   const tenantStats = useMemo(() => ({
     total: tenants.length,
     latePayers: tenants.filter((t) => !t.paid).length,
@@ -516,7 +553,7 @@ export function BuildingProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      building, floors, payments, totalUnits, occupiedUnits, monthlyRevenue,
+      building, floors, payments, totalUnits, occupiedUnits, monthlyRevenue, totalOutstanding,
       tenants, tenantStats, transactions, alerts, upcomingPayments,
       revenueMonthly, revenueMix, cashFlowData, maintenance, maintenanceStats,
       paymentMethods, tenantFilters, statusBorders, priorityBorders,
@@ -530,7 +567,7 @@ export function BuildingProvider({ children }) {
     }),
     [
       building, floors, payments, maintenance, totalUnits, occupiedUnits,
-      monthlyRevenue, tenants, tenantStats, transactions, alerts, upcomingPayments,
+      monthlyRevenue, totalOutstanding, tenants, tenantStats, transactions, alerts, upcomingPayments,
       getFloorBySlug, getUnitByFloorAndId, getAvatarColor,
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,

@@ -197,18 +197,23 @@ export default function RentCollection() {
                     <React.Fragment key={`${t.floor}-${t.unit}`}>
                       <tr className="hover:bg-surface-container transition-colors group">
                         <td className="px-4 py-3">
-                          <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
-                            className="flex items-center gap-2.5 group/link text-left">
-                            <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${statusColor(t.paymentStatus)}`}>
-                              {initials(t.name)}
-                            </div>
+                          <div className="flex items-center gap-2.5">
+                            <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
+                              className="flex items-center gap-2.5 group/link text-left">
+                              <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${statusColor(t.paymentStatus)}`}>
+                                {initials(t.name)}
+                              </div>
+                            </button>
                             <div>
-                              <span className="font-medium text-on-surface group-hover/link:text-primary transition-colors text-sm">{t.name || 'Unknown'}</span>
+                              <Link to={`/tenant-payments/${floorSlug(t.floor)}/${t.unitId}`}
+                                className="font-medium text-on-surface hover:text-primary transition-colors text-sm">
+                                {t.name || 'Unknown'}
+                              </Link>
                               {history.length > 0 && (
                                 <span className="text-[10px] text-on-surface-dim ml-1.5">{history.length} payment{history.length !== 1 ? 's' : ''}</span>
                               )}
                             </div>
-                          </button>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <Link to={`/properties/floor/${floorSlug(t.floor)}/unit/${t.unitId}`}
@@ -232,6 +237,11 @@ export default function RentCollection() {
                               <span className="material-symbols-outlined text-sm">payments</span>
                               Pay
                             </button>
+                            <Link to={`/tenant-payments/${floorSlug(t.floor)}/${t.unitId}`}
+                              className="text-xs font-medium text-on-surface-muted hover:text-primary px-2 py-1.5 rounded-lg hover:bg-surface-container transition-colors inline-flex items-center gap-1"
+                              title="Payment history">
+                              <span className="material-symbols-outlined text-sm">receipt_long</span>
+                            </Link>
                             {history.length > 0 && (
                               <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
                                 className="text-xs font-medium text-on-surface-muted hover:bg-surface-container px-2 py-1.5 rounded-lg transition-colors">

@@ -12,6 +12,7 @@ import RentCollection from './pages/RentCollection'
 import FinancialReports from './pages/FinancialReports'
 import MaintenanceBoard from './pages/MaintenanceBoard'
 import MaintenanceRequests from './pages/MaintenanceRequests'
+import TenantPayments from './pages/TenantPayments'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/financial-reports" element={<FinancialReports />} />
               <Route path="/maintenance-board" element={<MaintenanceBoard />} />
               <Route path="/maintenance-requests" element={<MaintenanceRequests />} />
+              <Route path="/tenant-payments/:floorName/:unitId" element={<TenantPayments />} />
             </Route>
           </Route>
         </Routes>

@@ -148,7 +148,10 @@ export default function FloorDetails() {
                           <div className={`w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold ${getAvatarColor(t.initials)}`}>
                             {t.initials}
                           </div>
-                          <span className="text-sm text-on-surface-muted hidden sm:inline max-w-[120px] truncate">{t.name}</span>
+                          <Link to={`/tenant-payments/${floorName}/${unit.id}`}
+                            className="text-sm text-on-surface-muted hover:text-primary transition-colors hidden sm:inline max-w-[120px] truncate">
+                            {t.name}
+                          </Link>
                         </div>
                       ) : (
                         <span className="text-xs text-on-surface-dim italic hidden sm:inline">Vacant</span>
@@ -161,6 +164,11 @@ export default function FloorDetails() {
                           <>
                             <IconBtn icon="payments" title="Record payment" onClick={() => setPaymentModal({ tenant: t, unit: unit.name })} color="primary" />
                             <IconBtn icon="edit" title="Edit tenant" onClick={() => setTenantModal({ mode: 'edit', floor: floor.name, unit: unit.id, data: t })} color="primary" />
+                            <Link to={`/tenant-payments/${floorName}/${unit.id}`}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-primary hover:bg-primary-50 transition-colors"
+                              title="Payment history">
+                              <span className="material-symbols-outlined text-base">receipt_long</span>
+                            </Link>
                             <IconBtn icon="swap_horiz" title="Reassign to new tenant" onClick={() => setReassignModal({ unit })} color="amber" />
                             <IconBtn icon="person_remove" title="Remove tenant" onClick={() => { if (window.confirm(`Remove ${t.name} from ${unit.name}?`)) deleteTenant(floor.name, unit.id) }} color="red" />
                           </>

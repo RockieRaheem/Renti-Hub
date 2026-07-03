@@ -25,7 +25,7 @@ function KpiCard({ icon, label, value, trend, sub }) {
 }
 
 export default function Dashboard() {
-  const { building, floors, floorSlug, maintenance, maintenanceStats, monthlyRevenue, payments, refreshing } = useBuilding()
+  const { building, floors, floorSlug, maintenance, maintenanceStats, monthlyRevenue, totalOutstanding, payments, refreshing } = useBuilding()
   const [period, setPeriod] = useState('month')
   const totalUnits = floors.reduce((s, f) => s + f.units.length, 0)
   const occupiedUnits = floors.reduce((s, f) => s + f.units.filter(u => u.status === 'occupied').length, 0)
@@ -38,6 +38,13 @@ export default function Dashboard() {
     const unit = floor.units.find(u => u.name === p.unit)
     if (!unit) return null
     return `/properties/floor/${floorSlug(floor.name)}/unit/${unit.id}`
+  }
+  function historyLink(p) {
+    const floor = floors.find(f => f.name === p.floor)
+    if (!floor) return null
+    const unit = floor.units.find(u => u.name === p.unit)
+    if (!unit || !unit.tenant) return null
+    return `/tenant-payments/${floorSlug(floor.name)}/${unit.id}`
   }
 
   const hasData = totalUnits > 0
@@ -78,10 +85,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard icon="payments" label="Monthly Revenue" value={`UGX ${(monthlyRevenue / 1000000).toFixed(1)}M`} trend={8.2} sub="vs last period" />
         <KpiCard icon="real_estate_agent" label="Occupancy" value={`${occupiedUnits}/${totalUnits}`} trend={occupiedUnits > 0 ? 4.1 : 0} sub={`${Math.round((occupiedUnits / totalUnits) * 100)}% occupied`} />
-        <KpiCard icon="warning" label="Pending Issues" value={pendingMaint} trend={null} sub={`${maintenanceStats.resolved} resolved this period`} />
+        <KpiCard icon="warning" label="Outstanding" value={`UGX ${totalOutstanding.toLocaleString()}`} trend={null} sub={totalOutstanding > 0 ? 'Tenant debt' : 'All cleared'} />
+        <KpiCard icon="build" label="Pending Issues" value={pendingMaint} trend={null} sub={`${maintenanceStats.resolved} resolved this period`} />
         <KpiCard icon="group" label="Total Tenants" value={occupiedUnits} trend={null} sub="Across all floors" />
       </div>
 
@@ -105,11 +113,15 @@ export default function Dashboard() {
                 <tbody className="divide-y divide-outline">
                   {recentPayments.map((p) => {
                     const link = paymentLink(p)
+                    const hlink = historyLink(p)
                     return (
                       <tr key={p.id} className="hover:bg-surface-container transition-colors group">
                         <td className="px-5 py-3">
-                          {link ? (
-                            <Link to={link} className="font-medium text-on-surface group-hover/link:text-primary transition-colors">{p.tenantName}</Link>
+                          {hlink ? (
+                            <Link to={hlink} className="font-medium text-on-surface hover:text-primary transition-colors inline-flex items-center gap-1">
+                              {p.tenantName}
+                              <span className="material-symbols-outlined text-sm text-on-surface-dim opacity-0 group-hover:opacity-100 transition-opacity">receipt_long</span>
+                            </Link>
                           ) : (
                             <span className="font-medium text-on-surface">{p.tenantName}</span>
                           )}
