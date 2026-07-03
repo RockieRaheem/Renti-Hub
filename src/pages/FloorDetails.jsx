@@ -174,7 +174,7 @@ export default function FloorDetails() {
         <TenantFormModal
           mode={tenantModal.mode}
           floorName={tenantModal.floor || floor.name}
-          unitId={tenantModal.unit || (tenantModal.data ? findUnitId(floor, tenantModal.data) : null)}
+          unitId={tenantModal.unit || (tenantModal.data?.name ? findUnitId(floor, tenantModal.data) : null)}
           initialData={tenantModal.data}
           onClose={() => setTenantModal(null)}
         />
