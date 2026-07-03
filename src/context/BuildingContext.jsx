@@ -72,6 +72,7 @@ export function BuildingProvider({ children }) {
   const [userId, setUserId] = useState(null)
   const [building, setBuilding] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [restoringSession, setRestoringSession] = useState(false)
   const [error, setError] = useState(null)
   const [supabaseReady, setSupabaseReady] = useState(false)
@@ -152,9 +153,9 @@ export function BuildingProvider({ children }) {
 
   const refreshData = useCallback(async () => {
     if (!building || !userId) return
-    setLoading(true)
+    setRefreshing(true)
     await loadAllData(userId)
-    setLoading(false)
+    setRefreshing(false)
   }, [building, userId])
 
   // ── Building ──
@@ -503,7 +504,7 @@ export function BuildingProvider({ children }) {
       updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
-      auth, login, register, logout, loading, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
+      auth, login, register, logout, loading, refreshing, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     }),
     [
       building, floors, payments, maintenance, totalUnits, occupiedUnits,
@@ -514,7 +515,7 @@ export function BuildingProvider({ children }) {
       updateUnit, deleteUnit,
       addPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
-      auth, login, register, logout, loading, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
+      auth, login, register, logout, loading, refreshing, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     ],
   )
 

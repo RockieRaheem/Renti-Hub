@@ -25,7 +25,7 @@ function KpiCard({ icon, label, value, trend, sub }) {
 }
 
 export default function Dashboard() {
-  const { building, floors, floorSlug, maintenance, maintenanceStats, monthlyRevenue, payments } = useBuilding()
+  const { building, floors, floorSlug, maintenance, maintenanceStats, monthlyRevenue, payments, refreshing } = useBuilding()
   const [period, setPeriod] = useState('month')
   const totalUnits = floors.reduce((s, f) => s + f.units.length, 0)
   const occupiedUnits = floors.reduce((s, f) => s + f.units.filter(u => u.status === 'occupied').length, 0)
