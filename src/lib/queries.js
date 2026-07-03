@@ -35,7 +35,8 @@ function mapFloor(data) {
 }
 
 function mapUnit(data) {
-  const t = data.tenant
+  const raw = Array.isArray(data.tenant) ? data.tenant[0] : data.tenant
+  const t = raw || data.tenant
   const tenant = t
     ? {
         name: t.name,
@@ -84,6 +85,7 @@ function mapPayment(data) {
     status: data.status,
     tenantName: data.tenant_name || '',
     date: data.date,
+    receiptId: data.receipt_id || `RCP-${data.id?.substring(0, 4).toUpperCase()}-${data.id?.substring(4, 8).toUpperCase()}`,
     time: new Date(data.created_at).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -317,8 +319,7 @@ export async function addTenant(unitId, buildingId, tenantData) {
       lease_end: tenantData.leaseEnd || '',
       lease_term: tenantData.leaseTerm || '',
       payment_status: tenantData.paymentStatus || 'Good Payer',
-      paid: true,
-      outstanding_balance: 0,
+  outstanding_balance: 0,
     })
     .select()
     .single()
@@ -364,6 +365,12 @@ export async function fetchPayments(buildingId) {
 }
 
 export async function addPayment(paymentData) {
+  const { data: countData } = await supabase
+    .from('payments')
+    .select('id', { count: 'exact', head: true })
+  const seq = ((countData?.length || 0) + 1).toString().padStart(4, '0')
+  const receiptId = `RCP-${new Date().toISOString().slice(2, 4)}${new Date().toISOString().slice(5, 7)}-${seq}`
+
   const { data, error } = await supabase
     .from('payments')
     .insert({
@@ -376,11 +383,28 @@ export async function addPayment(paymentData) {
       status: paymentData.status || 'Paid',
       tenant_name: paymentData.tenantName || '',
       date: paymentData.date || new Date().toISOString().split('T')[0],
+      receipt_id: receiptId,
     })
     .select('*, units!inner(name), floors!inner(name)')
     .single()
   if (error) return { error: error.message }
-  return { data: mapPayment(data) }
+  return { data: { ...mapPayment(data), receiptId } }
+}
+
+export async function voidPayment(paymentId) {
+  const { error } = await supabase.from('payments').delete().eq('id', paymentId)
+  if (error) return { error: error.message }
+  return {}
+}
+
+export async function fetchPaymentsByTenant(tenantId) {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*, units!inner(name), floors!inner(name)')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+  if (error) return { error: error.message }
+  return { data: (data || []).map(mapPayment) }
 }
 
 // ── Maintenance ──────────────────────────────────────────────────────────

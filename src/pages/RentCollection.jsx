@@ -136,7 +136,7 @@ export default function RentCollection() {
                     </td>
                     <td className="px-5 py-3 text-on-surface-muted">{t.floor}</td>
                     <td className="px-5 py-3 font-medium text-on-surface">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
-                    <td className="px-5 py-3"><StatusBadge status={t.paid ? 'Paid' : 'Overdue'} /></td>
+                    <td className="px-5 py-3"><StatusBadge status={t.outstandingBalance > 0 ? 'Overdue' : t.lastPayment ? 'Paid' : 'No Payment'} /></td>
                     <td className={`px-5 py-3 text-xs font-medium ${t.outstandingBalance > 0 ? 'text-status-unpaid' : 'text-on-surface-muted'}`}>
                       {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` : '—'}
                     </td>

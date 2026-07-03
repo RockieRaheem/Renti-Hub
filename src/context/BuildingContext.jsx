@@ -267,7 +267,8 @@ export function BuildingProvider({ children }) {
 
   // ── Unit ──
   const updateUnit = useCallback(async (floorName, unitId, updates) => {
-    await q.updateUnit(unitId, updates)
+    const result = await q.updateUnit(unitId, updates)
+    if (result.error) { setError(result.error); return }
     setFloors((prev) =>
       prev.map((f) => {
         if (f.name !== floorName) return f
@@ -301,25 +302,26 @@ export function BuildingProvider({ children }) {
 
   // ── Payment ──
   const addPayment = useCallback(async ({ floor: floorName, unit: unitName, amount, method, tenantName, status, date }) => {
-    if (!building) return
+    if (!building) { setError('Building not loaded'); return null }
     const floor = floors.find((f) => f.name === floorName)
-    if (!floor) return
+    if (!floor) { setError(`Floor "${floorName}" not found`); return null }
     const unit = floor.units.find((u) => u.name === unitName)
-    if (!unit) return
+    if (!unit) { setError(`Unit "${unitName}" not found on ${floorName}`); return null }
 
     const result = await q.addPayment({
       unitId: unit.id, floorId: floor.id, buildingId: building.id,
+      tenantId: unit.tenant?.id || null,
       amount, method: method || 'Cash', status: status || 'Paid',
       tenantName: tenantName || '', date,
     })
-    if (result.data) {
-      setPayments((prev) => [result.data, ...prev])
-    }
+    if (result.error) { setError(result.error); return null }
+
+    const paymentRecord = result.data
 
     if (unit.tenant) {
       const rawAmount = Number(amount) || 0
       const newOutstanding = Math.max(0, (unit.tenant.outstandingBalance || 0) - rawAmount)
-      await q.updateTenant(unit.tenant.id, {
+      const tenantResult = await q.updateTenant(unit.tenant.id, {
         paid: newOutstanding <= 0,
         outstandingBalance: newOutstanding,
         lastPayment: `UGX ${rawAmount.toLocaleString()}`,
@@ -327,11 +329,26 @@ export function BuildingProvider({ children }) {
           day: 'numeric', month: 'short', year: 'numeric',
         }),
       })
+      if (tenantResult.error) { setError(tenantResult.error) }
     }
+
+    setPayments((prev) => [paymentRecord, ...prev])
 
     await refreshData()
     logAudit('Payment recorded', `${tenantName} UGX ${(Number(amount) || 0).toLocaleString()} (${status})`)
+    return paymentRecord
   }, [building, floors, refreshData])
+
+  const voidPayment = useCallback(async (paymentId) => {
+    const payment = payments.find((p) => p.id === paymentId)
+    if (!payment) return
+
+    const result = await q.voidPayment(paymentId)
+    if (result.error) { setError(result.error); return }
+
+    await refreshData()
+    logAudit('Payment voided', `${payment.tenantName} UGX ${(payment.amount || 0).toLocaleString()} (${payment.receiptId})`)
+  }, [payments, refreshData])
 
   // ── Maintenance ──
   const addMaintenance = useCallback(async (item) => {
@@ -502,7 +519,7 @@ export function BuildingProvider({ children }) {
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,
       updateUnit, deleteUnit,
-      addPayment, combinedActivityLog,
+      addPayment, voidPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
       auth, login, register, logout, loading, refreshing, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     }),
@@ -513,7 +530,7 @@ export function BuildingProvider({ children }) {
       addTenant, updateTenant, deleteTenant,
       addFloor, updateFloor, deleteFloor,
       updateUnit, deleteUnit,
-      addPayment, combinedActivityLog,
+      addPayment, voidPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
       auth, login, register, logout, loading, refreshing, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     ],

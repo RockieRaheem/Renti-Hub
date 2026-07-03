@@ -149,10 +149,10 @@ export default function FloorDetails() {
                         {!occupied && (
                           <>
                             <IconBtn icon="person_add" title="Add tenant" onClick={() => setTenantModal({ mode: 'add', floor: floor.name, unit: unit.id })} color="primary" />
-                            <IconBtn icon="edit" title="Edit unit" onClick={() => setUnitModal({ unit })} color="primary" />
-                            <IconBtn icon="delete" title="Delete unit" onClick={() => { if (window.confirm(`Delete ${unit.name} from ${floor.name}?`)) deleteUnit(floor.name, unit.id) }} color="red" />
                           </>
                         )}
+                        <IconBtn icon="edit" title="Edit unit" onClick={() => setUnitModal({ unit })} color="primary" />
+                        <IconBtn icon="delete" title="Delete unit" onClick={() => { if (window.confirm(`Delete ${unit.name} from ${floor.name}?`)) deleteUnit(floor.name, unit.id) }} color="red" />
                         <Link to={`/properties/floor/${floorName}/unit/${unit.id}`}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-dim hover:text-primary hover:bg-primary-50 transition-colors"
                           title="View details">

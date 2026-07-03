@@ -2,6 +2,7 @@ const colorMap = {
   Paid: 'bg-green-50 text-green-700',
   Partial: 'bg-yellow-50 text-yellow-700',
   Overdue: 'bg-red-50 text-red-700',
+  'No Payment': 'bg-gray-100 text-gray-500',
   'Good Payer': 'bg-green-50 text-green-700',
   'Neutral Payer': 'bg-yellow-50 text-yellow-700',
   'Bad Payer': 'bg-red-50 text-red-700',
