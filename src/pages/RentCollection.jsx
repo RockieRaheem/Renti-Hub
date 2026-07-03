@@ -19,19 +19,21 @@ function statusColor(ps) {
 
 function agingDays(lastPaymentDate) {
   if (!lastPaymentDate) return 90
-  const parts = lastPaymentDate.split(/[/\s,]+/)
-  if (parts.length < 3) return 0
-  const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 }
-  const d = parseInt(parts[0], 10)
-  const m = months[parts[1]] ?? (parseInt(parts[1], 10) - 1)
-  const y = parseInt(parts[2], 10)
-  if (isNaN(d) || isNaN(m) || isNaN(y)) return 0
-  const then = new Date(y, m, d)
-  return Math.floor((Date.now() - then.getTime()) / (1000 * 60 * 60 * 24))
+  const d = new Date(lastPaymentDate)
+  if (isNaN(d.getTime())) return 90
+  return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function fmtDate(d) {
+  if (!d) return '—'
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return d
+  return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function AgingIndicator({ days }) {
-  if (days <= 0) return null
+  if (days < 0) return null
+  if (days === 0) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-green-600 bg-green-50">Today</span>
   const color = days <= 30 ? 'text-yellow-600 bg-yellow-50' : days <= 60 ? 'text-orange-600 bg-orange-50' : 'text-red-600 bg-red-50'
   return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${color}`}>{days}d</span>
 }
@@ -187,8 +189,10 @@ export default function RentCollection() {
               <tbody className="divide-y divide-outline">
                 {filtered.map((t) => {
                   const isExpanded = expandedTenant === `${t.floor}|${t.unit}`
-                  const days = agingDays(t.lastPaymentDate)
                   const history = tenantPayments(t)
+                  const lastPayStatus = history[0]?.status
+                  const displayStatus = lastPayStatus || (t.outstandingBalance > 0 ? 'Overdue' : t.lastPayment ? 'Paid' : 'No Payment')
+                  const days = agingDays(t.lastPaymentDate || history[0]?.date)
                   return (
                     <React.Fragment key={`${t.floor}-${t.unit}`}>
                       <tr className="hover:bg-surface-container transition-colors group">
@@ -213,14 +217,14 @@ export default function RentCollection() {
                           </Link>
                         </td>
                         <td className="px-4 py-3 font-medium text-on-surface whitespace-nowrap">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
-                        <td className="px-4 py-3"><StatusBadge status={t.outstandingBalance > 0 ? 'Overdue' : t.lastPayment ? 'Paid' : 'No Payment'} /></td>
+                        <td className="px-4 py-3"><StatusBadge status={displayStatus} /></td>
                         <td className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${t.outstandingBalance > 0 ? 'text-status-unpaid' : 'text-on-surface-muted'}`}>
                           {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` : '—'}
                         </td>
                         <td className="px-4 py-3">
                           {t.outstandingBalance > 0 ? <AgingIndicator days={days} /> : <span className="text-[10px] text-on-surface-dim">Current</span>}
                         </td>
-                        <td className="px-4 py-3 text-on-surface-muted text-xs whitespace-nowrap">{t.lastPaymentDate || '—'}</td>
+                        <td className="px-4 py-3 text-on-surface-muted text-xs whitespace-nowrap">{fmtDate(t.lastPaymentDate)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <button onClick={() => openPaymentForm(t)}
@@ -256,7 +260,7 @@ export default function RentCollection() {
                                   {history.map((p) => (
                                     <tr key={p.id} className="hover:bg-surface-container/50">
                                       <td className="px-4 py-2 font-mono text-[11px] text-on-surface-muted">{p.receiptId}</td>
-                                      <td className="px-4 py-2 text-on-surface-muted">{p.date || '—'}</td>
+                                      <td className="px-4 py-2 text-on-surface-muted">{fmtDate(p.date)}</td>
                                       <td className="px-4 py-2 text-on-surface-muted">{p.method || 'Cash'}</td>
                                       <td className="px-4 py-2 text-right font-medium text-on-surface">UGX {(p.amount || 0).toLocaleString()}</td>
                                       <td className="px-4 py-2 text-center">
@@ -310,7 +314,7 @@ export default function RentCollection() {
                   <div className="w-2 h-2 rounded-full bg-status-paid" />
                   <div>
                     <p className="text-sm font-medium text-on-surface">{p.tenantName}</p>
-                    <p className="text-xs text-on-surface-muted">{p.unit} &middot; {p.date} &middot; <span className="font-mono text-[10px]">{p.receiptId}</span></p>
+                    <p className="text-xs text-on-surface-muted">{p.unit} &middot; {fmtDate(p.date)} &middot; <span className="font-mono text-[10px]">{p.receiptId}</span></p>
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-status-paid">UGX {(p.amount || 0).toLocaleString()}</span>

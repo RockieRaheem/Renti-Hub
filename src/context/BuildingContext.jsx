@@ -308,33 +308,30 @@ export function BuildingProvider({ children }) {
     const unit = floor.units.find((u) => u.name === unitName)
     if (!unit) { return { error: `Unit "${unitName}" not found on ${floorName}` } }
 
+    const cleaned = sanitizePaymentData({ floor: floorName, unit: unitName, amount, method, tenantName, status, date })
+
     const result = await q.addPayment({
       unitId: unit.id, floorId: floor.id, buildingId: building.id,
       tenantId: unit.tenant?.id || null,
-      floorName, unitName,
-      amount, method: method || 'Cash', status: status || 'Paid',
-      tenantName: tenantName || '', date,
+      floorName: cleaned.floor, unitName: cleaned.unit,
+      amount: cleaned.amount, method: cleaned.method,
+      status: cleaned.status, tenantName: cleaned.tenantName, date: cleaned.date,
     })
     if (result.error) { return { error: result.error } }
 
     const paymentRecord = result.data
     const monthlyRent = unit.monthlyRent || 0
     const currentOutstanding = unit.tenant?.outstandingBalance || 0
-    // If no outstanding debt recorded, the tenant owes this period's monthly rent.
-    // If outstanding exists, that's what they owe (accumulated from prior periods).
     const oldBalance = currentOutstanding > 0 ? currentOutstanding : monthlyRent
-    const rawAmount = Number(amount) || 0
     paymentRecord.previousBalance = oldBalance
 
     if (unit.tenant) {
-      const newOutstanding = Math.max(0, oldBalance - rawAmount)
+      const newOutstanding = Math.max(0, oldBalance - cleaned.amount)
       const tenantResult = await q.updateTenant(unit.tenant.id, {
         paid: newOutstanding <= 0,
         outstandingBalance: newOutstanding,
-        lastPayment: `UGX ${rawAmount.toLocaleString()}`,
-        lastPaymentDate: new Date().toLocaleDateString('en-GB', {
-          day: 'numeric', month: 'short', year: 'numeric',
-        }),
+        lastPayment: `UGX ${cleaned.amount.toLocaleString()}`,
+        lastPaymentDate: cleaned.date,
       })
       if (tenantResult.error) { setError(tenantResult.error) }
     }
@@ -342,7 +339,7 @@ export function BuildingProvider({ children }) {
     setPayments((prev) => [paymentRecord, ...prev])
 
     await refreshData()
-    logAudit('Payment recorded', `${tenantName} UGX ${rawAmount.toLocaleString()} (${status})`)
+    logAudit('Payment recorded', `${cleaned.tenantName} UGX ${cleaned.amount.toLocaleString()} (${cleaned.status})`)
     return paymentRecord
   }, [building, floors, refreshData])
 
