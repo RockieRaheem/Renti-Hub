@@ -21,6 +21,7 @@ export default function Properties() {
   const [expandedFloor, setExpandedFloor] = useState(null)
   const [floorModal, setFloorModal] = useState(null)
   const [tenantModal, setTenantModal] = useState(null)
+  const [search, setSearch] = useState('')
 
   const hasData = floors.length > 0
 
@@ -58,8 +59,15 @@ export default function Properties() {
 
   return (
     <div className="p-6 md:p-8 space-y-5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-on-surface-muted font-medium">{floors.length} floor{floors.length !== 1 ? 's' : ''} &middot; {floors.reduce((s, f) => s + f.units.length, 0)} units</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-on-surface-muted font-medium">{floors.length} floor{floors.length !== 1 ? 's' : ''} &middot; {floors.reduce((s, f) => s + f.units.length, 0)} units</p>
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-dim text-sm pointer-events-none">search</span>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search floor or tenant..."
+              className="w-48 h-8 pl-7 pr-2.5 border border-outline rounded-lg text-xs text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+          </div>
+        </div>
         <button onClick={() => setFloorModal({ mode: 'add' })}
           className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
           <span className="material-symbols-outlined text-base">add</span>
@@ -68,7 +76,7 @@ export default function Properties() {
       </div>
 
       <div className="grid gap-4" ref={ref}>
-        {floors.map((floor) => {
+        {floors.filter((f) => !search || f.name.toLowerCase().includes(search.toLowerCase()) || f.units.some((u) => u.tenant?.name?.toLowerCase().includes(search.toLowerCase()))).map((floor) => {
           const occ = floor.units.filter(u => u.status === 'occupied').length
           const vac = floor.units.length - occ
           const pct = Math.round((occ / floor.units.length) * 100)

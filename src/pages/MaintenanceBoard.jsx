@@ -125,12 +125,19 @@ function KanbanColumn({ title, count, items, status, onUpdate, onMove, onDelete 
 export default function MaintenanceBoard() {
   const { building, maintenance, maintenanceStats, addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance } = useBuilding()
   const [modal, setModal] = useState(null)
+  const [search, setSearch] = useState('')
+
+  const allItems = [...maintenance.pending, ...maintenance.inProgress, ...maintenance.resolved]
+  const filteredPending = maintenance.pending.filter((i) => !search || i.title?.toLowerCase().includes(search.toLowerCase()) || i.floor?.toLowerCase().includes(search.toLowerCase()) || i.tenant?.toLowerCase().includes(search.toLowerCase()))
+  const filteredInProgress = maintenance.inProgress.filter((i) => !search || i.title?.toLowerCase().includes(search.toLowerCase()) || i.floor?.toLowerCase().includes(search.toLowerCase()) || i.tenant?.toLowerCase().includes(search.toLowerCase()))
+  const filteredResolved = maintenance.resolved.filter((i) => !search || i.title?.toLowerCase().includes(search.toLowerCase()) || i.floor?.toLowerCase().includes(search.toLowerCase()) || i.tenant?.toLowerCase().includes(search.toLowerCase()))
 
   const total = maintenanceStats.pending + maintenanceStats.inProgress + maintenanceStats.resolved
+  const filteredTotal = filteredPending.length + filteredInProgress.length + filteredResolved.length
   const columns = [
-    { title: 'Pending', key: 'pending', count: maintenanceStats.pending, items: maintenance.pending },
-    { title: 'In Progress', key: 'inProgress', count: maintenanceStats.inProgress, items: maintenance.inProgress },
-    { title: 'Resolved', key: 'resolved', count: maintenanceStats.resolved, items: maintenance.resolved },
+    { title: 'Pending', key: 'pending', count: filteredPending.length, items: filteredPending },
+    { title: 'In Progress', key: 'inProgress', count: filteredInProgress.length, items: filteredInProgress },
+    { title: 'Resolved', key: 'resolved', count: filteredResolved.length, items: filteredResolved },
   ]
 
   function handleUpdate(id, actions) {
@@ -182,8 +189,15 @@ export default function MaintenanceBoard() {
         ))}
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-on-surface-muted">{total} total request{total !== 1 ? 's' : ''}</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-on-surface-muted">{search ? `${filteredTotal} of ${total}` : total} request{total !== 1 ? 's' : ''}</p>
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-dim text-sm pointer-events-none">search</span>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search requests..."
+              className="w-48 h-8 pl-7 pr-2.5 border border-outline rounded-lg text-xs text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+          </div>
+        </div>
         <div className="flex items-center gap-3">
           <button onClick={() => setModal({ type: 'add' })}
             className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">

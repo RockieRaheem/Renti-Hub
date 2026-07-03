@@ -141,7 +141,7 @@ export default function FloorDetails() {
                       <div className="flex items-center gap-0.5">
                         {occupied && (
                           <>
-                            <IconBtn icon="edit" title="Edit tenant" onClick={() => setTenantModal({ mode: 'edit', data: t })} color="primary" />
+                            <IconBtn icon="edit" title="Edit tenant" onClick={() => setTenantModal({ mode: 'edit', floor: floor.name, unit: unit.id, data: t })} color="primary" />
                             <IconBtn icon="swap_horiz" title="Reassign to new tenant" onClick={() => setReassignModal({ unit })} color="amber" />
                             <IconBtn icon="person_remove" title="Remove tenant" onClick={() => { if (window.confirm(`Remove ${t.name} from ${unit.name}?`)) deleteTenant(floor.name, unit.id) }} color="red" />
                           </>

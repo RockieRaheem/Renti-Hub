@@ -9,12 +9,14 @@ export default function RentCollection() {
   const { floors, floorSlug, payments, addPayment } = useBuilding()
   const [filterFloor, setFilterFloor] = useState('all')
   const [showModal, setShowModal] = useState(false)
+  const [search, setSearch] = useState('')
   const [form, setForm] = useState({ tenantName: '', unit: '', floor: '', amount: '', status: 'Paid', date: new Date().toISOString().slice(0, 10) })
 
   const allTenants = floors.flatMap((f) =>
     f.units.filter((u) => u.tenant).map((u) => ({ ...u.tenant, unit: u.name, floor: f.name, unitId: u.id, monthlyRent: u.monthlyRent, outstandingBalance: u.tenant.outstandingBalance || 0 }))
   )
-  const filtered = filterFloor === 'all' ? allTenants : allTenants.filter((t) => t.floor === filterFloor)
+  const filtered = (filterFloor === 'all' ? allTenants : allTenants.filter((t) => t.floor === filterFloor))
+    .filter((t) => !search || t.name?.toLowerCase().includes(search.toLowerCase()) || t.unit?.toLowerCase().includes(search.toLowerCase()))
 
   const totalCollected = payments.reduce((s, p) => s + (p.amount || 0), 0)
   const totalExpected = allTenants.reduce((s, t) => s + (t.monthlyRent || 0), 0)
@@ -60,9 +62,14 @@ export default function RentCollection() {
       </div>
 
       <div className="bg-surface rounded-card border border-outline overflow-hidden shadow-card">
-        <div className="p-5 border-b border-outline flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
+        <div className="p-5 border-b border-outline flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
             <h3 className="text-sm font-semibold text-on-surface">Tenants</h3>
+            <div className="relative flex-1 sm:flex-initial min-w-[160px]">
+              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-dim text-sm pointer-events-none">search</span>
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tenant or unit..."
+                className="w-full h-8 pl-7 pr-2.5 border border-outline rounded-lg text-xs text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
+            </div>
             <div className="flex items-center bg-surface-container-highest rounded-lg p-0.5 gap-0.5">
               <button onClick={() => setFilterFloor('all')}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${filterFloor === 'all' ? 'bg-surface text-on-surface shadow-card' : 'text-on-surface-muted hover:text-on-surface'}`}>
@@ -183,7 +190,7 @@ export default function RentCollection() {
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
               <div>
                 <h2 className="text-base font-bold text-on-surface">Record Payment</h2>
-                <p className="text-xs text-on-surface-muted mt-0.5">Enter payment details below</p>
+                <p className="text-xs text-on-surface-muted mt-0.5">Select tenant and enter amount</p>
               </div>
               <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
                 <span className="material-symbols-outlined text-xl">close</span>
@@ -192,19 +199,39 @@ export default function RentCollection() {
             <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
+                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Select Tenant</label>
+                  <select value={`${form.floor}|${form.unit}`} onChange={(e) => {
+                    const [floor, unit] = e.target.value.split('|')
+                    const tenant = allTenants.find((t) => t.floor === floor && t.unit === unit)
+                    setForm(p => ({ ...p, floor, unit, tenantName: tenant?.name || '', amount: tenant ? (tenant.monthlyRent || 0).toString() : p.amount }))
+                  }} className={inputClass}>
+                    <option value="|">Choose a tenant...</option>
+                    {floors.map((f) => {
+                      const floorTenants = allTenants.filter((t) => t.floor === f.name)
+                      if (floorTenants.length === 0) return null
+                      return (
+                        <optgroup key={f.name} label={f.name}>
+                          {floorTenants.map((t) => (
+                            <option key={`${t.floor}|${t.unit}`} value={`${t.floor}|${t.unit}`}>
+                              {t.name} — {t.unit} (UGX {(t.monthlyRent || 0).toLocaleString()})
+                            </option>
+                          ))}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+                </div>
+                <div className="col-span-2">
                   <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Tenant Name</label>
                   <input value={form.tenantName} onChange={(e) => setForm(p => ({ ...p, tenantName: e.target.value }))} className={inputClass} placeholder="Tenant name" required />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Floor</label>
-                  <select value={form.floor} onChange={(e) => setForm(p => ({ ...p, floor: e.target.value }))} className={inputClass} required>
-                    <option value="">Select floor</option>
-                    {floors.map((f) => <option key={f.name} value={f.name}>{f.name}</option>)}
-                  </select>
+                  <input value={form.floor} onChange={(e) => setForm(p => ({ ...p, floor: e.target.value }))} className={inputClass} placeholder="Floor" required />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Unit</label>
-                  <input value={form.unit} onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))} className={inputClass} placeholder="e.g. Shop 1" required />
+                  <input value={form.unit} onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))} className={inputClass} placeholder="Unit" required />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Amount (UGX)</label>

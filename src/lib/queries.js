@@ -8,12 +8,29 @@ import { supabase } from './supabase'
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
+function naturalSort(a, b) {
+  const re = /(\d+)|(\D+)/g
+  const aParts = a.name.match(re) || []
+  const bParts = b.name.match(re) || []
+  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+    if (!aParts[i]) return -1
+    if (!bParts[i]) return 1
+    const aNum = parseInt(aParts[i], 10)
+    const bNum = parseInt(bParts[i], 10)
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+      if (aNum !== bNum) return aNum - bNum
+    } else {
+      const cmp = aParts[i].localeCompare(bParts[i])
+      if (cmp !== 0) return cmp
+    }
+  }
+  return 0
+}
+
 function mapFloor(data) {
   return {
     name: data.name,
-    units: (data.units || [])
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map(mapUnit),
+    units: (data.units || []).sort(naturalSort).map(mapUnit),
   }
 }
 
@@ -28,9 +45,9 @@ function mapUnit(data) {
         leaseStart: t.lease_start || '',
         leaseEnd: t.lease_end || '',
         leaseTerm: t.lease_term || '',
-        paymentStatus: t.payment_status,
-        paid: t.paid,
-        outstandingBalance: Number(t.outstanding_balance),
+        paymentStatus: t.payment_status || 'Good Payer',
+        paid: t.paid ?? true,
+        outstandingBalance: Number(t.outstanding_balance || 0),
         lastPayment: t.last_payment || '',
         lastPaymentDate: t.last_payment_date || '',
       }
