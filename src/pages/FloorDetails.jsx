@@ -6,16 +6,32 @@ import FloorFormModal from '../components/FloorFormModal'
 import TenantFormModal from '../components/TenantFormModal'
 import UnitFormModal from '../components/UnitFormModal'
 import ReassignTenantModal from '../components/ReassignTenantModal'
+import PaymentReceipt from '../components/PaymentReceipt'
 
 export default function FloorDetails() {
   const { floorName } = useParams()
   const navigate = useNavigate()
-  const { building, floorSlug, getFloorBySlug, getAvatarColor, deleteFloor, deleteTenant, deleteUnit } = useBuilding()
+  const { building, floorSlug, getFloorBySlug, getAvatarColor, deleteFloor, deleteTenant, deleteUnit, addPayment } = useBuilding()
   const floor = getFloorBySlug(floorName)
   const [showFloorModal, setShowFloorModal] = useState(false)
   const [tenantModal, setTenantModal] = useState(null)
   const [unitModal, setUnitModal] = useState(null)
   const [reassignModal, setReassignModal] = useState(null)
+  const [paymentModal, setPaymentModal] = useState(null)
+  const [paymentReceipt, setPaymentReceipt] = useState(null)
+
+  const handleFloorPayment = async (tenant, unitName) => {
+    const result = await addPayment({
+      floor: floor.name, unit: unitName,
+      amount: tenant.monthlyRent || 0, method: 'Cash',
+      tenantName: tenant.name, status: 'Paid',
+      date: new Date().toISOString().slice(0, 10),
+    })
+    if (result) {
+      setPaymentReceipt({ ...result, previousBalance: tenant.outstandingBalance || 0 })
+      setPaymentModal(null)
+    }
+  }
 
   if (!floor) {
     return (
@@ -141,6 +157,7 @@ export default function FloorDetails() {
                       <div className="flex items-center gap-0.5">
                         {occupied && (
                           <>
+                            <IconBtn icon="payments" title="Record payment" onClick={() => setPaymentModal({ tenant: t, unit: unit.name })} color="primary" />
                             <IconBtn icon="edit" title="Edit tenant" onClick={() => setTenantModal({ mode: 'edit', floor: floor.name, unit: unit.id, data: t })} color="primary" />
                             <IconBtn icon="swap_horiz" title="Reassign to new tenant" onClick={() => setReassignModal({ unit })} color="amber" />
                             <IconBtn icon="person_remove" title="Remove tenant" onClick={() => { if (window.confirm(`Remove ${t.name} from ${unit.name}?`)) deleteTenant(floor.name, unit.id) }} color="red" />
@@ -186,6 +203,66 @@ export default function FloorDetails() {
 
       {reassignModal && (
         <ReassignTenantModal floorName={floor.name} unit={reassignModal.unit} onClose={() => setReassignModal(null)} />
+      )}
+
+      {paymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setPaymentModal(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
+              <div>
+                <h2 className="text-base font-bold text-on-surface">Record Payment</h2>
+                <p className="text-xs text-on-surface-muted mt-0.5">{paymentModal.tenant.name} &middot; {paymentModal.unit}</p>
+              </div>
+              <button onClick={() => setPaymentModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-surface-container/50 rounded-lg p-4 text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Tenant</span>
+                  <span className="font-medium text-on-surface">{paymentModal.tenant.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Unit</span>
+                  <span className="font-medium text-on-surface">{paymentModal.unit}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Monthly Rent</span>
+                  <span className="font-medium text-on-surface">UGX {(paymentModal.tenant.monthlyRent || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-muted">Outstanding</span>
+                  <span className={`font-medium ${(paymentModal.tenant.outstandingBalance || 0) > 0 ? 'text-status-unpaid' : 'text-status-paid'}`}>
+                    {paymentModal.tenant.outstandingBalance > 0 ? `UGX ${paymentModal.tenant.outstandingBalance.toLocaleString()}` : 'Cleared'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button onClick={() => setPaymentModal(null)}
+                  className="px-4 py-2.5 text-sm font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors">
+                  Cancel
+                </button>
+                <button onClick={() => handleFloorPayment(paymentModal.tenant, paymentModal.unit)}
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors inline-flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base">payments</span>
+                  Pay UGX {(paymentModal.tenant.monthlyRent || 0).toLocaleString()}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {paymentReceipt && (
+        <PaymentReceipt
+          payment={paymentReceipt}
+          tenant={paymentReceipt.tenantName}
+          floor={floor?.name}
+          unit={paymentReceipt.unit}
+          buildingName={building?.name}
+          onClose={() => setPaymentReceipt(null)}
+        />
       )}
     </div>
   )

@@ -39,7 +39,7 @@ function AgingIndicator({ days }) {
 const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
 
 export default function RentCollection() {
-  const { floors, floorSlug, payments, addPayment } = useBuilding()
+  const { floors, floorSlug, payments, addPayment, building } = useBuilding()
   const [filterFloor, setFilterFloor] = useState('all')
   const [showModal, setShowModal] = useState(false)
   const [receipt, setReceipt] = useState(null)
@@ -407,7 +407,7 @@ export default function RentCollection() {
           tenant={receipt.tenantName}
           floor={receipt.floor}
           unit={receipt.unit}
-          buildingName={useBuilding().building?.name}
+          buildingName={building?.name}
           onClose={() => setReceipt(null)}
         />
       )}

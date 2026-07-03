@@ -365,11 +365,8 @@ export async function fetchPayments(buildingId) {
 }
 
 export async function addPayment(paymentData) {
-  const { data: countData } = await supabase
-    .from('payments')
-    .select('id', { count: 'exact', head: true })
-  const seq = ((countData?.length || 0) + 1).toString().padStart(4, '0')
-  const receiptId = `RCP-${new Date().toISOString().slice(2, 4)}${new Date().toISOString().slice(5, 7)}-${seq}`
+  const stamp = Date.now().toString(36).slice(-4).toUpperCase()
+  const receiptId = `RCP-${new Date().toISOString().slice(2, 4)}${new Date().toISOString().slice(5, 7)}-${stamp}`
 
   const { data, error } = await supabase
     .from('payments')
