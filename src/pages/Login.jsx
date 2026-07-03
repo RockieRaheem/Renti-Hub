@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import { isSupabaseConfigured } from '../lib/queries'
+import { sanitizeString } from '../utils/sanitize'
 
 const configured = isSupabaseConfigured()
 
@@ -19,7 +20,7 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      const err = await login(email, password)
+      const err = await login(sanitizeString(email), password)
       if (err) {
         setError(err)
       } else {

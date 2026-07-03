@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect } 
 import { logAudit } from '../utils/audit'
 import { supabase } from '../lib/supabase'
 import * as q from '../lib/queries'
+import { sanitizePaymentData } from '../utils/sanitize'
 
 const SESSION_CACHE_KEY = 'rh_user_session'
 

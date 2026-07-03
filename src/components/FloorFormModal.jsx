@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useBuilding } from '../context/BuildingContext'
+import { sanitizeString } from '../utils/sanitize'
 
 export default function FloorFormModal({ mode, floorName, onClose }) {
   const overlayRef = useRef(null)
@@ -18,10 +19,12 @@ export default function FloorFormModal({ mode, floorName, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const clean = sanitizeString(name)
+    if (!clean) return
     if (isAdd) {
-      await addFloor(name, unitCount)
+      await addFloor(clean, unitCount)
     } else {
-      await updateFloor(floorName, name)
+      await updateFloor(floorName, clean)
     }
     onClose()
   }

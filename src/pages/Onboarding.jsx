@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
+import { sanitizeString } from '../utils/sanitize'
 
 export default function Onboarding() {
   const navigate = useNavigate()
@@ -12,9 +13,12 @@ export default function Onboarding() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name.trim()) return
+    const cleanName = sanitizeString(name)
+    const cleanLocation = sanitizeString(location)
+    const cleanType = sanitizeString(type) || 'Mixed-Use'
+    if (!cleanName) return
     setSubmitting(true)
-    const ok = await createBuilding(name.trim(), location.trim(), type)
+    const ok = await createBuilding(cleanName, cleanLocation, cleanType)
     setSubmitting(false)
     if (ok) navigate('/dashboard')
   }

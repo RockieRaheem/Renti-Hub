@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useBuilding } from '../context/BuildingContext'
+import { sanitizeString } from '../utils/sanitize'
 
 const unitTypes = ['Retail', 'Office', 'Event Space', 'Storage', 'Residential']
 
@@ -21,7 +22,11 @@ export default function UnitFormModal({ floorName, unit, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    await updateUnit(floorName, unit.id, { name, type, size, monthlyRent: Number(monthlyRent) || 0 })
+    const cleanName = sanitizeString(name)
+    const cleanType = sanitizeString(type)
+    const cleanSize = sanitizeString(size)
+    if (!cleanName) return
+    await updateUnit(floorName, unit.id, { name: cleanName, type: cleanType, size: cleanSize, monthlyRent: Number(monthlyRent) || 0 })
     onClose()
   }
 

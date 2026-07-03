@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useBuilding } from '../context/BuildingContext'
+import { sanitizeTenantData, sanitizeNumber } from '../utils/sanitize'
 
 const paymentStatuses = ['Good Payer', 'Neutral Payer', 'Bad Payer']
 
@@ -29,12 +30,15 @@ export default function ReassignTenantModal({ floorName, unit, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const cleanForm = sanitizeTenantData(form)
+    const cleanRent = sanitizeNumber(form.monthlyRent)
+    if (!cleanForm.name) return
     if (!confirmPhase) {
       setConfirmPhase(true)
       return
     }
     await deleteTenant(floorName, unit.id)
-    await addTenant(floorName, unit.id, form, form.monthlyRent)
+    await addTenant(floorName, unit.id, cleanForm, cleanRent)
     onClose()
   }
 

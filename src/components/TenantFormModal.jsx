@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useBuilding } from '../context/BuildingContext'
+import { sanitizeTenantData, sanitizeNumber } from '../utils/sanitize'
 
 const paymentStatuses = ['Good Payer', 'Neutral Payer', 'Bad Payer']
 
@@ -39,10 +40,14 @@ export default function TenantFormModal({ mode, initialData, floorName, unitId, 
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const cleanForm = sanitizeTenantData(form)
+    const cleanRent = sanitizeNumber(form.monthlyRent)
+    if (!cleanForm.name) return
     if (isAdd) {
-      await addTenant(selectedFloor, selectedUnit, form, form.monthlyRent)
+      await addTenant(selectedFloor, selectedUnit, cleanForm, cleanRent)
     } else {
-      await updateTenant(floorName, unitId, form)
+      cleanForm.monthlyRent = cleanRent
+      await updateTenant(floorName, unitId, cleanForm)
     }
     onClose()
   }

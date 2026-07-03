@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import { usePrivacy } from '../context/PrivacyContext'
 import { isSupabaseConfigured } from '../lib/queries'
+import { sanitizeString } from '../utils/sanitize'
 
 const configured = isSupabaseConfigured()
 
@@ -36,7 +37,7 @@ export default function Register() {
     }
     setLoading(true)
     try {
-      const err = await register(name, email, password)
+      const err = await register(sanitizeString(name), sanitizeString(email), password)
       if (err) {
         setError(err)
       } else {
