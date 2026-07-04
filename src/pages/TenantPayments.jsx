@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
-import { fetchPaymentsByTenant } from '../lib/queries'
+import { fetchPaymentsByTenant, fetchAllPeriods, fetchPeriodAllocations } from '../lib/queries'
 import PaymentReceipt from '../components/PaymentReceipt'
 
 function fmtDate(d) {
@@ -11,10 +11,10 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function fmtTime(d) {
-  const dt = new Date(d)
-  if (isNaN(dt.getTime())) return ''
-  return dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+function monthLabel(periodStart) {
+  if (!periodStart) return ''
+  const dt = new Date(periodStart + 'T00:00:00')
+  return dt.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 }
 
 export default function TenantPayments() {
@@ -23,14 +23,19 @@ export default function TenantPayments() {
   const unit = getUnitByFloorAndId(floorName, unitId)
   const tenant = unit?.tenant
   const [payments, setPayments] = useState([])
+  const [periods, setPeriods] = useState([])
   const [loading, setLoading] = useState(true)
   const [receipt, setReceipt] = useState(null)
 
   useEffect(() => {
     if (!tenant?.id) { setLoading(false); return }
     setLoading(true)
-    fetchPaymentsByTenant(tenant.id).then(({ data, error }) => {
-      if (data) setPayments(data)
+    Promise.all([
+      fetchPaymentsByTenant(tenant.id),
+      fetchAllPeriods(tenant.id),
+    ]).then(([payResult, periodResult]) => {
+      if (payResult.data) setPayments(payResult.data)
+      if (periodResult.data) setPeriods(periodResult.data)
       setLoading(false)
     })
   }, [tenant?.id])
@@ -59,30 +64,25 @@ export default function TenantPayments() {
   const currentBalance = tenant.outstandingBalance || 0
   const credit = Math.max(0, -currentBalance)
   const outstanding = Math.max(0, currentBalance)
-
-  const running = []
-  const sorted = [...payments].reverse()
-  let currentObligation
-  if (currentBalance > 0) {
-    currentObligation = currentBalance
-  } else if (currentBalance < 0) {
-    currentObligation = Math.max(0, monthlyRent + currentBalance)
-  } else {
-    currentObligation = monthlyRent
-  }
-  sorted.forEach((p, i) => {
-    const balBefore = currentObligation
-    const balAfter = Math.max(0, balBefore - p.amount)
-    running.push({ ...p, balBefore, balAfter, idx: i + 1 })
-    currentObligation = balAfter
-    if (balAfter === 0 && i < sorted.length - 1) {
-      currentObligation = monthlyRent
-    }
-  })
-  running.reverse()
-
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0)
   const hasCredit = credit > 0
+
+  // Build period-based ledger: merge periods with their allocations
+  const [ledgerData, setLedgerData] = useState([])
+  useEffect(() => {
+    if (periods.length === 0) { setLedgerData([]); return }
+    Promise.all(
+      periods.map(async (period) => {
+        const { data: allocs } = await fetchPeriodAllocations(period.id) || { data: [] }
+        const paidAmount = allocs.reduce((s, a) => s + a.amount, 0)
+        return { ...period, paidAmount, balance: period.rentDue - paidAmount }
+      }),
+    ).then((results) => setLedgerData(results))
+  }, [periods])
+
+  const cumulativeBalance = ledgerData.reduce((s, p) => s + p.balance, 0)
+  const totalRentDue = ledgerData.reduce((s, p) => s + p.rentDue, 0)
+  const totalPaidAllocated = ledgerData.reduce((s, p) => s + p.paidAmount, 0)
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -114,7 +114,7 @@ export default function TenantPayments() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="bg-surface-container/50 rounded-lg p-4 border border-outline/50">
               <p className="text-[10px] text-on-surface-dim uppercase tracking-wide font-semibold mb-1">Monthly Rent</p>
               <p className="text-lg font-bold text-on-surface">UGX {monthlyRent.toLocaleString()}</p>
@@ -139,6 +139,11 @@ export default function TenantPayments() {
               <p className="text-lg font-bold text-on-surface">UGX {totalPaid.toLocaleString()}</p>
               <p className="text-[10px] text-on-surface-dim mt-0.5">{payments.length} payment{payments.length !== 1 ? 's' : ''}</p>
             </div>
+            <div className="bg-surface-container/50 rounded-lg p-4 border border-outline/50">
+              <p className="text-[10px] text-on-surface-dim uppercase tracking-wide font-semibold mb-1">Total Rent Due</p>
+              <p className="text-lg font-bold text-on-surface">UGX {totalRentDue.toLocaleString()}</p>
+              <p className="text-[10px] text-on-surface-dim mt-0.5">{ledgerData.length} month{ledgerData.length !== 1 ? 's' : ''}</p>
+            </div>
           </div>
 
           {hasCredit && (
@@ -149,7 +154,7 @@ export default function TenantPayments() {
                   <p className="text-sm font-semibold text-blue-800">Money on Account</p>
                   <p className="text-xs text-blue-700 mt-0.5">
                     {tenant.name} has <strong>UGX {credit.toLocaleString()}</strong> in prepaid credit.
-                    This amount will be applied to the next month's rent automatically.
+                    This will be applied to the next month's rent automatically.
                   </p>
                 </div>
               </div>
@@ -160,90 +165,129 @@ export default function TenantPayments() {
             <div className="text-center py-12">
               <span className="inline-block w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
             </div>
-          ) : payments.length === 0 ? (
+          ) : ledgerData.length === 0 && payments.length === 0 ? (
             <div className="text-center py-12">
               <span className="material-symbols-outlined text-3xl text-on-surface-dim mb-2">receipt_long</span>
               <p className="text-sm text-on-surface-muted">No payments recorded yet</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-outline bg-surface-container/50">
-                    <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">#</th>
-                    <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Receipt</th>
-                    <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Date</th>
-                    <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Time</th>
-                    <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Method</th>
-                    <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Amount</th>
-                    <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Balance Before</th>
-                    <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Balance After</th>
-                    <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline">
-                  {running.map((p) => {
-                    const overpaid = p.amount > p.balBefore
-                    return (
+            <>
+              {/* Period-based ledger table */}
+              {ledgerData.length > 0 && (
+                <div className="overflow-x-auto mb-6">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-outline bg-surface-container/50">
+                        <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Month</th>
+                        <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Rent Due</th>
+                        <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Paid</th>
+                        <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Balance</th>
+                        <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline">
+                      {ledgerData.map((p) => {
+                        const balColor = p.balance > 0 ? 'text-status-unpaid' : p.balance < 0 ? 'text-blue-600' : 'text-status-paid'
+                        return (
+                          <tr key={p.id} className="hover:bg-surface-container/50 transition-colors">
+                            <td className="px-4 py-3 font-medium text-on-surface">{monthLabel(p.periodStart)}</td>
+                            <td className="px-4 py-3 text-right text-on-surface-muted">UGX {p.rentDue.toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right text-on-surface font-medium">UGX {p.paidAmount.toLocaleString()}</td>
+                            <td className={`px-4 py-3 text-right font-medium ${balColor}`}>
+                              {p.balance > 0 ? `UGX ${p.balance.toLocaleString()}` : p.balance < 0 ? `-UGX ${Math.abs(p.balance).toLocaleString()}` : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                                p.status === 'paid' ? 'bg-green-50 text-green-700' :
+                                p.status === 'partial' ? 'bg-yellow-50 text-yellow-700' :
+                                p.status === 'credited' ? 'bg-blue-50 text-blue-700' :
+                                'bg-red-50 text-red-700'
+                              }`}>
+                                {p.status === 'paid' ? 'Paid' : p.status === 'partial' ? 'Partial' : p.status === 'credited' ? 'Credited' : 'Unpaid'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-surface-container/30 font-medium text-sm border-t-2 border-outline">
+                        <td className="px-4 py-3 text-on-surface font-semibold">{ledgerData.length} month{ledgerData.length !== 1 ? 's' : ''}</td>
+                        <td className="px-4 py-3 text-right font-bold text-on-surface">UGX {totalRentDue.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-bold text-on-surface">UGX {totalPaidAllocated.toLocaleString()}</td>
+                        <td className={`px-4 py-3 text-right font-bold ${cumulativeBalance > 0 ? 'text-status-unpaid' : cumulativeBalance < 0 ? 'text-blue-600' : 'text-status-paid'}`}>
+                          {cumulativeBalance > 0 ? `UGX ${cumulativeBalance.toLocaleString()}` : cumulativeBalance < 0 ? `-UGX ${Math.abs(cumulativeBalance).toLocaleString()}` : '—'}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+
+              {/* Payment details table */}
+              <h4 className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-3">Payment Transactions</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-outline bg-surface-container/50">
+                      <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">#</th>
+                      <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Receipt</th>
+                      <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Date</th>
+                      <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Time</th>
+                      <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Method</th>
+                      <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">For Month</th>
+                      <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Amount</th>
+                      <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline">
+                    {payments.map((p, i) => (
                       <tr key={p.id} className="hover:bg-surface-container/50 transition-colors">
-                        <td className="px-4 py-3 text-[11px] text-on-surface-dim font-mono">{p.idx}</td>
+                        <td className="px-4 py-3 text-[11px] text-on-surface-dim font-mono">{i + 1}</td>
                         <td className="px-4 py-3 font-mono text-[11px] text-on-surface-muted">{p.receiptId}</td>
                         <td className="px-4 py-3 text-on-surface-muted whitespace-nowrap">{fmtDate(p.date)}</td>
-                        <td className="px-4 py-3 text-on-surface-dim text-[11px] whitespace-nowrap">{p.time || fmtTime(p.date)}</td>
+                        <td className="px-4 py-3 text-on-surface-dim text-[11px] whitespace-nowrap">{p.time || ''}</td>
                         <td className="px-4 py-3 text-on-surface-muted">{p.method || 'Cash'}</td>
-                        <td className="px-4 py-3 text-right font-medium text-on-surface whitespace-nowrap">
-                          UGX {(p.amount || 0).toLocaleString()}
-                          {overpaid && (
-                            <span className="ml-1.5 text-[10px] text-blue-600 font-semibold">
-                              (+UGX {((p.amount || 0) - p.balBefore).toLocaleString()} credit)
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right text-on-surface-muted whitespace-nowrap">
-                          UGX {p.balBefore.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <span className={p.balAfter > 0 ? 'text-status-unpaid font-medium' : 'text-status-paid font-medium'}>
-                            {p.balAfter > 0 ? `UGX ${p.balAfter.toLocaleString()}` : 'Cleared'}
-                          </span>
-                        </td>
+                        <td className="px-4 py-3 text-on-surface-dim text-[11px]">{p.forMonth || '-'}</td>
+                        <td className="px-4 py-3 text-right font-medium text-on-surface whitespace-nowrap">UGX {(p.amount || 0).toLocaleString()}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${p.status === 'Paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
                             {p.status}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button onClick={() => setReceipt({ ...p, previousBalance: p.balBefore })}
+                          <button onClick={() => setReceipt(p)}
                             className="text-[11px] text-primary hover:underline">
                             Receipt
                           </button>
                         </td>
                       </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-surface-container/30 font-medium text-sm border-t-2 border-outline">
-                    <td colSpan={5} className="px-4 py-3 text-on-surface font-semibold">Total</td>
-                    <td className="px-4 py-3 text-right font-bold text-on-surface">UGX {totalPaid.toLocaleString()}</td>
-                    <td colSpan={4}></td>
-                  </tr>
-                  {hasCredit && (
-                    <tr className="bg-blue-50/50 text-sm">
-                      <td colSpan={5} className="px-4 py-3 text-blue-700 font-medium">
-                        <span className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-sm">account_balance_wallet</span>
-                          Prepaid Credit Available
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-blue-600">UGX {credit.toLocaleString()}</td>
-                      <td colSpan={4}></td>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-surface-container/30 font-medium text-sm border-t-2 border-outline">
+                      <td colSpan={6} className="px-4 py-3 text-on-surface font-semibold">Total</td>
+                      <td className="px-4 py-3 text-right font-bold text-on-surface">UGX {totalPaid.toLocaleString()}</td>
+                      <td colSpan={2}></td>
                     </tr>
-                  )}
-                </tfoot>
-              </table>
-            </div>
+                    {hasCredit && (
+                      <tr className="bg-blue-50/50 text-sm">
+                        <td colSpan={6} className="px-4 py-3 text-blue-700 font-medium">
+                          <span className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm">account_balance_wallet</span>
+                            Prepaid Credit Available
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-blue-600">UGX {credit.toLocaleString()}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    )}
+                  </tfoot>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

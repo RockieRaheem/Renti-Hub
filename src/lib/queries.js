@@ -87,6 +87,7 @@ function mapPayment(data) {
     status: data.status,
     tenantName: data.tenant_name || '',
     date: data.date,
+    forMonth: (data.date || '').substring(0, 7),
     receiptId: `RCP-${(data.id || '').substring(0, 4).toUpperCase()}-${(data.id || '').substring(4, 8).toUpperCase()}`,
     time: new Date(data.created_at).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -399,6 +400,7 @@ export async function addPayment(paymentData) {
       status: data.status,
       tenantName: data.tenant_name || '',
       date: data.date,
+      forMonth: (data.date || '').substring(0, 7),
       receiptId,
       time: new Date(data.created_at).toLocaleTimeString('en-US', {
         hour: '2-digit', minute: '2-digit', hour12: true,
@@ -421,6 +423,161 @@ export async function fetchPaymentsByTenant(tenantId) {
     .order('created_at', { ascending: false })
   if (error) return { error: error.message }
   return { data: (data || []).map(mapPayment) }
+}
+
+// ── Billing Periods ──────────────────────────────────────────────────────
+
+function mapPeriod(data) {
+  return {
+    id: data.id,
+    tenantId: data.tenant_id,
+    periodStart: data.period_start,
+    periodEnd: data.period_end,
+    rentDue: Number(data.rent_due),
+    status: data.status,
+  }
+}
+
+function mapAllocation(data) {
+  return {
+    id: data.id,
+    paymentId: data.payment_id,
+    periodId: data.period_id,
+    amount: Number(data.amount),
+  }
+}
+
+export async function fetchOrCreateBillingPeriod(tenantId, forMonth, rentDue) {
+  const year = parseInt(forMonth.substring(0, 4), 10)
+  const month = parseInt(forMonth.substring(5, 7), 10) - 1
+  const periodStart = new Date(Date.UTC(year, month, 1)).toISOString().split('T')[0]
+  const periodEnd = new Date(Date.UTC(year, month + 1, 0)).toISOString().split('T')[0]
+
+  const { data: existing } = await supabase
+    .from('billing_periods')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .eq('period_start', periodStart)
+    .maybeSingle()
+
+  if (existing) return { data: mapPeriod(existing) }
+
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .insert({
+      tenant_id: tenantId,
+      period_start: periodStart,
+      period_end: periodEnd,
+      rent_due: Math.max(0, rentDue),
+      status: 'unpaid',
+    })
+    .select()
+    .single()
+  if (error) return { error: error.message }
+  return { data: mapPeriod(data) }
+}
+
+export async function fetchUnpaidPeriods(tenantId) {
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .in('status', ['unpaid', 'partial'])
+    .order('period_start', { ascending: true })
+  if (error) return { error: error.message }
+  return { data: (data || []).map(mapPeriod) }
+}
+
+export async function fetchAllPeriods(tenantId) {
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('period_start', { ascending: false })
+  if (error) return { error: error.message }
+  return { data: (data || []).map(mapPeriod) }
+}
+
+export async function fetchPeriodAllocations(periodId) {
+  const { data, error } = await supabase
+    .from('payment_allocations')
+    .select('*')
+    .eq('period_id', periodId)
+  if (error) return { error: error.message }
+  return { data: (data || []).map(mapAllocation) }
+}
+
+export async function fetchAllocationsForPayment(paymentId) {
+  const { data, error } = await supabase
+    .from('payment_allocations')
+    .select('*, billing_periods!inner(period_start, period_end, rent_due)')
+    .eq('payment_id', paymentId)
+  if (error) return { error: error.message }
+  return { data: (data || []).map((a) => ({
+    ...mapAllocation(a),
+    periodStart: a.billing_periods?.period_start,
+    periodEnd: a.billing_periods?.period_end,
+    rentDue: Number(a.billing_periods?.rent_due || 0),
+  })) }
+}
+
+export async function allocatePayment(paymentId, periodId, amount) {
+  const { data, error } = await supabase
+    .from('payment_allocations')
+    .insert({
+      payment_id: paymentId,
+      period_id: periodId,
+      amount: Number(amount),
+    })
+    .select()
+    .single()
+  if (error) return { error: error.message }
+  return { data: mapAllocation(data) }
+}
+
+export async function updatePeriodStatus(periodId, status) {
+  const { error } = await supabase
+    .from('billing_periods')
+    .update({ status })
+    .eq('id', periodId)
+  if (error) return { error: error.message }
+  return {}
+}
+
+export async function computeTenantBalance(tenantId) {
+  const { data, error } = await supabase
+    .rpc('compute_tenant_balance', { p_tenant_id: tenantId })
+  if (error) return { error: error.message }
+  return { data: Number(data || 0) }
+}
+
+export async function periodsExistForTenant(tenantId) {
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+  if (error) return { error: error.message }
+  return { data: (data?.length || 0) > 0 }
+}
+
+// ── Tenant Migration (one-time) ─────────────────────────────────────────
+// Creates billing periods for existing tenants who predate the new system.
+
+export async function migrateExistingTenant(tenantId, monthlyRent, openingBalance) {
+  const now = new Date()
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const { data: period } = await fetchOrCreateBillingPeriod(tenantId, currentMonth, monthlyRent)
+  if (!period) return {}
+
+  // If there's an opening balance, adjust the first period's rent_due to include it
+  if (openingBalance > 0) {
+    const adjusted = openingBalance + (monthlyRent || 0)
+    await supabase
+      .from('billing_periods')
+      .update({ rent_due: adjusted })
+      .eq('id', period.id)
+  }
+  return { data: period }
 }
 
 // ── Maintenance ──────────────────────────────────────────────────────────

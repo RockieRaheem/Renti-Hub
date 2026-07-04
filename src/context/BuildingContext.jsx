@@ -311,10 +311,11 @@ export function BuildingProvider({ children }) {
     if (!unit) { return { error: `Unit "${unitName}" not found on ${floorName}` } }
 
     const cleaned = sanitizePaymentData({ floor: floorName, unit: unitName, amount, method, tenantName, status, date })
+    const tenantId = unit.tenant?.id
 
     const result = await q.addPayment({
       unitId: unit.id, floorId: floor.id, buildingId: building.id,
-      tenantId: unit.tenant?.id || null,
+      tenantId: tenantId || null,
       floorName: cleaned.floor, unitName: cleaned.unit,
       amount: cleaned.amount, method: cleaned.method,
       status: cleaned.status, tenantName: cleaned.tenantName, date: cleaned.date,
@@ -323,45 +324,67 @@ export function BuildingProvider({ children }) {
 
     const paymentRecord = result.data
     const monthlyRent = unit.monthlyRent || 0
-    const currentBalance = unit.tenant?.outstandingBalance || 0
-    const lastPaymentDate = unit.tenant?.lastPaymentDate || null
 
-    // Count full calendar months elapsed since last payment
-    let monthsSinceLastPayment = 0
-    if (lastPaymentDate) {
-      const last = new Date(lastPaymentDate + 'T00:00:00')
-      const curr = new Date(cleaned.date + 'T00:00:00')
-      monthsSinceLastPayment = (curr.getFullYear() - last.getFullYear()) * 12
-        + (curr.getMonth() - last.getMonth())
-    }
+    if (tenantId) {
+      // ── Billing-period allocation (waterfall: oldest unpaid first) ──
+      const forMonth = cleaned.date.substring(0, 7)
 
-    // Effective balance = outstanding debt + rent accrued for each elapsed month
-    let oldBalance = currentBalance + (monthlyRent * Math.max(0, monthsSinceLastPayment))
+      // 1. Ensure a billing period exists for the payment's month
+      const { data: currentPeriod, error: periodErr } = await q.fetchOrCreateBillingPeriod(tenantId, forMonth, monthlyRent)
+      if (periodErr) { await q.voidPayment(paymentRecord.id); return { error: periodErr } }
 
-    // If balance is zero or negative after accrual:
-    //   - First payment ever: owes full monthly rent
-    //   - Already paid this month / has credit: keep as-is (zero → advance, negative → credit rolls forward)
-    if (oldBalance <= 0 && !lastPaymentDate) {
-      oldBalance = monthlyRent
-    }
+      // 1b. Migration: if tenant has existing outstandingBalance and this is their first period,
+      //     add the opening balance to the current period's rent_due so carry-over debt is captured
+      const { data: allExistingPeriods } = await q.fetchAllPeriods(tenantId) || { data: [] }
+      const hasLegacyBalance = (unit.tenant?.outstandingBalance || 0) > 0
+      if (hasLegacyBalance && allExistingPeriods.length <= 1) {
+        const openingBalance = unit.tenant.outstandingBalance
+        const adjustedRent = currentPeriod.rentDue + openingBalance
+        await supabase
+          .from('billing_periods')
+          .update({ rent_due: adjustedRent })
+          .eq('id', currentPeriod.id)
+        currentPeriod.rentDue = adjustedRent
+      }
 
-    const newOutstanding = oldBalance - cleaned.amount
-    paymentRecord.previousBalance = oldBalance
-    paymentRecord.excess = Math.max(0, -newOutstanding)
+      // 2. Get all unpaid periods (oldest first)
+      const { data: unpaidPeriods } = await q.fetchUnpaidPeriods(tenantId) || { data: [] }
+      const allPeriods = unpaidPeriods.filter((p) => p.id === currentPeriod.id || p.status !== 'paid')
+      if (!allPeriods.find((p) => p.id === currentPeriod.id)) {
+        allPeriods.push(currentPeriod)
+      }
+      allPeriods.sort((a, b) => new Date(a.periodStart) - new Date(b.periodStart))
 
-    if (unit.tenant) {
-      const tenantResult = await q.updateTenant(unit.tenant.id, {
-        paid: newOutstanding <= 0,
-        outstandingBalance: newOutstanding,
+      // 3. Allocate waterfall
+      let remaining = cleaned.amount
+      for (const period of allPeriods) {
+        if (remaining <= 0) break
+        const { data: existingAllocs } = await q.fetchPeriodAllocations(period.id) || { data: [] }
+        const allocatedSoFar = existingAllocs.reduce((s, a) => s + a.amount, 0)
+        const stillOwed = period.rentDue - allocatedSoFar
+        if (stillOwed <= 0) {
+          if (period.status !== 'paid') await q.updatePeriodStatus(period.id, 'paid')
+          continue
+        }
+        const toAllocate = Math.min(remaining, stillOwed)
+        await q.allocatePayment(paymentRecord.id, period.id, toAllocate)
+        remaining -= toAllocate
+        const newStatus = toAllocate >= stillOwed ? 'paid' : 'partial'
+        await q.updatePeriodStatus(period.id, newStatus)
+      }
+
+      // 4. Compute new balance from periods
+      const { data: newBalance } = await q.computeTenantBalance(tenantId) || { data: 0 }
+      const balance = Number(newBalance || 0)
+
+      // 5. Update tenant balance cache
+      await q.updateTenant(tenantId, {
+        outstandingBalance: balance,
         lastPayment: `UGX ${cleaned.amount.toLocaleString()}`,
         lastPaymentDate: cleaned.date,
       })
-      if (tenantResult.error) {
-        await q.voidPayment(paymentRecord.id)
-        setError(tenantResult.error)
-        return { error: `Payment was recorded but tenant balance update failed and was rolled back: ${tenantResult.error}` }
-      }
 
+      // 6. Update local state
       setFloors((prev) =>
         prev.map((f) => {
           if (f.name !== floorName) return f
@@ -372,16 +395,20 @@ export function BuildingProvider({ children }) {
               return {
                 ...u,
                 tenant: u.tenant
-                  ? { ...u.tenant, outstandingBalance: newOutstanding, paid: newOutstanding <= 0, lastPayment: `UGX ${cleaned.amount.toLocaleString()}`, lastPaymentDate: cleaned.date }
+                  ? { ...u.tenant, outstandingBalance: balance, paid: balance <= 0, lastPayment: `UGX ${cleaned.amount.toLocaleString()}`, lastPaymentDate: cleaned.date }
                   : null,
               }
             }),
           }
         }),
       )
-    }
-    setPayments((prev) => [paymentRecord, ...prev])
 
+      // Attach balance info to payment record
+      paymentRecord.previousBalance = balance + cleaned.amount
+      paymentRecord.excess = Math.max(0, -balance)
+    }
+
+    setPayments((prev) => [paymentRecord, ...prev])
     refreshData()
     logAudit('Payment recorded', `${cleaned.tenantName} UGX ${cleaned.amount.toLocaleString()} (${cleaned.status})`)
     return paymentRecord
