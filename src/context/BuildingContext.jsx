@@ -206,12 +206,13 @@ export function BuildingProvider({ children }) {
   // ── Tenant ──
   const addTenant = useCallback(async (floorName, unitId, tenantData, monthlyRent) => {
     if (!building) return
-    const result = await q.addTenant(unitId, building.id, tenantData)
-    if (result.error) { setError(result.error); return }
-
+    // Set unit's monthly rent FIRST so the billing-period trigger picks it up
     if (monthlyRent) {
       await q.updateUnit(unitId, { monthlyRent: Number(monthlyRent) })
     }
+    const result = await q.addTenant(unitId, building.id, tenantData)
+    if (result.error) { setError(result.error); return }
+
     await refreshData()
     logAudit('Tenant added', `${tenantData.name} → ${floorName} / ${unitId}`)
   }, [building, refreshData])

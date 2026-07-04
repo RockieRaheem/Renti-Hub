@@ -102,21 +102,27 @@ begin
 end;
 $$ language plpgsql security definer stable;
 
--- 5. Trigger: auto-create billing period when tenant is added to a unit
+-- 5. Trigger: auto-create billing period on tenant insert, sync cached balance
 create or replace function public.create_initial_billing_period()
 returns trigger as $$
 declare
   month_start date;
-  month_end date;
-  rent numeric;
+  month_end   date;
+  rent        numeric;
 begin
   month_start := date_trunc('month', now())::date;
-  month_end := (date_trunc('month', now()) + interval '1 month - 1 day')::date;
-  rent := public.get_tenant_monthly_rent(new.id);
+  month_end   := (date_trunc('month', now()) + interval '1 month - 1 day')::date;
+  rent        := public.get_tenant_monthly_rent(new.id);
 
   insert into public.billing_periods (tenant_id, period_start, period_end, rent_due, status)
-  values (new.id, month_start, month_end, rent, 'unpaid')
-  on conflict do nothing;
+  values (new.id, month_start, month_end, rent, 'unpaid');
+
+  -- Keep the tenant's cached balance in sync so all UI reads are consistent
+  update public.tenants
+  set outstanding_balance = rent,
+      paid = (rent <= 0)
+  where id = new.id;
+
   return new;
 end;
 $$ language plpgsql security definer;
