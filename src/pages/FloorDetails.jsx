@@ -18,20 +18,35 @@ export default function FloorDetails() {
   const [unitModal, setUnitModal] = useState(null)
   const [reassignModal, setReassignModal] = useState(null)
   const [paymentModal, setPaymentModal] = useState(null)
+  const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'Cash', date: new Date().toISOString().slice(0, 10) })
   const [paymentReceipt, setPaymentReceipt] = useState(null)
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false)
+  const [paymentError, setPaymentError] = useState(null)
 
-  const handleFloorPayment = async (tenant, unitName) => {
-    const result = await addPayment({
-      floor: floor.name, unit: unitName,
-      amount: tenant.monthlyRent || 0, method: 'Cash',
-      tenantName: tenant.name, status: 'Paid',
-      date: new Date().toISOString().slice(0, 10),
-    })
-    if (result?.error) {
-      alert(result.error)
-    } else if (result) {
-      setPaymentReceipt(result)
-      setPaymentModal(null)
+  const handleFloorPayment = async (e) => {
+    e.preventDefault()
+    const amount = parseFloat(paymentForm.amount)
+    if (!amount || amount <= 0) { setPaymentError('Enter a valid payment amount'); return }
+    setPaymentError(null)
+    setPaymentSubmitting(true)
+    try {
+      const result = await addPayment({
+        floor: floor.name, unit: paymentModal.unit,
+        amount, method: paymentForm.method,
+        tenantName: paymentModal.tenant.name, status: 'Paid',
+        date: paymentForm.date,
+      })
+      if (result?.error) {
+        setPaymentError(result.error)
+      } else if (result) {
+        setPaymentReceipt(result)
+        setPaymentModal(null)
+        setPaymentForm({ amount: '', method: 'Cash', date: new Date().toISOString().slice(0, 10) })
+      }
+    } catch {
+      setPaymentError('An unexpected error occurred')
+    } finally {
+      setPaymentSubmitting(false)
     }
   }
 
@@ -162,7 +177,7 @@ export default function FloorDetails() {
                       <div className="flex items-center gap-0.5">
                         {occupied && (
                           <>
-                            <IconBtn icon="payments" title="Record payment" onClick={() => setPaymentModal({ tenant: t, unit: unit.name })} color="primary" />
+                            <IconBtn icon="payments" title="Record payment" onClick={() => { setPaymentModal({ tenant: t, unit: unit.name, monthlyRent: unit.monthlyRent || 0 }); setPaymentForm({ amount: '', method: 'Cash', date: new Date().toISOString().slice(0, 10) }); setPaymentError(null) }} color="primary" />
                             <IconBtn icon="edit" title="Edit tenant" onClick={() => setTenantModal({ mode: 'edit', floor: floor.name, unit: unit.id, data: t })} color="primary" />
                             <Link to={`/tenant-payments/${floorName}/${unit.id}`}
                               className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-primary hover:bg-primary-50 transition-colors"
@@ -216,18 +231,24 @@ export default function FloorDetails() {
       )}
 
       {paymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setPaymentModal(null) }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) { setPaymentModal(null); setPaymentError(null) } }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
               <div>
                 <h2 className="text-base font-bold text-on-surface">Record Payment</h2>
                 <p className="text-xs text-on-surface-muted mt-0.5">{paymentModal.tenant.name} &middot; {paymentModal.unit}</p>
               </div>
-              <button onClick={() => setPaymentModal(null)} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+              <button onClick={() => { setPaymentModal(null); setPaymentError(null) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
                 <span className="material-symbols-outlined text-xl">close</span>
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <form onSubmit={handleFloorPayment} className="p-6 space-y-4">
+              {paymentError && (
+                <div className="bg-status-unpaid/10 border border-status-unpaid/30 rounded-lg px-4 py-3 text-sm text-status-unpaid font-medium flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base">error</span>
+                  {paymentError}
+                </div>
+              )}
               <div className="bg-surface-container/50 rounded-lg p-4 text-sm space-y-2">
                 <div className="flex justify-between">
                   <span className="text-on-surface-muted">Tenant</span>
@@ -239,27 +260,59 @@ export default function FloorDetails() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-on-surface-muted">Monthly Rent</span>
-                  <span className="font-medium text-on-surface">UGX {(paymentModal.tenant.monthlyRent || 0).toLocaleString()}</span>
+                  <span className="font-medium text-on-surface">UGX {(paymentModal.monthlyRent || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-on-surface-muted">Outstanding</span>
                   <span className={`font-medium ${(paymentModal.tenant.outstandingBalance || 0) > 0 ? 'text-status-unpaid' : 'text-status-paid'}`}>
-                    {paymentModal.tenant.outstandingBalance > 0 ? `UGX ${paymentModal.tenant.outstandingBalance.toLocaleString()}` : 'Cleared'}
+                    {paymentModal.tenant.outstandingBalance > 0
+                      ? `UGX ${paymentModal.tenant.outstandingBalance.toLocaleString()}`
+                      : `UGX ${(paymentModal.monthlyRent || 0).toLocaleString()} due`}
                   </span>
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Amount (UGX)</label>
+                <input type="number" min="0" step="100" required autoFocus
+                  value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  placeholder="Enter amount"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Method</label>
+                  <select value={paymentForm.method} onChange={(e) => setPaymentForm((p) => ({ ...p, method: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    <option value="Cash">Cash</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cheque">Cheque</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Date</label>
+                  <input type="date" value={paymentForm.date}
+                    onChange={(e) => setPaymentForm((p) => ({ ...p, date: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button onClick={() => setPaymentModal(null)}
-                  className="px-4 py-2.5 text-sm font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors">
+                <button type="button" onClick={() => { setPaymentModal(null); setPaymentError(null) }}
+                  className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                   Cancel
                 </button>
-                <button onClick={() => handleFloorPayment(paymentModal.tenant, paymentModal.unit)}
-                  className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors inline-flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-base">payments</span>
-                  Pay UGX {(paymentModal.tenant.monthlyRent || 0).toLocaleString()}
+                <button type="submit" disabled={paymentSubmitting}
+                  className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-card transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
+                  {paymentSubmitting ? (
+                    <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                  ) : (
+                    <><span className="material-symbols-outlined text-base">payments</span>Record Payment</>
+                  )}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
