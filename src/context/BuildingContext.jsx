@@ -324,13 +324,24 @@ export function BuildingProvider({ children }) {
     const paymentRecord = result.data
     const monthlyRent = unit.monthlyRent || 0
     const currentBalance = unit.tenant?.outstandingBalance || 0
+    const lastPaymentDate = unit.tenant?.lastPaymentDate || null
 
-    let oldBalance
-    if (currentBalance > 0) {
-      oldBalance = currentBalance
-    } else if (currentBalance < 0) {
-      oldBalance = Math.max(0, monthlyRent + currentBalance)
-    } else {
+    // Count full calendar months elapsed since last payment
+    let monthsSinceLastPayment = 0
+    if (lastPaymentDate) {
+      const last = new Date(lastPaymentDate + 'T00:00:00')
+      const curr = new Date(cleaned.date + 'T00:00:00')
+      monthsSinceLastPayment = (curr.getFullYear() - last.getFullYear()) * 12
+        + (curr.getMonth() - last.getMonth())
+    }
+
+    // Effective balance = outstanding debt + rent accrued for each elapsed month
+    let oldBalance = currentBalance + (monthlyRent * Math.max(0, monthsSinceLastPayment))
+
+    // If balance is zero or negative after accrual:
+    //   - First payment ever: owes full monthly rent
+    //   - Already paid this month / has credit: keep as-is (zero → advance, negative → credit rolls forward)
+    if (oldBalance <= 0 && !lastPaymentDate) {
       oldBalance = monthlyRent
     }
 
