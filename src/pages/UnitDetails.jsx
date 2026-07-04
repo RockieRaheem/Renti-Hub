@@ -127,6 +127,11 @@ export default function UnitDetails() {
                         </div>
                       ))}
                     </div>
+                    <Link to={`/tenant-payments/${floorName}/${unit.id}`}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card">
+                      <span className="material-symbols-outlined text-lg">receipt_long</span>
+                      View Full Payment History
+                    </Link>
                   </div>
                 </div>
               ) : (
@@ -147,6 +152,7 @@ export default function UnitDetails() {
               {[
                 { icon: 'payments', label: 'Record Payment', sub: t ? `UGX ${(unit.monthlyRent || 0).toLocaleString()}/mo` : 'No tenant', to: '/rent-collection', color: 'bg-primary-50 text-primary', disabled: !t },
                 { icon: 'build', label: 'Report Maintenance', sub: `${unitMaintenance.length} past requests`, to: '/maintenance-board', color: 'bg-orange-50 text-orange-700', disabled: !t },
+                { icon: 'receipt_long', label: 'Payment History', sub: t ? 'View full payment ledger' : 'No tenant', to: `/tenant-payments/${floorName}/${unit.id}`, color: 'bg-indigo-50 text-indigo-600', disabled: !t },
                 { icon: 'arrow_back', label: 'Back to Floor', sub: unit.floor, to: `/properties/floor/${floorName}`, color: 'bg-surface-container text-on-surface-muted' },
               ].map((a) => (
                 <Link key={a.label} to={a.to}
