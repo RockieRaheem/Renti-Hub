@@ -580,6 +580,68 @@ export async function migrateExistingTenant(tenantId, monthlyRent, openingBalanc
   return { data: period }
 }
 
+// ── Billing Period Gap-Filler ────────────────────────────────────────────
+// Ensures every month from the tenant's start to the current month has a
+// billing period. Created periods use full monthlyRent; credit is handled
+// separately by addPayment.
+
+export async function ensureTenantPeriods(tenantId, monthlyRent) {
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('lease_start')
+    .eq('id', tenantId)
+    .single()
+
+  const { data: existingPeriods } = await supabase
+    .from('billing_periods')
+    .select('period_start')
+    .eq('tenant_id', tenantId)
+    .order('period_start', { ascending: true })
+
+  const existingSet = new Set(
+    (existingPeriods || []).map((p) => p.period_start.substring(0, 7)),
+  )
+
+  let startMonth
+  if (existingPeriods && existingPeriods.length > 0) {
+    startMonth = existingPeriods[0].period_start.substring(0, 7)
+  } else if (tenant?.lease_start && tenant.lease_start.length >= 7) {
+    startMonth = tenant.lease_start.substring(0, 7)
+  } else {
+    const n = new Date()
+    startMonth = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
+  }
+
+  const now = new Date()
+  const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+
+  const toCreate = []
+  const cur = new Date(startMonth + '-01')
+  const end = new Date(endMonth + '-01')
+
+  while (cur <= end) {
+    const m = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`
+    if (!existingSet.has(m)) {
+      const periodStart = `${m}-01`
+      const lastDay = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate()
+      toCreate.push({
+        tenant_id: tenantId,
+        period_start: periodStart,
+        period_end: `${m}-${String(lastDay).padStart(2, '0')}`,
+        rent_due: Math.max(0, Number(monthlyRent) || 0),
+        status: 'unpaid',
+      })
+    }
+    cur.setMonth(cur.getMonth() + 1)
+  }
+
+  for (const p of toCreate) {
+    await supabase.from('billing_periods').insert(p)
+  }
+
+  return toCreate.length
+}
+
 // ── Maintenance ──────────────────────────────────────────────────────────
 
 export async function fetchMaintenance(buildingId) {

@@ -62,8 +62,8 @@ export default function TenantPayments() {
 
   const monthlyRent = unit.monthlyRent || 0
   const currentBalance = tenant.outstandingBalance || 0
-  const credit = Math.max(0, -currentBalance)
   const outstanding = Math.max(0, currentBalance)
+  const credit = Math.max(0, -currentBalance)
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0)
   const hasCredit = credit > 0
 

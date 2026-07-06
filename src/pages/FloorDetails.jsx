@@ -264,10 +264,16 @@ export default function FloorDetails() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-on-surface-muted">Outstanding</span>
-                  <span className={`font-medium ${(paymentModal.tenant.outstandingBalance || 0) > 0 ? 'text-status-unpaid' : 'text-status-paid'}`}>
-                    {paymentModal.tenant.outstandingBalance > 0
+                  <span className={`font-medium ${
+                    (paymentModal.tenant.outstandingBalance || 0) > 0 ? 'text-status-unpaid' :
+                    (paymentModal.tenant.outstandingBalance || 0) < 0 ? 'text-blue-600' :
+                    'text-status-paid'
+                  }`}>
+                    {(paymentModal.tenant.outstandingBalance || 0) > 0
                       ? `UGX ${paymentModal.tenant.outstandingBalance.toLocaleString()}`
-                      : `UGX ${(paymentModal.monthlyRent || 0).toLocaleString()} due`}
+                      : (paymentModal.tenant.outstandingBalance || 0) < 0
+                        ? `UGX ${Math.abs(paymentModal.tenant.outstandingBalance).toLocaleString()} credit`
+                        : 'UGX 0 (Cleared)'}
                   </span>
                 </div>
               </div>

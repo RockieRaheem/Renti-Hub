@@ -31,6 +31,8 @@ export default function Dashboard() {
   const occupiedUnits = floors.reduce((s, f) => s + f.units.filter(u => u.status === 'occupied').length, 0)
   const recentPayments = [...payments].reverse().slice(0, 5)
   const pendingMaint = maintenanceStats.pending + maintenanceStats.inProgress
+  const totalCredit = floors.reduce((s, f) => s + f.units.reduce((us, u) => us + Math.max(0, -(u.tenant?.outstandingBalance || 0)), 0), 0)
+  const tenantsWithCredit = floors.reduce((s, f) => s + f.units.filter(u => (u.tenant?.outstandingBalance || 0) < 0).length, 0)
 
   function paymentLink(p) {
     const floor = floors.find(f => f.name === p.floor)
@@ -90,7 +92,7 @@ export default function Dashboard() {
         <KpiCard icon="real_estate_agent" label="Occupancy" value={`${occupiedUnits}/${totalUnits}`} trend={occupiedUnits > 0 ? 4.1 : 0} sub={`${Math.round((occupiedUnits / totalUnits) * 100)}% occupied`} />
         <KpiCard icon="warning" label="Outstanding" value={`UGX ${totalOutstanding.toLocaleString()}`} trend={null} sub={totalOutstanding > 0 ? 'Tenant debt' : 'All cleared'} />
         <KpiCard icon="build" label="Pending Issues" value={pendingMaint} trend={null} sub={`${maintenanceStats.resolved} resolved this period`} />
-        <KpiCard icon="group" label="Total Tenants" value={occupiedUnits} trend={null} sub="Across all floors" />
+        <KpiCard icon="account_balance_wallet" label="Credit Available" value={totalCredit > 0 ? `UGX ${totalCredit.toLocaleString()}` : 'None'} trend={null} sub={totalCredit > 0 ? `${tenantsWithCredit} with credit` : 'No prepayments'} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

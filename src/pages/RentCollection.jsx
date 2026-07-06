@@ -64,9 +64,9 @@ export default function RentCollection() {
 
   const totalCollected = payments.reduce((s, p) => s + (p.amount || 0), 0)
   const totalExpected = allTenants.reduce((s, t) => s + (t.monthlyRent || 0), 0)
-  const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0
-  const overdueCount = allTenants.filter((t) => !t.paid).length
-  const totalOutstanding = allTenants.reduce((s, t) => s + (t.outstandingBalance || 0), 0)
+  const overdueCount = allTenants.filter((t) => (t.outstandingBalance || 0) > 0).length
+  const totalDebt = allTenants.reduce((s, t) => s + Math.max(0, t.outstandingBalance || 0), 0)
+  const totalCredit = allTenants.reduce((s, t) => s + Math.max(0, -(t.outstandingBalance || 0)), 0)
 
   const handleRecordPayment = async (e) => {
     e.preventDefault()
@@ -114,9 +114,9 @@ export default function RentCollection() {
         {[
           { icon: 'payments', label: 'Total Collected', value: `UGX ${(totalCollected / 1000000).toFixed(1)}M`, sub: `${payments.length} payments` },
           { icon: 'account_balance', label: 'Expected Revenue', value: `UGX ${(totalExpected / 1000000).toFixed(1)}M`, sub: `${allTenants.length} tenants` },
-          { icon: 'pie_chart', label: 'Collection Rate', value: `${collectionRate}%`, sub: totalExpected > 0 ? `${totalCollected >= totalExpected ? 'On target' : `${((totalExpected - totalCollected) / 1000000).toFixed(1)}M short`}` : 'No data' },
-          { icon: 'warning', label: 'Outstanding', value: `UGX ${(totalOutstanding / 1000000).toFixed(1)}M`, sub: `${overdueCount} overdue tenant${overdueCount !== 1 ? 's' : ''}` },
-          { icon: 'receipt_long', label: 'Avg per Tenant', value: `UGX ${allTenants.length ? Math.round(totalCollected / allTenants.length / 1000) * 1000 : 0}`, sub: `${((collectionRate / 100) * totalExpected / (allTenants.length || 1) / 1000000).toFixed(1)}M avg rent` },
+          { icon: 'pie_chart', label: 'Collection Rate', value: totalExpected > 0 ? `${Math.round(((totalExpected - totalDebt) / totalExpected) * 100)}%` : 'N/A', sub: totalExpected > 0 ? (totalDebt > 0 ? `${overdueCount} tenant${overdueCount !== 1 ? 's' : ''} overdue` : 'All paid up') : 'No data' },
+          { icon: 'warning', label: 'Outstanding Debt', value: `UGX ${(totalDebt / 1000000).toFixed(1)}M`, sub: `${overdueCount} tenant${overdueCount !== 1 ? 's' : ''} overdue` },
+          { icon: 'account_balance_wallet', label: 'Credit / Prepaid', value: totalCredit > 0 ? `UGX ${(totalCredit / 1000000).toFixed(1)}M` : 'None', sub: totalCredit > 0 ? `Prepaid by ${allTenants.filter(t => (t.outstandingBalance || 0) < 0).length} tenant(s)` : 'No credit' },
         ].map((s) => (
           <div key={s.label} className="bg-surface rounded-card border border-outline p-4 shadow-card">
             <div className="flex items-center gap-2.5 mb-2">
@@ -190,8 +190,7 @@ export default function RentCollection() {
                 {filtered.map((t) => {
                   const isExpanded = expandedTenant === `${t.floor}|${t.unit}`
                   const history = tenantPayments(t)
-                  const lastPayStatus = history[0]?.status
-                  const displayStatus = lastPayStatus || (t.outstandingBalance > 0 ? 'Overdue' : t.lastPayment ? 'Paid' : 'No Payment')
+                  const displayStatus = !t.lastPayment && history.length === 0 ? 'No Payment' : t.paid ? 'Paid' : 'Overdue'
                   const days = agingDays(t.lastPaymentDate || history[0]?.date)
                   return (
                     <React.Fragment key={`${t.floor}-${t.unit}`}>
@@ -223,8 +222,12 @@ export default function RentCollection() {
                         </td>
                         <td className="px-4 py-3 font-medium text-on-surface whitespace-nowrap">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
                         <td className="px-4 py-3"><StatusBadge status={displayStatus} /></td>
-                        <td className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${t.outstandingBalance > 0 ? 'text-status-unpaid' : 'text-on-surface-muted'}`}>
-                          {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` : '—'}
+                        <td className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
+                          t.outstandingBalance > 0 ? 'text-status-unpaid' :
+                          t.outstandingBalance < 0 ? 'text-blue-600' : 'text-on-surface-muted'
+                        }`}>
+                          {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` :
+                           t.outstandingBalance < 0 ? `UGX ${Math.abs(t.outstandingBalance).toLocaleString()} cr` : '\u2014'}
                         </td>
                         <td className="px-4 py-3">
                           {t.outstandingBalance > 0 ? <AgingIndicator days={days} /> : <span className="text-[10px] text-on-surface-dim">Current</span>}
@@ -299,7 +302,7 @@ export default function RentCollection() {
                   <td className="px-4 py-3 text-on-surface">Total ({filtered.length} tenant{filtered.length !== 1 ? 's' : ''})</td>
                   <td colSpan={2}></td>
                   <td></td>
-                  <td className="px-4 py-3 font-bold text-status-unpaid">UGX {filtered.reduce((s, t) => s + (t.outstandingBalance || 0), 0).toLocaleString()}</td>
+                  <td className="px-4 py-3 font-bold text-status-unpaid">UGX {Math.max(0, filtered.reduce((s, t) => s + (t.outstandingBalance || 0), 0)).toLocaleString()}</td>
                   <td colSpan={3}></td>
                 </tr>
               </tbody>
