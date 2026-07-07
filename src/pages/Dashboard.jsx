@@ -183,7 +183,10 @@ export default function Dashboard() {
                       <tr key={p.id} className="hover:bg-surface-container/50 transition-colors group">
                         <td className="px-4 py-2.5">
                           <button onClick={() => setReceipt(p)}
-                            className="font-mono text-[11px] text-on-surface-muted hover:text-primary transition-colors cursor-pointer">
+                            className="font-mono text-[11px] text-on-surface-muted hover:text-primary transition-colors cursor-pointer inline-flex items-center gap-1">
+                            {p.stellarTxHash && (
+                              <span className="material-symbols-outlined text-[10px] text-emerald-500" title="Verified on Stellar">verified</span>
+                            )}
                             {p.receiptId?.slice(0, 12) || '—'}
                           </button>
                         </td>
