@@ -7,6 +7,7 @@ import TenantFormModal from '../components/TenantFormModal'
 import UnitFormModal from '../components/UnitFormModal'
 import ReassignTenantModal from '../components/ReassignTenantModal'
 import PaymentReceipt from '../components/PaymentReceipt'
+import { fetchUnpaidPeriodCounts } from '../lib/queries'
 
 export default function FloorDetails() {
   const { floorName } = useParams()
@@ -22,6 +23,7 @@ export default function FloorDetails() {
   const [paymentReceipt, setPaymentReceipt] = useState(null)
   const [paymentSubmitting, setPaymentSubmitting] = useState(false)
   const [paymentError, setPaymentError] = useState(null)
+  const [unpaidMonthCount, setUnpaidMonthCount] = useState(0)
 
   const handleFloorPayment = async (e) => {
     e.preventDefault()
@@ -177,7 +179,7 @@ export default function FloorDetails() {
                       <div className="flex items-center gap-0.5">
                         {occupied && (
                           <>
-                            <IconBtn icon="payments" title="Record payment" onClick={() => { setPaymentModal({ tenant: t, unit: unit.name, monthlyRent: unit.monthlyRent || 0 }); setPaymentForm({ amount: '', method: 'Cash', date: new Date().toISOString().slice(0, 10) }); setPaymentError(null) }} color="primary" />
+                            <IconBtn icon="payments" title="Record payment" onClick={() => { setPaymentModal({ tenant: t, unit: unit.name, monthlyRent: unit.monthlyRent || 0 }); setPaymentForm({ amount: '', method: 'Cash', date: new Date().toISOString().slice(0, 10) }); setPaymentError(null); setUnpaidMonthCount(0); if (t?.id) fetchUnpaidPeriodCounts([t.id]).then(({ data }) => { if (data) setUnpaidMonthCount(data[t.id] || 0) }) }} color="primary" />
                             <IconBtn icon="edit" title="Edit tenant" onClick={() => setTenantModal({ mode: 'edit', floor: floor.name, unit: unit.id, data: t })} color="primary" />
                             <Link to={`/tenant-payments/${floorName}/${unit.id}`}
                               className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-primary hover:bg-primary-50 transition-colors"
@@ -243,6 +245,12 @@ export default function FloorDetails() {
               </button>
             </div>
             <form onSubmit={handleFloorPayment} className="p-6 space-y-4">
+              {paymentForm.date && paymentModal?.tenant?.name && (
+                <div className="bg-primary-50 border border-primary-100 rounded-lg px-4 py-2.5 text-xs text-primary-800 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">calendar_month</span>
+                  <span>Paying <strong>{paymentMonthLabel(paymentForm.date)}</strong> &middot; <strong>{paymentModal.tenant.name}</strong></span>
+                </div>
+              )}
               {paymentError && (
                 <div className="bg-status-unpaid/10 border border-status-unpaid/30 rounded-lg px-4 py-3 text-sm text-status-unpaid font-medium flex items-center gap-2">
                   <span className="material-symbols-outlined text-base">error</span>
@@ -270,7 +278,7 @@ export default function FloorDetails() {
                     'text-status-paid'
                   }`}>
                     {(paymentModal.tenant.outstandingBalance || 0) > 0
-                      ? `UGX ${paymentModal.tenant.outstandingBalance.toLocaleString()}`
+                      ? <span>UGX {paymentModal.tenant.outstandingBalance.toLocaleString()}{unpaidMonthCount > 0 ? <span className="text-[10px] text-on-surface-dim"> ({unpaidMonthCount} month{unpaidMonthCount > 1 ? 's' : ''})</span> : ''}</span>
                       : (paymentModal.tenant.outstandingBalance || 0) < 0
                         ? `UGX ${Math.abs(paymentModal.tenant.outstandingBalance).toLocaleString()} credit`
                         : 'UGX 0 (Cleared)'}
@@ -341,6 +349,13 @@ function findUnitId(floor, tenant) {
   if (!floor || !tenant) return null
   const unit = floor.units.find(u => u.tenant && u.tenant.name === tenant.name)
   return unit ? unit.id : null
+}
+
+function paymentMonthLabel(dateStr) {
+  if (!dateStr) return ''
+  const dt = new Date(dateStr + 'T00:00:00')
+  if (isNaN(dt.getTime())) return ''
+  return dt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 }
 
 function IconBtn({ icon, title, onClick, color }) {

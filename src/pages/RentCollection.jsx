@@ -5,6 +5,7 @@ import StatusBadge from '../components/ui/StatusBadge'
 import PaymentReceipt from '../components/PaymentReceipt'
 import { downloadCSV } from '../utils/csv'
 import { downloadTenantPDF, downloadPaymentPDF } from '../utils/pdf'
+import { fetchUnpaidPeriodCounts } from '../lib/queries'
 
 function initials(name) {
   return (name || '').split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'
@@ -31,6 +32,25 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function monthsOverdue(balance, rent) {
+  if (balance <= 0 || !rent || rent <= 0) return 0
+  return Math.ceil(balance / rent)
+}
+
+function oldestMonthLabel(monthsBack) {
+  if (monthsBack <= 0) return ''
+  const d = new Date()
+  d.setMonth(d.getMonth() - monthsBack + 1)
+  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+
+function paymentMonthLabel(dateStr) {
+  if (!dateStr) return ''
+  const dt = new Date(dateStr + 'T00:00:00')
+  if (isNaN(dt.getTime())) return ''
+  return dt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+}
+
 function AgingIndicator({ days }) {
   if (days < 0) return null
   if (days === 0) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-green-600 bg-green-50">Today</span>
@@ -49,6 +69,7 @@ export default function RentCollection() {
   const [expandedTenant, setExpandedTenant] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [unpaidCounts, setUnpaidCounts] = useState({})
   const [form, setForm] = useState({
     tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid', date: new Date().toISOString().slice(0, 10),
   })
@@ -59,6 +80,14 @@ export default function RentCollection() {
       outstandingBalance: u.tenant.outstandingBalance || 0,
     }))
   )
+
+  useEffect(() => {
+    const ids = allTenants.map((t) => t.id).filter(Boolean)
+    if (ids.length === 0) { setUnpaidCounts({}); return }
+    fetchUnpaidPeriodCounts(ids).then(({ data }) => {
+      if (data) setUnpaidCounts(data)
+    })
+  }, [allTenants.length])
   const filtered = (filterFloor === 'all' ? allTenants : allTenants.filter((t) => t.floor === filterFloor))
     .filter((t) => !search || t.name?.toLowerCase().includes(search.toLowerCase()) || t.unit?.toLowerCase().includes(search.toLowerCase()))
 
@@ -226,8 +255,14 @@ export default function RentCollection() {
                           t.outstandingBalance > 0 ? 'text-status-unpaid' :
                           t.outstandingBalance < 0 ? 'text-blue-600' : 'text-on-surface-muted'
                         }`}>
-                          {t.outstandingBalance > 0 ? `UGX ${t.outstandingBalance.toLocaleString()}` :
-                           t.outstandingBalance < 0 ? `UGX ${Math.abs(t.outstandingBalance).toLocaleString()} cr` : '\u2014'}
+                          {t.outstandingBalance > 0
+                            ? (() => {
+                                const mo = unpaidCounts[t.id] || 0
+                                return <><div>UGX {t.outstandingBalance.toLocaleString()}</div><div className="text-[9px] text-on-surface-dim mt-0.5">{mo > 0 ? `${mo} month${mo > 1 ? 's' : ''} overdue` : 'Overdue'}</div></>
+                              })()
+                            : t.outstandingBalance < 0
+                              ? `UGX ${Math.abs(t.outstandingBalance).toLocaleString()} cr`
+                              : '\u2014'}
                         </td>
                         <td className="px-4 py-3">
                           {t.outstandingBalance > 0 ? <AgingIndicator days={days} /> : <span className="text-[10px] text-on-surface-dim">Current</span>}
@@ -339,7 +374,7 @@ export default function RentCollection() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
               <div>
                 <h2 className="text-base font-bold text-on-surface">Record Payment</h2>
@@ -350,6 +385,12 @@ export default function RentCollection() {
               </button>
             </div>
             <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
+              {form.tenantName && form.date && (
+                <div className="bg-primary-50 border border-primary-100 rounded-lg px-4 py-2.5 text-xs text-primary-800 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-sm">calendar_month</span>
+                  <span>Paying <strong>{paymentMonthLabel(form.date)}</strong> &middot; <strong>{form.tenantName}</strong></span>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Select Tenant</label>

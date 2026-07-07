@@ -343,29 +343,30 @@ export function BuildingProvider({ children }) {
 
     const paymentRecord = result.data
 
-    // STEP 4: Waterfall allocation (oldest unpaid periods first)
+    // STEP 4: Waterfall allocation — batch-optimized (2 queries total vs N+1)
     if (tenantId) {
-      const { data: unpaidPeriods } = await q.fetchUnpaidPeriods(tenantId) || { data: [] }
+      const { data: periods } = await q.fetchUnpaidPeriodsWithAllocations(tenantId) || { data: [] }
 
       let remaining = cleaned.amount
-      for (const period of unpaidPeriods) {
+      const newAllocs = []
+      const statusUpdates = []
+
+      for (const period of periods) {
         if (remaining <= 0) break
-
-        const { data: existingAllocs } = await q.fetchPeriodAllocations(period.id) || { data: [] }
-        const allocatedSoFar = existingAllocs.reduce((s, a) => s + a.amount, 0)
-        const stillOwed = period.rentDue - allocatedSoFar
-
-        if (stillOwed <= 0) {
-          if (period.status !== 'paid') await q.updatePeriodStatus(period.id, 'paid')
-          continue
-        }
-
+        const stillOwed = period.rentDue - (period.allocatedAmount || 0)
+        if (stillOwed <= 0) { statusUpdates.push({ id: period.id, status: 'paid' }); continue }
         const toAllocate = Math.min(remaining, stillOwed)
-        await q.allocatePayment(paymentRecord.id, period.id, toAllocate)
+        newAllocs.push({ payment_id: paymentRecord.id, period_id: period.id, amount: toAllocate })
         remaining -= toAllocate
+        statusUpdates.push({ id: period.id, status: toAllocate >= stillOwed ? 'paid' : 'partial' })
+      }
 
-        const newStatus = toAllocate >= stillOwed ? 'paid' : 'partial'
-        await q.updatePeriodStatus(period.id, newStatus)
+      // Batch insert all allocations (1 query)
+      await q.batchInsertAllocations(newAllocs)
+
+      // Batch update statuses
+      for (const u of statusUpdates) {
+        await q.updatePeriodStatus(u.id, u.status)
       }
 
       // STEP 5: Compute new balance (simple net: oldBalance minus payment)
@@ -379,7 +380,7 @@ export function BuildingProvider({ children }) {
         lastPaymentDate: cleaned.date,
       })
 
-      // STEP 7: Update local state
+      // STEP 7: Update local state (no refreshData — we mutate local state directly)
       setFloors((prev) =>
         prev.map((f) => {
           if (f.name !== floorName) return f
@@ -409,10 +410,9 @@ export function BuildingProvider({ children }) {
     }
 
     setPayments((prev) => [paymentRecord, ...prev])
-    refreshData()
     logAudit('Payment recorded', `${cleaned.tenantName} UGX ${cleaned.amount.toLocaleString()} (${cleaned.status})`)
     return paymentRecord
-  }, [building, floors, refreshData])
+  }, [building, floors])
 
   const voidPayment = useCallback(async (paymentId) => {
     const payment = payments.find((p) => p.id === paymentId)

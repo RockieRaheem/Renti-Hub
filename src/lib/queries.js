@@ -810,6 +810,52 @@ export async function deleteAllUserData(userId) {
 
 // ── Check if Supabase is configured ──────────────────────────────────────
 
+export async function fetchUnpaidPeriodsWithAllocations(tenantId) {
+  const { data: periods, error } = await supabase
+    .from('billing_periods')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .in('status', ['unpaid', 'partial'])
+    .order('period_start', { ascending: true })
+  if (error) return { error: error.message }
+
+  if (!periods?.length) return { data: [] }
+
+  const { data: allocs } = await supabase
+    .from('payment_allocations')
+    .select('period_id, amount')
+    .in('period_id', periods.map((p) => p.id))
+
+  const allocMap = {}
+  for (const a of allocs || []) {
+    allocMap[a.period_id] = (allocMap[a.period_id] || 0) + (a.amount || 0)
+  }
+
+  return { data: periods.map((p) => ({ ...mapPeriod(p), allocatedAmount: allocMap[p.id] || 0 })) }
+}
+
+export async function batchInsertAllocations(allocations) {
+  if (!allocations?.length) return { data: [] }
+  const { data, error } = await supabase.from('payment_allocations').insert(allocations).select()
+  if (error) return { error: error.message }
+  return { data: (data || []).map(mapAllocation) }
+}
+
+export async function fetchUnpaidPeriodCounts(tenantIds) {
+  if (!tenantIds?.length) return { data: {} }
+  const { data, error } = await supabase
+    .from('billing_periods')
+    .select('tenant_id, status')
+    .in('tenant_id', tenantIds)
+    .in('status', ['unpaid', 'partial'])
+  if (error) return { error: error.message }
+  const counts = {}
+  for (const row of data || []) {
+    counts[row.tenant_id] = (counts[row.tenant_id] || 0) + 1
+  }
+  return { data: counts }
+}
+
 export function isSupabaseConfigured() {
   const url = import.meta.env.VITE_SUPABASE_URL
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY
