@@ -32,16 +32,19 @@ function fmtDate(d) {
   return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function monthsOverdue(balance, rent) {
-  if (balance <= 0 || !rent || rent <= 0) return 0
-  return Math.ceil(balance / rent)
-}
-
-function oldestMonthLabel(monthsBack) {
-  if (monthsBack <= 0) return ''
-  const d = new Date()
-  d.setMonth(d.getMonth() - monthsBack + 1)
-  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+function timeAgo(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return null
+  const diff = Date.now() - d.getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 30) return `${days}d ago`
+  return fmtDate(dateStr)
 }
 
 function paymentMonthLabel(dateStr) {
@@ -56,6 +59,31 @@ function AgingIndicator({ days }) {
   if (days === 0) return <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-green-600 bg-green-50">Today</span>
   const color = days <= 30 ? 'text-yellow-600 bg-yellow-50' : days <= 60 ? 'text-orange-600 bg-orange-50' : 'text-red-600 bg-red-50'
   return <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${color}`}>{days}d</span>
+}
+
+function methodBadge(method) {
+  const styles = {
+    Cash: 'bg-yellow-50 text-yellow-700',
+    'Mobile Money': 'bg-blue-50 text-blue-700',
+    'Bank Transfer': 'bg-purple-50 text-purple-700',
+    Cheque: 'bg-orange-50 text-orange-700',
+  }
+  return styles[method] || 'bg-gray-50 text-gray-600'
+}
+
+function KpiCard({ icon, label, value, sub, accent }) {
+  return (
+    <div className="bg-surface rounded-card border border-outline p-4 shadow-card">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${accent || 'bg-primary-50'}`}>
+          <span className="material-symbols-outlined text-xl" style={{ color: accent ? '#1a1a2e' : undefined }}>{icon}</span>
+        </div>
+      </div>
+      <p className="text-xl font-bold text-on-surface mb-0.5 tracking-tight">{value}</p>
+      <p className="text-[11px] text-on-surface-muted">{label}</p>
+      {sub && <p className="text-[10px] text-on-surface-dim mt-0.5">{sub}</p>}
+    </div>
+  )
 }
 
 const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
@@ -88,6 +116,7 @@ export default function RentCollection() {
       if (data) setUnpaidCounts(data)
     })
   }, [allTenants.length])
+
   const filtered = (filterFloor === 'all' ? allTenants : allTenants.filter((t) => t.floor === filterFloor))
     .filter((t) => !search || t.name?.toLowerCase().includes(search.toLowerCase()) || t.unit?.toLowerCase().includes(search.toLowerCase()))
 
@@ -96,6 +125,7 @@ export default function RentCollection() {
   const overdueCount = allTenants.filter((t) => (t.outstandingBalance || 0) > 0).length
   const totalDebt = allTenants.reduce((s, t) => s + Math.max(0, t.outstandingBalance || 0), 0)
   const totalCredit = allTenants.reduce((s, t) => s + Math.max(0, -(t.outstandingBalance || 0)), 0)
+  const collectionRate = totalExpected > 0 ? Math.round(((totalExpected - totalDebt) / totalExpected) * 100) : 0
 
   const handleRecordPayment = async (e) => {
     e.preventDefault()
@@ -135,35 +165,26 @@ export default function RentCollection() {
   const tenantPayments = (tenant) =>
     payments.filter((p) => p.tenantName === tenant.name && p.unit === tenant.unit).slice(0, 20)
 
-  const latestPayments = [...payments].reverse().slice(0, 5)
-
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
-          { icon: 'payments', label: 'Total Collected', value: `UGX ${(totalCollected / 1000000).toFixed(1)}M`, sub: `${payments.length} payments` },
-          { icon: 'account_balance', label: 'Expected Revenue', value: `UGX ${(totalExpected / 1000000).toFixed(1)}M`, sub: `${allTenants.length} tenants` },
-          { icon: 'pie_chart', label: 'Collection Rate', value: totalExpected > 0 ? `${Math.round(((totalExpected - totalDebt) / totalExpected) * 100)}%` : 'N/A', sub: totalExpected > 0 ? (totalDebt > 0 ? `${overdueCount} tenant${overdueCount !== 1 ? 's' : ''} overdue` : 'All paid up') : 'No data' },
-          { icon: 'warning', label: 'Outstanding Debt', value: `UGX ${(totalDebt / 1000000).toFixed(1)}M`, sub: `${overdueCount} tenant${overdueCount !== 1 ? 's' : ''} overdue` },
-          { icon: 'account_balance_wallet', label: 'Credit / Prepaid', value: totalCredit > 0 ? `UGX ${(totalCredit / 1000000).toFixed(1)}M` : 'None', sub: totalCredit > 0 ? `Prepaid by ${allTenants.filter(t => (t.outstandingBalance || 0) < 0).length} tenant(s)` : 'No credit' },
-        ].map((s) => (
-          <div key={s.label} className="bg-surface rounded-card border border-outline p-4 shadow-card">
-            <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-lg">{s.icon}</span>
-              </div>
-            </div>
-            <p className="text-xl font-bold text-on-surface mb-0.5 tracking-tight">{s.value}</p>
-            <p className="text-[11px] text-on-surface-muted">{s.label}</p>
-            {s.sub && <p className="text-[10px] text-on-surface-dim mt-0.5">{s.sub}</p>}
-          </div>
-        ))}
+
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <KpiCard icon="payments" label="Total Collected" value={`UGX ${(totalCollected / 1000000).toFixed(1)}M`} sub={`${payments.length} payments`} />
+        <KpiCard icon="account_balance" label="Expected Revenue" value={`UGX ${(totalExpected / 1000000).toFixed(1)}M`} sub={`${allTenants.length} tenants`} />
+        <KpiCard icon="pie_chart" label="Collection Rate" value={`${collectionRate}%`} sub={totalExpected > 0 ? (totalDebt > 0 ? `${overdueCount} tenant${overdueCount !== 1 ? 's' : ''} overdue` : 'All paid up') : 'No data'} accent={collectionRate >= 90 ? 'bg-green-50' : collectionRate >= 50 ? 'bg-yellow-50' : 'bg-red-50'} />
+        <KpiCard icon="warning" label="Outstanding Debt" value={`UGX ${(totalDebt / 1000000).toFixed(1)}M`} sub={`${overdueCount} tenant${overdueCount !== 1 ? 's' : ''} overdue`} accent={totalDebt > 0 ? 'bg-red-50' : 'bg-green-50'} />
+        <KpiCard icon="account_balance_wallet" label="Credit / Prepaid" value={totalCredit > 0 ? `UGX ${(totalCredit / 1000000).toFixed(1)}M` : 'None'} sub={totalCredit > 0 ? `${allTenants.filter(t => (t.outstandingBalance || 0) < 0).length} tenant(s) with credit` : 'No prepayments'} />
+        <KpiCard icon="trending_up" label="Avg per Tenant" value={allTenants.length > 0 ? `UGX ${Math.round(totalExpected / allTenants.length).toLocaleString()}` : '—'} sub={`${allTenants.length} active tenants`} />
       </div>
 
       <div className="bg-surface rounded-card border border-outline overflow-hidden shadow-card">
         <div className="p-5 border-b border-outline flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-wrap w-full sm:w-auto">
-            <h3 className="text-sm font-semibold text-on-surface">Tenants</h3>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-on-surface-dim text-base">groups</span>
+              <h3 className="text-sm font-semibold text-on-surface">Tenants</h3>
+              <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{filtered.length}</span>
+            </div>
             <div className="relative flex-1 sm:flex-initial min-w-[160px]">
               <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-dim text-sm pointer-events-none">search</span>
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tenant or unit..."
@@ -210,9 +231,14 @@ export default function RentCollection() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-outline bg-surface-container/50">
-                  {['Tenant', 'Unit / Floor', 'Monthly Rent', 'Status', 'Outstanding', 'Aging', 'Last Payment', ''].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-[11px] text-on-surface-muted font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
-                  ))}
+                  <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Tenant</th>
+                  <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Unit / Floor</th>
+                  <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Rent</th>
+                  <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Status</th>
+                  <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Outstanding</th>
+                  <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Aging</th>
+                  <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Last Payment</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline">
@@ -223,15 +249,12 @@ export default function RentCollection() {
                   const days = agingDays(t.lastPaymentDate || history[0]?.date)
                   return (
                     <React.Fragment key={`${t.floor}-${t.unit}`}>
-                      <tr className="hover:bg-surface-container transition-colors group">
+                      <tr className="hover:bg-surface-container/50 transition-colors group">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
-                              className="flex items-center gap-2.5 group/link text-left">
-                              <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${statusColor(t.paymentStatus)}`}>
-                                {initials(t.name)}
-                              </div>
-                            </button>
+                            <div className={`w-7 h-7 rounded flex items-center justify-center text-[9px] font-bold ${statusColor(t.paymentStatus)}`}>
+                              {initials(t.name)}
+                            </div>
                             <div>
                               <Link to={`/tenant-payments/${floorSlug(t.floor)}/${t.unitId}`}
                                 className="font-medium text-on-surface hover:text-primary transition-colors text-sm">
@@ -249,40 +272,40 @@ export default function RentCollection() {
                             {t.unit} <span className="text-on-surface-dim text-[11px]">{t.floor}</span>
                           </Link>
                         </td>
-                        <td className="px-4 py-3 font-medium text-on-surface whitespace-nowrap">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
-                        <td className="px-4 py-3"><StatusBadge status={displayStatus} /></td>
-                        <td className={`px-4 py-3 text-xs font-medium whitespace-nowrap ${
+                        <td className="px-4 py-3 text-right font-medium text-on-surface whitespace-nowrap">UGX {(t.monthlyRent || 0).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-center"><StatusBadge status={displayStatus} /></td>
+                        <td className={`px-4 py-3 text-xs font-medium whitespace-nowrap text-right ${
                           t.outstandingBalance > 0 ? 'text-status-unpaid' :
                           t.outstandingBalance < 0 ? 'text-blue-600' : 'text-on-surface-muted'
                         }`}>
                           {t.outstandingBalance > 0
                             ? (() => {
                                 const mo = unpaidCounts[t.id] || 0
-                                return <><div>UGX {t.outstandingBalance.toLocaleString()}</div><div className="text-[9px] text-on-surface-dim mt-0.5">{mo > 0 ? `${mo} month${mo > 1 ? 's' : ''} overdue` : 'Overdue'}</div></>
+                                return <><span>UGX {t.outstandingBalance.toLocaleString()}</span>{mo > 0 && <span className="text-[9px] text-on-surface-dim ml-1">({mo}mo)</span>}</>
                               })()
                             : t.outstandingBalance < 0
                               ? `UGX ${Math.abs(t.outstandingBalance).toLocaleString()} cr`
                               : '\u2014'}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-center">
                           {t.outstandingBalance > 0 ? <AgingIndicator days={days} /> : <span className="text-[10px] text-on-surface-dim">Current</span>}
                         </td>
-                        <td className="px-4 py-3 text-on-surface-muted text-xs whitespace-nowrap">{fmtDate(t.lastPaymentDate)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
+                        <td className="px-4 py-3 text-right text-on-surface-muted text-xs whitespace-nowrap">{fmtDate(t.lastPaymentDate)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <button onClick={() => openPaymentForm(t)}
                               className="text-xs font-medium text-primary hover:bg-primary-50 px-2 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
                               <span className="material-symbols-outlined text-sm">payments</span>
                               Pay
                             </button>
                             <Link to={`/tenant-payments/${floorSlug(t.floor)}/${t.unitId}`}
-                              className="text-xs font-medium text-on-surface-muted hover:text-primary px-2 py-1.5 rounded-lg hover:bg-surface-container transition-colors inline-flex items-center gap-1"
+                              className="text-xs font-medium text-on-surface-muted hover:text-primary p-1.5 rounded-lg hover:bg-surface-container transition-colors"
                               title="Payment history">
                               <span className="material-symbols-outlined text-sm">receipt_long</span>
                             </Link>
                             {history.length > 0 && (
                               <button onClick={() => setExpandedTenant(isExpanded ? null : `${t.floor}|${t.unit}`)}
-                                className="text-xs font-medium text-on-surface-muted hover:bg-surface-container px-2 py-1.5 rounded-lg transition-colors">
+                                className="text-xs font-medium text-on-surface-muted hover:bg-surface-container p-1.5 rounded-lg transition-colors">
                                 <span className="material-symbols-outlined text-sm">{isExpanded ? 'expand_less' : 'expand_more'}</span>
                               </button>
                             )}
@@ -308,8 +331,14 @@ export default function RentCollection() {
                                   {history.map((p) => (
                                     <tr key={p.id} className="hover:bg-surface-container/50">
                                       <td className="px-4 py-2 font-mono text-[11px] text-on-surface-muted">{p.receiptId}</td>
-                                      <td className="px-4 py-2 text-on-surface-muted">{fmtDate(p.date)}</td>
-                                      <td className="px-4 py-2 text-on-surface-muted">{p.method || 'Cash'}</td>
+                                      <td className="px-4 py-2 text-on-surface-muted whitespace-nowrap">
+                                        <span title={fmtDate(p.date)}>{timeAgo(p.date) || fmtDate(p.date)}</span>
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${methodBadge(p.method)}`}>
+                                          {p.method || 'Cash'}
+                                        </span>
+                                      </td>
                                       <td className="px-4 py-2 text-right font-medium text-on-surface">UGX {(p.amount || 0).toLocaleString()}</td>
                                       <td className="px-4 py-2 text-center">
                                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${p.status === 'Paid' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
@@ -333,14 +362,16 @@ export default function RentCollection() {
                     </React.Fragment>
                   )
                 })}
-                <tr className="bg-surface-container/30 font-medium text-sm">
-                  <td className="px-4 py-3 text-on-surface">Total ({filtered.length} tenant{filtered.length !== 1 ? 's' : ''})</td>
+              </tbody>
+              <tfoot>
+                <tr className="bg-surface-container/30 text-sm border-t-2 border-outline">
+                  <td className="px-4 py-3 text-on-surface font-medium">{filtered.length} tenant{filtered.length !== 1 ? 's' : ''}</td>
                   <td colSpan={2}></td>
                   <td></td>
-                  <td className="px-4 py-3 font-bold text-status-unpaid">UGX {Math.max(0, filtered.reduce((s, t) => s + (t.outstandingBalance || 0), 0)).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right font-bold text-status-unpaid">UGX {Math.max(0, filtered.reduce((s, t) => s + (t.outstandingBalance || 0), 0)).toLocaleString()}</td>
                   <td colSpan={3}></td>
                 </tr>
-              </tbody>
+              </tfoot>
             </table>
           </div>
         ) : (
@@ -351,26 +382,6 @@ export default function RentCollection() {
           </div>
         )}
       </div>
-
-      {latestPayments.length > 0 && (
-        <div className="bg-surface rounded-card border border-outline p-5 shadow-card">
-          <h3 className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-4">Recent Payments</h3>
-          <div className="space-y-2">
-            {latestPayments.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-2 border-b border-outline/50 last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-status-paid" />
-                  <div>
-                    <p className="text-sm font-medium text-on-surface">{p.tenantName}</p>
-                    <p className="text-xs text-on-surface-muted">{p.unit} &middot; {fmtDate(p.date)} &middot; <span className="font-mono text-[10px]">{p.receiptId}</span></p>
-                  </div>
-                </div>
-                <span className="text-sm font-semibold text-status-paid">UGX {(p.amount || 0).toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
