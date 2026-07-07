@@ -94,6 +94,8 @@ function mapPayment(data) {
       minute: '2-digit',
       hour12: true,
     }),
+    stellarHash: data.stellar_hash || null,
+    stellarTxHash: data.stellar_tx_hash || null,
   }
 }
 
@@ -407,6 +409,15 @@ export async function addPayment(paymentData) {
       }),
     },
   }
+}
+
+export async function updatePaymentStellarHash(paymentId, hash, txHash) {
+  const { error } = await supabase
+    .from('payments')
+    .update({ stellar_hash: hash, stellar_tx_hash: txHash })
+    .eq('id', paymentId)
+  if (error) return { error: error.message }
+  return {}
 }
 
 export async function voidPayment(paymentId) {

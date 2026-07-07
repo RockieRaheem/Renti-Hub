@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect } 
 import { logAudit } from '../utils/audit'
 import { supabase } from '../lib/supabase'
 import * as q from '../lib/queries'
+import { computeReceiptHash, anchorHash } from '../lib/stellar'
 import { sanitizePaymentData } from '../utils/sanitize'
 
 const SESSION_CACHE_KEY = 'rh_user_session'
@@ -420,7 +421,20 @@ export function BuildingProvider({ children }) {
     }
 
     setPayments((prev) => [paymentRecord, ...prev])
+
     logAudit('Payment recorded', `${cleaned.tenantName} UGX ${cleaned.amount.toLocaleString()} (${cleaned.status})`)
+
+    // Anchor receipt hash on Stellar (fire-and-forget — never blocks the payment flow)
+    ;(async () => {
+      const receiptData = { ...paymentRecord, tenantId }
+      const { hash, txHash, error } = await anchorHash(receiptData)
+      if (hash && !error) {
+        paymentRecord.stellarHash = hash
+        paymentRecord.stellarTxHash = txHash
+        await q.updatePaymentStellarHash(paymentRecord.id, hash, txHash)
+      }
+    })()
+
     return paymentRecord
   }, [building, floors])
 
