@@ -18,9 +18,9 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-container">
+    <div className="flex h-screen bg-surface-container">
       <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(v => !v)} />
-      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header />
         <div className="flex-1 overflow-y-auto scroll-smooth">
           <div className="max-w-7xl mx-auto">
