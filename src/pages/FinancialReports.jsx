@@ -218,7 +218,7 @@ export default function FinancialReports() {
             </div>
           </div>
 
-          <div className="flex items-end gap-1.5 h-60 border-b border-outline pb-1.5 relative">
+          <div className="flex items-end gap-1.5 h-60 border-b border-outline pb-1 relative">
             {[25, 50, 75].map((pct) => (
               <div key={pct} className="absolute left-0 right-0 border-t border-dashed border-outline/20 pointer-events-none"
                 style={{ bottom: `${pct}%` }} />
@@ -226,23 +226,21 @@ export default function FinancialReports() {
             {cashFlow.map((d) => {
               const collectedH = (d.collected / maxBar) * 100
               const expectedH = (d.expected / maxBar) * 100
-              const groupH = Math.max(collectedH, expectedH, 3)
               return (
-                <div key={d.month} className="flex-1 flex flex-col items-center justify-end h-full min-w-0">
-                  <div className="w-full flex flex-col items-center justify-end"
-                    style={{ height: `${groupH}%` }}>
+                <div key={d.month} className="flex-1 flex flex-col items-center self-stretch h-full min-w-0">
+                  <div className="flex-1 w-full flex items-end justify-center gap-px">
                     <div
-                      className="w-[55%] bg-primary rounded-sm transition-all hover:opacity-80 cursor-pointer min-h-[2px]"
-                      style={{ height: `${collectedH > 0 ? (collectedH / groupH) * 100 : 0}%` }}
+                      className="w-[38%] rounded-t-sm transition-all duration-200 hover:opacity-80 cursor-pointer min-h-[2px]"
+                      style={{ height: `${Math.max(collectedH, 0.5)}%`, backgroundColor: '#0037b0' }}
                       title={`${d.month}: Collected ${fmtAmount(d.collected)}`}
                     />
                     <div
-                      className="w-[55%] bg-amber-400 rounded-sm transition-all hover:opacity-80 cursor-pointer min-h-[2px]"
-                      style={{ height: `${expectedH > 0 ? (expectedH / groupH) * 100 : 0}%` }}
+                      className="w-[38%] rounded-t-sm transition-all duration-200 hover:opacity-80 cursor-pointer min-h-[2px]"
+                      style={{ height: `${Math.max(expectedH, 0.5)}%`, backgroundColor: '#fbbf24', opacity: 0.55 }}
                       title={`${d.month}: Expected ${fmtAmount(d.expected)}`}
                     />
                   </div>
-                  <span className="text-[10px] text-on-surface-muted font-medium mt-1.5">{d.month}</span>
+                  <span className="text-[10px] text-on-surface-muted font-medium mt-1 shrink-0">{d.month}</span>
                 </div>
               )
             })}
