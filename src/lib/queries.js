@@ -808,6 +808,19 @@ export async function deleteAllUserData(userId) {
   return {}
 }
 
+// ── Profile Update ─────────────────────────────────────────────────────────
+
+export async function updateProfile(userId, updates) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select('name')
+    .limit(1)
+  if (error) return { error: error.message }
+  return { data: data?.[0] || null }
+}
+
 // ── Check if Supabase is configured ──────────────────────────────────────
 
 export async function fetchUnpaidPeriodsWithAllocations(tenantId) {

@@ -195,6 +195,16 @@ export function BuildingProvider({ children }) {
     await q.signOut()
   }, [auth])
 
+  const updateProfile = useCallback(async (name) => {
+    if (!userId) return { error: 'Not authenticated' }
+    const result = await q.updateProfile(userId, { name })
+    if (result.data) {
+      setAuth((prev) => ({ ...prev, name: result.data.name }))
+      logAudit('Profile updated', name)
+    }
+    return result
+  }, [userId])
+
   // ── Helpers ──
   const findTenantId = useCallback((floorName, unitId) => {
     const floor = floors.find((f) => f.name === floorName)
@@ -601,6 +611,7 @@ export function BuildingProvider({ children }) {
       updateUnit, deleteUnit,
       addPayment, voidPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
+      updateProfile,
       auth, login, register, logout, loading, refreshing, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     }),
     [
@@ -612,6 +623,7 @@ export function BuildingProvider({ children }) {
       updateUnit, deleteUnit,
       addPayment, voidPayment, combinedActivityLog,
       addMaintenance, updateMaintenance, moveMaintenance, deleteMaintenance,
+      updateProfile,
       auth, login, register, logout, loading, refreshing, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     ],
   )
