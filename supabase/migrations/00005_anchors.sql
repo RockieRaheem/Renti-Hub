@@ -17,3 +17,12 @@ CREATE TABLE IF NOT EXISTS anchors (
 CREATE INDEX IF NOT EXISTS idx_anchors_building_id ON anchors(building_id);
 CREATE INDEX IF NOT EXISTS idx_anchors_record_type ON anchors(record_type);
 CREATE INDEX IF NOT EXISTS idx_anchors_created_at ON anchors(created_at DESC);
+
+-- RLS: single-user — user can only see and insert their own anchors
+ALTER TABLE anchors ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY anchors_user_select ON anchors
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY anchors_user_insert ON anchors
+  FOR INSERT WITH CHECK (user_id = auth.uid());

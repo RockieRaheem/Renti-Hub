@@ -25,9 +25,19 @@ function init() {
   }
 }
 
+function canonicalStringify(obj) {
+  if (obj === null || obj === undefined) return 'null'
+  if (typeof obj === 'string') return JSON.stringify(obj)
+  if (typeof obj === 'number') return Object.is(obj, -0) ? '-0' : String(obj)
+  if (typeof obj === 'boolean') return String(obj)
+  if (Array.isArray(obj)) return '[' + obj.map(canonicalStringify).join(',') + ']'
+  const keys = Object.keys(obj).sort()
+  return '{' + keys.map((k) => JSON.stringify(k) + ':' + canonicalStringify(obj[k])).join(',') + '}'
+}
+
 export async function sha256(data) {
   const encoder = new TextEncoder()
-  const bytes = encoder.encode(typeof data === 'string' ? data : JSON.stringify(data))
+  const bytes = encoder.encode(typeof data === 'string' ? data : canonicalStringify(data))
   const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -118,13 +128,15 @@ function base64ToHex(b64) {
 
 // ── Generic Anchor Record ────────────────────────────────────────────────
 // Builds canonical data with timestamp, hashes it, anchors to Stellar.
-// Returns { hash, txHash, ledger, error }
+// Returns { hash, txHash, ledger, error, recordSnapshot } where recordSnapshot
+// is the exact data that was hashed (with timestamp), so verification matches.
 export async function anchorRecord(canonicalData) {
-  const dataWithMeta = {
+  const recordSnapshot = {
     ...canonicalData,
     anchoredAt: new Date().toISOString(),
   }
-  return anchorHash(dataWithMeta)
+  const result = await anchorHash(recordSnapshot)
+  return { ...result, recordSnapshot }
 }
 
 // ── Canonical Data Builders ──────────────────────────────────────────────

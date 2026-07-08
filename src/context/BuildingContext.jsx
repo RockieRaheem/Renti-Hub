@@ -228,20 +228,21 @@ export function BuildingProvider({ children }) {
   const doAnchor = useCallback(async (canonicalFn, recordId, recordLabel) => {
     if (!building) return
     const canonical = typeof canonicalFn === 'function' ? canonicalFn() : canonicalFn
-    const { hash, txHash, error } = await anchorRecord(canonical)
+    const { hash, txHash, error, recordSnapshot } = await anchorRecord(canonical)
     if (hash && !error) {
       const anchor = {
         buildingId: building.id,
-        recordType: canonical.recordType || 'unknown',
+        recordType: recordSnapshot?.recordType || canonical.recordType || 'unknown',
         recordId: recordId || '',
         recordLabel: recordLabel || '',
-        recordSnapshot: canonical,
+        recordSnapshot: recordSnapshot || canonical,
         sha256Hash: hash,
         stellarTxHash: txHash,
         anchoredAt: new Date().toISOString(),
       }
       setAnchors((prev) => [anchor, ...prev])
-      await q.insertAnchor(anchor).catch(() => {})
+      const ins = await q.insertAnchor(anchor)
+      if (ins?.error) console.warn('Anchor persist failed:', ins.error)
     }
   }, [building])
 
@@ -469,7 +470,7 @@ export function BuildingProvider({ children }) {
     // Anchor receipt hash on Stellar (fire-and-forget — never blocks the payment flow)
     ;(async () => {
       const receiptData = canonicalPayment(paymentRecord)
-      const { hash, txHash, error } = await anchorHash(receiptData)
+      const { hash, txHash, error, recordSnapshot } = await anchorRecord(receiptData)
       if (hash && !error) {
         paymentRecord.stellarHash = hash
         paymentRecord.stellarTxHash = txHash
@@ -479,13 +480,14 @@ export function BuildingProvider({ children }) {
           recordType: 'payment',
           recordId: paymentRecord.id,
           recordLabel: `UGX ${(paymentRecord.amount || 0).toLocaleString()} from ${paymentRecord.tenantName}`,
-          recordSnapshot: receiptData,
+          recordSnapshot: recordSnapshot || receiptData,
           sha256Hash: hash,
           stellarTxHash: txHash,
           anchoredAt: new Date().toISOString(),
         }
         setAnchors((prev) => [anchor, ...prev])
-        await q.insertAnchor(anchor).catch(() => {})
+        const ins = await q.insertAnchor(anchor)
+        if (ins?.error) console.warn('Payment anchor persist failed:', ins.error)
       }
     })()
 
