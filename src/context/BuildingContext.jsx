@@ -2,7 +2,14 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect } 
 import { logAudit } from '../utils/audit'
 import { supabase } from '../lib/supabase'
 import * as q from '../lib/queries'
-import { computeReceiptHash, anchorHash } from '../lib/stellar'
+import {
+  computeReceiptHash, anchorHash, anchorRecord,
+  canonicalPayment, canonicalTenantAdd, canonicalTenantDelete,
+  canonicalTenantUpdate, canonicalPaymentVoid,
+  canonicalMaintenanceAdd, canonicalMaintenanceUpdate, canonicalMaintenanceDelete,
+  canonicalFloorAdd, canonicalFloorDelete, canonicalFloorRename,
+  canonicalUnitUpdate, canonicalUnitDelete,
+} from '../lib/stellar'
 import { sanitizePaymentData } from '../utils/sanitize'
 
 const SESSION_CACHE_KEY = 'rh_user_session'
@@ -70,6 +77,7 @@ export function BuildingProvider({ children }) {
   const [floors, setFloors] = useState([])
   const [payments, setPayments] = useState([])
   const [maintenance, setMaintenance] = useState({ pending: [], inProgress: [], resolved: [] })
+  const [anchors, setAnchors] = useState([])
   const [auth, setAuth] = useState(null)
   const [userId, setUserId] = useState(null)
   const [building, setBuilding] = useState(null)
