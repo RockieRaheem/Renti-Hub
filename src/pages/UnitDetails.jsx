@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import StatusBadge from '../components/ui/StatusBadge'
 import TenantFormModal from '../components/TenantFormModal'
+import ConfirmModal from '../components/ConfirmModal'
 
 export default function UnitDetails() {
   const { floorName, unitId } = useParams()
@@ -10,6 +11,7 @@ export default function UnitDetails() {
   const unit = getUnitByFloorAndId(floorName, unitId)
   const t = unit?.tenant
   const [showTenantModal, setShowTenantModal] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const unitMaintenance = [
     ...maintenance.pending.filter((m) => m.floor === unit?.floor && m.unit === unit?.name),
@@ -78,7 +80,7 @@ export default function UnitDetails() {
                         <span className="material-symbols-outlined text-sm">edit</span>
                         Edit
                       </button>
-                      <button onClick={() => { if (window.confirm(`Remove ${t.name} from ${unit.name}?`)) deleteTenant(unit.floor, unit.id) }}
+                      <button onClick={() => setConfirmDelete({ title: 'Remove Tenant', message: `Remove ${t.name} from ${unit.name}? Their payment history will be preserved.` })}
                         className="px-2.5 py-1.5 text-xs font-medium text-status-unpaid hover:bg-red-50 rounded-lg transition-colors inline-flex items-center gap-1">
                         <span className="material-symbols-outlined text-sm">person_remove</span>
                         Remove
@@ -221,6 +223,14 @@ export default function UnitDetails() {
           onClose={() => setShowTenantModal(false)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title={confirmDelete?.title || ''}
+        message={confirmDelete?.message || ''}
+        onConfirm={() => { setConfirmDelete(null); deleteTenant(unit.floor, unit.id) }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

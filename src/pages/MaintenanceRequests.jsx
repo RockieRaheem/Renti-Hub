@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
+import ConfirmModal from '../components/ConfirmModal'
 
 const priorityOptions = ['All', 'Low', 'Medium', 'High', 'Critical']
 const statusOptions = ['All', 'Pending', 'In Progress', 'Resolved']
@@ -33,6 +34,7 @@ export default function MaintenanceRequests() {
   const [priorityFilter, setPriorityFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
   const [selected, setSelected] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const filtered = allItems.filter((item) => {
     if (!search) return true
@@ -57,7 +59,7 @@ export default function MaintenanceRequests() {
     if (action === 'start') moveMaintenance(id, 'pending', 'inProgress')
     else if (action === 'reopen') moveMaintenance(id, 'resolved', 'inProgress')
     else if (action === 'reopenPending') moveMaintenance(id, 'inProgress', 'pending')
-    else if (action === 'delete') { if (window.confirm('Delete this request?')) deleteMaintenance(id) }
+    else if (action === 'delete') setConfirmDelete({ id, title: 'Delete Request', message: 'Delete this maintenance request? This cannot be undone.' })
     else if (action === 'resolve') setSelected({ type: 'resolve', id, item })
     else if (action === 'assign') setSelected({ type: 'assign', id, item })
     else if (action === 'edit') setSelected({ type: 'edit', id, item })
@@ -250,6 +252,14 @@ export default function MaintenanceRequests() {
           </form>
         </Modal>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title={confirmDelete?.title || ''}
+        message={confirmDelete?.message || ''}
+        onConfirm={() => { if (confirmDelete) { deleteMaintenance(confirmDelete.id); setConfirmDelete(null) } }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

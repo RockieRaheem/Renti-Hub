@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import FloorFormModal from '../components/FloorFormModal'
 import TenantFormModal from '../components/TenantFormModal'
+import ConfirmModal from '../components/ConfirmModal'
 
 function KpiCard({ icon, label, value, sub, accent }) {
   return (
@@ -25,6 +26,7 @@ export default function Properties() {
   const [floorModal, setFloorModal] = useState(null)
   const [tenantModal, setTenantModal] = useState(null)
   const [search, setSearch] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const hasData = floors.length > 0
 
@@ -37,13 +39,11 @@ export default function Properties() {
   const tenantsCount = floors.reduce((s, f) => s + f.units.filter(u => u.tenant).length, 0)
 
   function handleDeleteFloor(name) {
-    if (!window.confirm(`Delete ${name} and all its units?`)) return
     deleteFloor(name)
     if (expandedFloor === name) setExpandedFloor(null)
   }
 
   function handleDeleteTenant(floorName, unitId) {
-    if (!window.confirm('Remove this tenant from the unit?')) return
     deleteTenant(floorName, unitId)
   }
 
@@ -134,7 +134,7 @@ export default function Properties() {
                       title="Edit floor">
                       <span className="material-symbols-outlined text-base">edit</span>
                     </button>
-                    <button onClick={() => handleDeleteFloor(floor.name)}
+                    <button onClick={() => setConfirmDelete({ type: 'floor', name: floor.name, title: 'Delete Floor', message: `Delete ${floor.name} and all its units? This cannot be undone.` })}
                       className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-status-unpaid hover:bg-red-50 transition-colors"
                       title="Delete floor">
                       <span className="material-symbols-outlined text-base">delete</span>
@@ -213,7 +213,7 @@ export default function Properties() {
                                   title="Edit tenant">
                                   <span className="material-symbols-outlined text-[12px]">edit</span>
                                 </button>
-                                <button onClick={(e) => { e.preventDefault(); handleDeleteTenant(floor.name, unit.id) }}
+                                <button onClick={(e) => { e.preventDefault(); setConfirmDelete({ type: 'tenant', floorName: floor.name, unitId: unit.id, title: 'Remove Tenant', message: `Remove ${t.name} from ${unit.name}? Their payment history will be preserved.` }) }}
                                   className="w-5 h-5 rounded-full bg-status-unpaid text-white flex items-center justify-center text-[10px] hover:bg-red-700 shadow-sm"
                                   title="Remove tenant">
                                   <span className="material-symbols-outlined text-[12px]">close</span>
@@ -263,6 +263,20 @@ export default function Properties() {
           onClose={() => setTenantModal(null)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title={confirmDelete?.title || ''}
+        message={confirmDelete?.message || ''}
+        onConfirm={() => {
+          if (!confirmDelete) return
+          const { type, name, floorName, unitId } = confirmDelete
+          setConfirmDelete(null)
+          if (type === 'floor') handleDeleteFloor(name)
+          else if (type === 'tenant') handleDeleteTenant(floorName, unitId)
+        }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

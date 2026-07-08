@@ -7,6 +7,7 @@ import TenantFormModal from '../components/TenantFormModal'
 import UnitFormModal from '../components/UnitFormModal'
 import ReassignTenantModal from '../components/ReassignTenantModal'
 import PaymentReceipt from '../components/PaymentReceipt'
+import ConfirmModal from '../components/ConfirmModal'
 import { fetchUnpaidPeriodCounts } from '../lib/queries'
 
 export default function FloorDetails() {
@@ -24,6 +25,7 @@ export default function FloorDetails() {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false)
   const [paymentError, setPaymentError] = useState(null)
   const [unpaidMonthCount, setUnpaidMonthCount] = useState(0)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const handleFloorPayment = async (e) => {
     e.preventDefault()
@@ -88,7 +90,7 @@ export default function FloorDetails() {
                     title="Edit floor">
                     <span className="material-symbols-outlined text-base">edit</span>
                   </button>
-                  <button onClick={() => { if (window.confirm(`Delete ${floor.name} and all its units?`)) { deleteFloor(floor.name); navigate('/properties') } }}
+                  <button onClick={() => setConfirmDelete({ type: 'floor', title: 'Delete Floor', message: `Delete ${floor.name} and all its units? This cannot be undone.` })}
                     className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-status-unpaid hover:bg-red-50 transition-colors text-sm"
                     title="Delete floor">
                     <span className="material-symbols-outlined text-base">delete</span>
@@ -187,7 +189,7 @@ export default function FloorDetails() {
                               <span className="material-symbols-outlined text-base">receipt_long</span>
                             </Link>
                             <IconBtn icon="swap_horiz" title="Reassign to new tenant" onClick={() => setReassignModal({ unit })} color="amber" />
-                            <IconBtn icon="person_remove" title="Remove tenant" onClick={() => { if (window.confirm(`Remove ${t.name} from ${unit.name}?`)) deleteTenant(floor.name, unit.id) }} color="red" />
+                            <IconBtn icon="person_remove" title="Remove tenant" onClick={() => setConfirmDelete({ type: 'tenant', unitId: unit.id, tenantName: t.name, title: 'Remove Tenant', message: `Remove ${t.name} from ${unit.name}? Their payment history will be preserved.` })} color="red" />
                           </>
                         )}
                         {!occupied && (
@@ -196,7 +198,7 @@ export default function FloorDetails() {
                           </>
                         )}
                         <IconBtn icon="edit" title="Edit unit" onClick={() => setUnitModal({ unit })} color="primary" />
-                        <IconBtn icon="delete" title="Delete unit" onClick={() => { if (window.confirm(`Delete ${unit.name} from ${floor.name}?`)) deleteUnit(floor.name, unit.id) }} color="red" />
+                        <IconBtn icon="delete" title="Delete unit" onClick={() => setConfirmDelete({ type: 'unit', unitId: unit.id, title: 'Delete Unit', message: `Delete ${unit.name} from ${floor.name}? Any tenant in this unit will be removed.` })} color="red" />
                         <Link to={`/properties/floor/${floorName}/unit/${unit.id}`}
                           className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-dim hover:text-primary hover:bg-primary-50 transition-colors"
                           title="View details">
@@ -337,6 +339,21 @@ export default function FloorDetails() {
           onClose={() => setPaymentReceipt(null)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title={confirmDelete?.title || ''}
+        message={confirmDelete?.message || ''}
+        onConfirm={() => {
+          if (!confirmDelete) return
+          const { type, unitId } = confirmDelete
+          setConfirmDelete(null)
+          if (type === 'floor') { deleteFloor(floor.name); navigate('/properties') }
+          else if (type === 'tenant') deleteTenant(floor.name, unitId)
+          else if (type === 'unit') deleteUnit(floor.name, unitId)
+        }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }

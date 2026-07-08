@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
+import ConfirmModal from '../components/ConfirmModal'
 
 const STAFF = ['John Ssempijja', 'Sarah Nabatanzi', 'Peter Wasswa', 'David Okello']
 const priorityOptions = ['Low', 'Medium', 'High', 'Critical']
@@ -60,6 +61,7 @@ export default function MaintenanceBoard() {
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [view, setView] = useState('kanban')
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const allItems = [...maintenance.pending, ...maintenance.inProgress, ...maintenance.resolved]
   const criticalCount = allItems.filter((i) => i.priority === 'Critical' && i.status !== 'resolved').length
@@ -103,7 +105,7 @@ export default function MaintenanceBoard() {
   function handleResolve(id, resolution) { updateMaintenance(id, { resolution }); moveMaintenance(id, 'inProgress', 'resolved'); setModal(null) }
   function handleEditSave(id, data) { updateMaintenance(id, data); setModal(null) }
   function handleMove(id, from, to) { moveMaintenance(id, from, to) }
-  function handleDelete(id) { if (window.confirm('Delete this maintenance request?')) deleteMaintenance(id) }
+  function handleDelete(id) { setConfirmDelete({ id, title: 'Delete Request', message: 'Delete this maintenance request? This cannot be undone.' }) }
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -332,6 +334,14 @@ export default function MaintenanceBoard() {
           <AddForm floors={floors} onSave={(data) => { addMaintenance(data); setModal(null) }} onCancel={() => setModal(null)} />
         </Modal>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title={confirmDelete?.title || ''}
+        message={confirmDelete?.message || ''}
+        onConfirm={() => { if (confirmDelete) { deleteMaintenance(confirmDelete.id); setConfirmDelete(null) } }}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   )
 }
