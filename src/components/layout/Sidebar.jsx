@@ -23,6 +23,7 @@ const sections = [
     label: 'Operations',
     links: [
       { to: '/maintenance-board', icon: 'build', label: 'Maintenance', desc: 'Track, assign, and resolve maintenance requests across all floors' },
+      { to: '/stellar-dashboard', icon: 'verified', label: 'Stellar Notary', desc: 'Cryptographic proof of payment integrity on Stellar blockchain' },
     ],
   },
 ]

@@ -13,6 +13,7 @@ import FinancialReports from './pages/FinancialReports'
 import MaintenanceBoard from './pages/MaintenanceBoard'
 import MaintenanceRequests from './pages/MaintenanceRequests'
 import TenantPayments from './pages/TenantPayments'
+import StellarDashboard from './pages/StellarDashboard'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="/maintenance-board" element={<MaintenanceBoard />} />
               <Route path="/maintenance-requests" element={<MaintenanceRequests />} />
               <Route path="/tenant-payments/:floorName/:unitId" element={<TenantPayments />} />
+              <Route path="/stellar-dashboard" element={<StellarDashboard />} />
             </Route>
           </Route>
         </Routes>
