@@ -126,15 +126,15 @@ function RecordTypeLabel({ type }) {
 
 function Modal({ title, children, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
-          <h2 className="text-base font-bold text-on-surface">{title}</h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
-            <span className="material-symbols-outlined text-xl">close</span>
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[6vh] bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 flex flex-col max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-outline shrink-0">
+          <h2 className="text-sm font-bold text-on-surface">{title}</h2>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+            <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-outline/40 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">{children}</div>
       </div>
     </div>
   )
@@ -419,61 +419,58 @@ export default function StellarDashboard() {
       </div>
 
       {activeAnchor && (
-        <Modal title="Stellar Transaction Detail" onClose={() => { setActiveAnchor(null); setTxDetail(null) }}>
-          <div className="space-y-4">
-            <div className="bg-surface-container rounded-lg p-3 space-y-2">
-              <div className="flex justify-between text-xs">
+        <Modal title="Stellar Transaction" onClose={() => { setActiveAnchor(null); setTxDetail(null) }}>
+          <div className="space-y-3">
+            <div className="bg-surface-container rounded-lg border border-outline p-3 space-y-1.5">
+              <div className="flex justify-between text-[10px]">
                 <span className="text-on-surface-muted">Event</span>
-                <span className="font-mono font-semibold text-on-surface"><RecordTypeLabel type={activeAnchor.recordType} /></span>
+                <span className="font-semibold text-on-surface"><RecordTypeLabel type={activeAnchor.recordType} /></span>
               </div>
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between text-[10px]">
                 <span className="text-on-surface-muted">Description</span>
-                <span className="font-medium text-on-surface text-right">{activeAnchor.recordLabel || '—'}</span>
+                <span className="font-medium text-on-surface text-right leading-tight">{activeAnchor.recordLabel || '—'}</span>
               </div>
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between text-[10px]">
                 <span className="text-on-surface-muted">Anchored At</span>
                 <span className="font-semibold text-on-surface">{fmtDateTime(activeAnchor.anchoredAt || activeAnchor.createdAt)}</span>
               </div>
-              {activeAnchor.recordSnapshot?.monthlyRent !== undefined && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-on-surface-muted">Monthly Rent</span>
-                  <span className="font-semibold text-on-surface">UGX {Number(activeAnchor.recordSnapshot.monthlyRent).toLocaleString()}</span>
-                </div>
-              )}
-
-              {activeAnchor.recordSnapshot?.tenantName && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-on-surface-muted">Tenant</span>
-                  <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.tenantName}</span>
-                </div>
-              )}
-
-              {activeAnchor.recordSnapshot?.floor && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-on-surface-muted">Floor</span>
-                  <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.floor}</span>
-                </div>
-              )}
-
-              {activeAnchor.recordSnapshot?.unit && (
-                <div className="flex justify-between text-xs">
-                  <span className="text-on-surface-muted">Unit</span>
-                  <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.unit}</span>
-                </div>
-              )}
+              <div className="border-t border-outline/50 pt-1.5 grid grid-cols-2 gap-y-1 gap-x-3 text-[11px]">
+                {activeAnchor.recordSnapshot?.tenantName && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-dim">Tenant</span>
+                    <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.tenantName}</span>
+                  </div>
+                )}
+                {activeAnchor.recordSnapshot?.floor && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-dim">Floor</span>
+                    <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.floor}</span>
+                  </div>
+                )}
+                {activeAnchor.recordSnapshot?.unit && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-dim">Unit</span>
+                    <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.unit}</span>
+                  </div>
+                )}
+                {activeAnchor.recordSnapshot?.monthlyRent !== undefined && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-dim">Rent</span>
+                    <span className="font-semibold text-on-surface">UGX {Number(activeAnchor.recordSnapshot.monthlyRent).toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
 
               {activeAnchor.recordType === 'tenant_update' && activeAnchor.recordSnapshot?.changes && (
-                <div className="pt-1">
-                  <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1.5">Changes</p>
-                  <div className="bg-surface rounded-lg border border-outline divide-y divide-outline">
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1">Changes</p>
+                  <div className="space-y-1">
                     {Object.entries(activeAnchor.recordSnapshot.changes).map(([field, c]) => (
-                      <div key={field} className="px-2.5 py-1.5">
-                        <p className="text-[10px] text-on-surface-dim font-semibold uppercase mb-0.5">{field}</p>
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <span className="text-status-unpaid line-through">{String(c.from || '—')}</span>
-                          <span className="material-symbols-outlined text-sm text-on-surface-dim">arrow_forward</span>
-                          <span className="font-medium text-status-paid">{String(c.to || '—')}</span>
-                        </div>
+                      <div key={field} className="flex items-center gap-1 text-[11px] bg-surface rounded px-2 py-1 border border-outline/50">
+                        <span className="text-[9px] text-on-surface-dim font-semibold uppercase mr-1 shrink-0">{field}</span>
+                        <span className="text-status-unpaid line-through text-[10px]">{String(c.from || '—')}</span>
+                        <span className="material-symbols-outlined text-[10px] text-on-surface-dim">arrow_forward</span>
+                        <span className="font-medium text-status-paid text-[10px]">{String(c.to || '—')}</span>
                       </div>
                     ))}
                   </div>
@@ -481,111 +478,72 @@ export default function StellarDashboard() {
               )}
 
               {activeAnchor.recordType === 'tenant_delete' && activeAnchor.recordSnapshot && (
-                <div className="pt-1">
-                  <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1.5">Deleted Tenant Details</p>
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 space-y-1 text-xs">
-                    {activeAnchor.recordSnapshot.tenantName && (
-                      <div className="flex justify-between">
-                        <span className="text-red-600">Name</span>
-                        <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.tenantName}</span>
-                      </div>
-                    )}
-                    {activeAnchor.recordSnapshot.email && (
-                      <div className="flex justify-between">
-                        <span className="text-red-600">Email</span>
-                        <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.email}</span>
-                      </div>
-                    )}
-                    {activeAnchor.recordSnapshot.phone && (
-                      <div className="flex justify-between">
-                        <span className="text-red-600">Phone</span>
-                        <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.phone}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-red-600">Unit</span>
-                      <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.unit || '—'}</span>
-                    </div>
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-red-600 font-semibold uppercase tracking-wider mb-1">Deleted Tenant</p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-[10px] space-y-0.5">
+                    {activeAnchor.recordSnapshot.tenantName && <div className="flex justify-between"><span className="text-red-600">Name</span><span className="font-medium text-red-800">{activeAnchor.recordSnapshot.tenantName}</span></div>}
+                    {activeAnchor.recordSnapshot.email && <div className="flex justify-between"><span className="text-red-600">Email</span><span className="font-medium text-red-800">{activeAnchor.recordSnapshot.email}</span></div>}
+                    {activeAnchor.recordSnapshot.phone && <div className="flex justify-between"><span className="text-red-600">Phone</span><span className="font-medium text-red-800">{activeAnchor.recordSnapshot.phone}</span></div>}
+                    <div className="flex justify-between"><span className="text-red-600">Unit</span><span className="font-medium text-red-800">{activeAnchor.recordSnapshot.unit || '—'}</span></div>
                   </div>
                 </div>
               )}
 
               {activeAnchor.recordType === 'payment' && activeAnchor.recordSnapshot && (
-                <div className="pt-1">
-                  <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1.5">Payment Details</p>
-                  <div className="bg-surface rounded-lg border border-outline p-2.5 space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-dim">Receipt</span>
-                      <span className="font-mono font-semibold text-on-surface">{activeAnchor.recordSnapshot.receiptId || '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-dim">Amount</span>
-                      <span className="font-semibold text-on-surface">UGX {Number(activeAnchor.recordSnapshot.amount || 0).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-dim">Method</span>
-                      <span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.method || '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-dim">Tenant</span>
-                      <span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.tenantName || '—'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-dim">Floor / Unit</span>
-                      <span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.floor || ''} {activeAnchor.recordSnapshot.unit || ''}</span>
-                    </div>
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1">Payment Details</p>
+                  <div className="bg-surface rounded-lg border border-outline p-2 text-[10px] space-y-0.5">
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Receipt</span><span className="font-mono font-semibold text-on-surface">{activeAnchor.recordSnapshot.receiptId || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Amount</span><span className="font-semibold text-on-surface">UGX {Number(activeAnchor.recordSnapshot.amount || 0).toLocaleString()}</span></div>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Method</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.method || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Tenant</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.tenantName || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Floor / Unit</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.floor || ''} {activeAnchor.recordSnapshot.unit || ''}</span></div>
                   </div>
                 </div>
               )}
             </div>
 
             {loadingTx ? (
-              <div className="flex items-center justify-center py-6">
-                <span className="material-symbols-outlined text-2xl text-primary animate-spin">sync</span>
-                <span className="text-xs text-on-surface-muted ml-2">Fetching from Stellar...</span>
+              <div className="flex items-center justify-center py-3">
+                <span className="material-symbols-outlined text-lg text-primary animate-spin">sync</span>
+                <span className="text-[10px] text-on-surface-muted ml-1.5">Fetching from Stellar...</span>
               </div>
             ) : txDetail?.error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                <span className="material-symbols-outlined text-red-500 text-base shrink-0">error</span>
-                <div>
-                  <p className="text-xs font-semibold text-red-700">Fetch Failed</p>
-                  <p className="text-[11px] text-red-600 mt-0.5">{txDetail.error}</p>
-                </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 flex items-start gap-1.5 text-[10px]">
+                <span className="material-symbols-outlined text-red-500 text-sm shrink-0">error</span>
+                <div><p className="font-semibold text-red-700">Fetch Failed</p><p className="text-red-600">{txDetail.error}</p></div>
               </div>
             ) : txDetail ? (
               <>
-                <div className="bg-surface-container rounded-lg p-3 space-y-2.5">
+                <div className="bg-surface-container rounded-lg border border-outline p-3 space-y-2">
                   <div>
-                    <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1">Transaction Hash</p>
-                    <p className="font-mono text-[11px] text-on-surface break-all bg-surface px-2 py-1.5 rounded border border-outline">{txDetail.txHash}</p>
+                    <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Transaction Hash</p>
+                    <p className="font-mono text-[10px] text-on-surface break-all bg-surface px-2 py-1 rounded border border-outline leading-relaxed">{txDetail.txHash}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Ledger</p>
-                      <p className="text-xs font-mono text-on-surface">{txDetail.ledger || '—'}</p>
+                      <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Ledger</p>
+                      <p className="text-[11px] font-mono text-on-surface">{txDetail.ledger || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">On-Chain Timestamp</p>
-                      <p className="text-xs text-on-surface">{txDetail.timestamp ? fmtDateTime(txDetail.timestamp) : '—'}</p>
+                      <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">On-Chain Timestamp</p>
+                      <p className="text-[11px] text-on-surface">{txDetail.timestamp ? fmtDateTime(txDetail.timestamp) : '—'}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Record Hash (Memo)</p>
-                    <p className="font-mono text-[10px] text-on-surface break-all bg-surface px-2 py-1.5 rounded border border-outline">{txDetail.memoHash || '—'}</p>
+                    <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Record Hash (Memo)</p>
+                    <p className="font-mono text-[9px] text-on-surface break-all bg-surface px-2 py-1 rounded border border-outline leading-relaxed">{txDetail.memoHash || '—'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  <span className="material-symbols-outlined text-emerald-600 text-base">check_circle</span>
-                  <div>
-                    <p className="text-xs font-semibold text-emerald-800">Transaction Found on Stellar</p>
-                    <p className="text-[10px] text-emerald-600">This hash exists in the Stellar ledger — immutable proof of integrity.</p>
-                  </div>
+                <div className="flex items-center gap-1.5 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[10px]">
+                  <span className="material-symbols-outlined text-emerald-600 text-sm shrink-0">check_circle</span>
+                  <span className="text-emerald-800">Transaction Found on Stellar</span>
                 </div>
 
                 <a href={`${STELLAR_EXPLORER_URL}/${txDetail.txHash}`} target="_blank" rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors">
-                  <span className="material-symbols-outlined text-base">open_in_new</span>
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-white text-[11px] font-semibold rounded-lg hover:bg-primary-600 transition-colors">
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
                   View on Stellar Explorer
                 </a>
               </>
