@@ -152,14 +152,16 @@ export function BuildingProvider({ children }) {
     if (!bid) { setBuilding(bld || null); return }
     setBuilding(bld || building)
 
-    const [fr, pr, mr] = await Promise.all([
+    const [fr, pr, mr, ar] = await Promise.all([
       q.fetchFloorsWithUnits(bid),
       q.fetchPayments(bid),
       q.fetchMaintenance(bid),
+      q.fetchAnchors(bid),
     ])
     if (fr.data) setFloors(fr.data)
     if (pr.data) setPayments(pr.data)
     if (mr.data) setMaintenance(mr.data)
+    if (ar.data) setAnchors(ar.data)
   }
 
   const refreshData = useCallback(async () => {
@@ -222,6 +224,27 @@ export function BuildingProvider({ children }) {
     return unit?.tenant?.id || null
   }, [floors])
 
+  // ── Helpers ──
+  const doAnchor = useCallback(async (canonicalFn, recordId, recordLabel) => {
+    if (!building) return
+    const canonical = typeof canonicalFn === 'function' ? canonicalFn() : canonicalFn
+    const { hash, txHash, error } = await anchorRecord(canonical)
+    if (hash && !error) {
+      const anchor = {
+        buildingId: building.id,
+        recordType: canonical.recordType || 'unknown',
+        recordId: recordId || '',
+        recordLabel: recordLabel || '',
+        recordSnapshot: canonical,
+        sha256Hash: hash,
+        stellarTxHash: txHash,
+        anchoredAt: new Date().toISOString(),
+      }
+      setAnchors((prev) => [anchor, ...prev])
+      await q.insertAnchor(anchor).catch(() => {})
+    }
+  }, [building])
+
   // ── Tenant ──
   const addTenant = useCallback(async (floorName, unitId, tenantData, monthlyRent) => {
     if (!building) return
@@ -234,7 +257,8 @@ export function BuildingProvider({ children }) {
 
     await refreshData()
     logAudit('Tenant added', `${tenantData.name} → ${floorName} / ${unitId}`)
-  }, [building, refreshData])
+    doAnchor(() => canonicalTenantAdd(tenantData, floorName, unitId), `tenant:${unitId}`, `${tenantData.name} added to ${floorName}`)
+  }, [building, refreshData, doAnchor])
 
   const updateTenant = useCallback(async (floorName, unitId, updates) => {
     const tenantId = findTenantId(floorName, unitId)
@@ -249,7 +273,9 @@ export function BuildingProvider({ children }) {
     }
     await refreshData()
     logAudit('Tenant updated', `${floorName} / ${unitId}`)
-  }, [findTenantId, refreshData])
+    const tenant = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.tenant
+    doAnchor(() => canonicalTenantUpdate(tenant, floorName, unitId, Object.keys(updates)), `tenant:${unitId}`, `Tenant updated on ${floorName}`)
+  }, [findTenantId, refreshData, doAnchor, floors])
 
   const deleteTenant = useCallback(async (floorName, unitId) => {
     const tenantId = findTenantId(floorName, unitId)
@@ -257,7 +283,10 @@ export function BuildingProvider({ children }) {
     await q.deleteTenant(tenantId)
     await refreshData()
     logAudit('Tenant removed', `${floorName} / ${unitId}`)
-  }, [findTenantId, refreshData])
+    const oldTenant = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.tenant
+    const unitName = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.name || ''
+    doAnchor(() => canonicalTenantDelete(oldTenant, floorName, unitName), `tenant:${unitId}`, `${oldTenant?.name || 'Tenant'} removed from ${floorName}`)
+  }, [findTenantId, refreshData, doAnchor, floors])
 
   // ── Floor ──
   const addFloor = useCallback(async (name, unitCount) => {
@@ -266,10 +295,11 @@ export function BuildingProvider({ children }) {
     if (result.data) {
       setFloors(result.data)
       logAudit('Floor added', `${name} (${unitCount} units)`)
+      doAnchor(() => canonicalFloorAdd(name, unitCount), `floor:${name}`, `Floor ${name} added`)
     } else {
       setError(result.error || 'Failed to add floor')
     }
-  }, [building])
+  }, [building, doAnchor])
 
   const updateFloor = useCallback(async (oldName, newName) => {
     const floor = floors.find((f) => f.name === oldName)
@@ -277,7 +307,8 @@ export function BuildingProvider({ children }) {
     await q.renameFloor(floor.id, newName)
     setFloors((prev) => prev.map((f) => f.name === oldName ? { ...f, name: newName } : f))
     logAudit('Floor renamed', `${oldName} → ${newName}`)
-  }, [floors])
+    doAnchor(() => canonicalFloorRename(oldName, newName), `floor:${oldName}`, `Floor renamed: ${oldName} → ${newName}`)
+  }, [floors, doAnchor])
 
   const deleteFloor = useCallback(async (name) => {
     const floor = floors.find((f) => f.name === name)
@@ -285,7 +316,8 @@ export function BuildingProvider({ children }) {
     await q.deleteFloor(floor.id)
     setFloors((prev) => prev.filter((f) => f.name !== name))
     logAudit('Floor deleted', name)
-  }, [floors])
+    doAnchor(() => canonicalFloorDelete(name), `floor:${name}`, `Floor ${name} deleted`)
+  }, [floors, doAnchor])
 
   // ── Unit ──
   const updateUnit = useCallback(async (floorName, unitId, updates) => {
@@ -309,7 +341,8 @@ export function BuildingProvider({ children }) {
       }),
     )
     logAudit('Unit updated', `${floorName} / ${unitId}`)
-  }, [])
+    doAnchor(() => canonicalUnitUpdate(floorName, unitId, updates), unitId, `Unit ${unitId} on ${floorName} updated`)
+  }, [doAnchor])
 
   const deleteUnit = useCallback(async (floorName, unitId) => {
     await q.deleteUnit(unitId)
@@ -320,7 +353,8 @@ export function BuildingProvider({ children }) {
       }),
     )
     logAudit('Unit deleted', `${floorName} / ${unitId}`)
-  }, [])
+    doAnchor(() => canonicalUnitDelete(floorName, unitId), unitId, `Unit ${unitId} on ${floorName} deleted`)
+  }, [doAnchor])
 
   // ── Payment ──
   const addPayment = useCallback(async ({ floor: floorName, unit: unitName, amount, method, tenantName, status, date }) => {
@@ -434,21 +468,24 @@ export function BuildingProvider({ children }) {
 
     // Anchor receipt hash on Stellar (fire-and-forget — never blocks the payment flow)
     ;(async () => {
-      const receiptData = {
-        id: paymentRecord.id,
-        receiptId: paymentRecord.receiptId,
-        tenantName: paymentRecord.tenantName,
-        amount: paymentRecord.amount,
-        method: paymentRecord.method,
-        date: paymentRecord.date,
-        floor: paymentRecord.floor,
-        unit: paymentRecord.unit,
-      }
+      const receiptData = canonicalPayment(paymentRecord)
       const { hash, txHash, error } = await anchorHash(receiptData)
       if (hash && !error) {
         paymentRecord.stellarHash = hash
         paymentRecord.stellarTxHash = txHash
         await q.updatePaymentStellarHash(paymentRecord.id, hash, txHash)
+        const anchor = {
+          buildingId: building.id,
+          recordType: 'payment',
+          recordId: paymentRecord.id,
+          recordLabel: `UGX ${(paymentRecord.amount || 0).toLocaleString()} from ${paymentRecord.tenantName}`,
+          recordSnapshot: receiptData,
+          sha256Hash: hash,
+          stellarTxHash: txHash,
+          anchoredAt: new Date().toISOString(),
+        }
+        setAnchors((prev) => [anchor, ...prev])
+        await q.insertAnchor(anchor).catch(() => {})
       }
     })()
 
@@ -464,7 +501,8 @@ export function BuildingProvider({ children }) {
 
     await refreshData()
     logAudit('Payment voided', `${payment.tenantName} UGX ${(payment.amount || 0).toLocaleString()} (${payment.receiptId})`)
-  }, [payments, refreshData])
+    doAnchor(() => canonicalPaymentVoid(payment), payment.id, `Payment ${payment.receiptId} voided`)
+  }, [payments, refreshData, doAnchor])
 
   // ── Maintenance ──
   const addMaintenance = useCallback(async (item) => {
@@ -474,7 +512,10 @@ export function BuildingProvider({ children }) {
       setMaintenance((prev) => ({ ...prev, pending: [result.data, ...prev.pending] }))
     }
     logAudit('Maintenance request created', item.title)
-  }, [building])
+    if (result.data) {
+      doAnchor(() => canonicalMaintenanceAdd(item, building.id), result.data.id, `Maintenance: ${item.title}`)
+    }
+  }, [building, doAnchor])
 
   const updateMaintenance = useCallback(async (id, updates) => {
     await q.updateMaintenanceRequest(id, updates)
@@ -490,7 +531,8 @@ export function BuildingProvider({ children }) {
         resolved: updateArr(prev.resolved),
       }
     })
-  }, [])
+    doAnchor(() => canonicalMaintenanceUpdate(id, updates), id, `Maintenance #${id} updated`)
+  }, [doAnchor])
 
   const moveMaintenance = useCallback(async (id, from, to) => {
     const statusMap = { pending: 'pending', inProgress: 'in_progress', resolved: 'resolved' }
@@ -500,25 +542,31 @@ export function BuildingProvider({ children }) {
       const item = prev[from].find((m) => m.id === id)
       if (!item) return prev
       logAudit('Maintenance moved', `${item.title}: ${from} → ${to}`)
+      doAnchor(() => ({ recordType: 'maintenance_move', id, title: item.title, from, to }), id, `${item.title}: ${from} → ${to}`)
       return {
         ...prev,
         [from]: prev[from].filter((m) => m.id !== id),
         [to]: [{ ...item, status: to, assignee: to === 'pending' ? null : item.assignee }, ...prev[to]],
       }
     })
-  }, [])
+  }, [doAnchor])
 
   const deleteMaintenance = useCallback(async (id) => {
     await q.deleteMaintenanceRequest(id)
     setMaintenance((prev) => {
       logAudit('Maintenance deleted', `#${id}`)
+      ;(async () => {
+        const allItems = [...prev.pending, ...prev.inProgress, ...prev.resolved]
+        const item = allItems.find((m) => m.id === id)
+        doAnchor(() => canonicalMaintenanceDelete(id, item?.title || ''), id, `Maintenance #${id} deleted`)
+      })()
       return {
         pending: prev.pending.filter((m) => m.id !== id),
         inProgress: prev.inProgress.filter((m) => m.id !== id),
         resolved: prev.resolved.filter((m) => m.id !== id),
       }
     })
-  }, [])
+  }, [doAnchor])
 
   // ── Computed ──
   const totalUnits = useMemo(() => floors.reduce((s, f) => s + f.units.length, 0), [floors])
@@ -632,7 +680,7 @@ export function BuildingProvider({ children }) {
 
   const value = useMemo(
     () => ({
-      building, floors, payments, totalUnits, occupiedUnits, monthlyRevenue, totalOutstanding,
+      building, floors, payments, anchors, totalUnits, occupiedUnits, monthlyRevenue, totalOutstanding,
       tenants, tenantStats, transactions, alerts, upcomingPayments,
       revenueMonthly, revenueMix, cashFlowData, maintenance, maintenanceStats,
       paymentMethods, tenantFilters, statusBorders, priorityBorders,
@@ -646,7 +694,7 @@ export function BuildingProvider({ children }) {
       auth, login, register, logout, loading, refreshing, restoringSession, error, hasBuilding, createBuilding, supabaseReady,
     }),
     [
-      building, floors, payments, maintenance, totalUnits, occupiedUnits,
+      building, floors, payments, anchors, maintenance, totalUnits, occupiedUnits,
       monthlyRevenue, totalOutstanding, tenants, tenantStats, transactions, alerts, upcomingPayments,
       getFloorBySlug, getUnitByFloorAndId, getAvatarColor,
       addTenant, updateTenant, deleteTenant,
