@@ -106,3 +106,145 @@ function base64ToHex(b64) {
   }
   return hex
 }
+
+// ── Generic Anchor Record ────────────────────────────────────────────────
+// Builds canonical data with timestamp, hashes it, anchors to Stellar.
+// Returns { hash, txHash, ledger, error }
+export async function anchorRecord(canonicalData) {
+  const dataWithMeta = {
+    ...canonicalData,
+    anchoredAt: new Date().toISOString(),
+  }
+  return anchorHash(dataWithMeta)
+}
+
+// ── Canonical Data Builders ──────────────────────────────────────────────
+// Each returns the minimal set of fields that define a record for integrity verification.
+export function canonicalPayment(p) {
+  return {
+    recordType: 'payment',
+    id: p.id,
+    receiptId: p.receiptId || `RCP-${(p.id || '').substring(0, 4).toUpperCase()}-${(p.id || '').substring(4, 8).toUpperCase()}`,
+    tenantName: p.tenantName || p.tenant_name || '',
+    amount: Number(p.amount || 0),
+    method: p.method || '',
+    date: p.date || '',
+    floor: p.floor || p.floor_name || '',
+    unit: p.unit || p.unit_name || '',
+  }
+}
+
+export function canonicalTenantAdd(tenantData, floorName, unitId) {
+  return {
+    recordType: 'tenant_add',
+    tenantName: tenantData.name || '',
+    email: tenantData.email || '',
+    phone: tenantData.phone || '',
+    floor: floorName || '',
+    unitId: unitId || '',
+    monthlyRent: Number(tenantData.monthlyRent || 0),
+    leaseStart: tenantData.leaseStart || '',
+    leaseEnd: tenantData.leaseEnd || '',
+    leaseTerm: tenantData.leaseTerm || '',
+  }
+}
+
+export function canonicalTenantDelete(tenant, floorName, unitName) {
+  return {
+    recordType: 'tenant_delete',
+    tenantName: tenant?.name || '',
+    email: tenant?.email || '',
+    phone: tenant?.phone || '',
+    floor: floorName || '',
+    unit: unitName || '',
+  }
+}
+
+export function canonicalTenantUpdate(tenant, floorName, unitName, changedFields) {
+  return {
+    recordType: 'tenant_update',
+    tenantName: tenant?.name || '',
+    floor: floorName || '',
+    unit: unitName || '',
+    changedFields,
+  }
+}
+
+export function canonicalPaymentVoid(payment) {
+  return {
+    recordType: 'payment_void',
+    id: payment.id,
+    receiptId: payment.receiptId || '',
+    tenantName: payment.tenantName || '',
+    amount: Number(payment.amount || 0),
+    date: payment.date || '',
+  }
+}
+
+export function canonicalMaintenanceAdd(item, buildingId) {
+  return {
+    recordType: 'maintenance_add',
+    title: item.title || '',
+    description: item.description || '',
+    floor: item.floor || '',
+    unit: item.unit || '',
+    priority: item.priority || 'medium',
+    category: item.category || '',
+  }
+}
+
+export function canonicalMaintenanceUpdate(id, updates) {
+  return {
+    recordType: 'maintenance_update',
+    id: id || '',
+    updates,
+  }
+}
+
+export function canonicalMaintenanceDelete(id, title) {
+  return {
+    recordType: 'maintenance_delete',
+    id: id || '',
+    title: title || '',
+  }
+}
+
+export function canonicalFloorAdd(name, unitCount) {
+  return {
+    recordType: 'floor_add',
+    name: name || '',
+    unitCount: unitCount || 0,
+  }
+}
+
+export function canonicalFloorDelete(name) {
+  return {
+    recordType: 'floor_delete',
+    name: name || '',
+  }
+}
+
+export function canonicalFloorRename(oldName, newName) {
+  return {
+    recordType: 'floor_rename',
+    oldName: oldName || '',
+    newName: newName || '',
+  }
+}
+
+export function canonicalUnitUpdate(floorName, unitId, updates) {
+  return {
+    recordType: 'unit_update',
+    floor: floorName || '',
+    unitId: unitId || '',
+    updates,
+  }
+}
+
+export function canonicalUnitDelete(floorName, unitId) {
+  return {
+    recordType: 'unit_delete',
+    floor: floorName || '',
+    unitId: unitId || '',
+  }
+}

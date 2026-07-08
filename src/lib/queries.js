@@ -890,3 +890,53 @@ export function isSupabaseConfigured() {
     key !== 'your-anon-key-here'
   )
 }
+
+// ── Anchors ──────────────────────────────────────────────────────────────
+export async function insertAnchor(anchor) {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const userId = sessionData?.session?.user?.id
+  if (!userId) return { error: 'Not authenticated' }
+
+  const { data, error } = await supabase
+    .from('anchors')
+    .insert({
+      building_id: anchor.buildingId,
+      user_id: userId,
+      record_type: anchor.recordType,
+      record_id: anchor.recordId,
+      record_label: anchor.recordLabel || '',
+      record_snapshot: anchor.recordSnapshot,
+      sha256_hash: anchor.sha256Hash,
+      stellar_tx_hash: anchor.stellarTxHash || null,
+    })
+    .select()
+    .single()
+  if (error) return { error: error.message }
+  return { data: mapAnchor(data) }
+}
+
+export async function fetchAnchors(buildingId) {
+  const { data, error } = await supabase
+    .from('anchors')
+    .select('*')
+    .eq('building_id', buildingId)
+    .order('created_at', { ascending: false })
+  if (error) return { error: error.message }
+  return { data: (data || []).map(mapAnchor) }
+}
+
+function mapAnchor(data) {
+  return {
+    id: data.id,
+    buildingId: data.building_id,
+    userId: data.user_id,
+    recordType: data.record_type,
+    recordId: data.record_id,
+    recordLabel: data.record_label || '',
+    recordSnapshot: data.record_snapshot,
+    sha256Hash: data.sha256_hash,
+    stellarTxHash: data.stellar_tx_hash,
+    anchoredAt: data.anchored_at,
+    createdAt: data.created_at,
+  }
+}
