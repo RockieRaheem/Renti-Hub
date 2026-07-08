@@ -86,8 +86,6 @@ function KpiCard({ icon, label, value, sub, accent }) {
   )
 }
 
-const inputClass = 'w-full h-10 px-3.5 border border-outline rounded-lg text-sm text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all'
-
 export default function RentCollection() {
   const { floors, floorSlug, payments, addPayment, building } = useBuilding()
   const [filterFloor, setFilterFloor] = useState('all')
@@ -127,10 +125,30 @@ export default function RentCollection() {
   const totalCredit = allTenants.reduce((s, t) => s + Math.max(0, -(t.outstandingBalance || 0)), 0)
   const collectionRate = totalExpected > 0 ? Math.round(((totalExpected - totalDebt) / totalExpected) * 100) : 0
 
+  const submitTimeoutRef = useRef(null)
+  const [formErrors, setFormErrors] = useState({})
+
   const handleRecordPayment = async (e) => {
     e.preventDefault()
     setSubmitError(null)
+
+    const errors = {}
+    if (!form.tenantName) errors.tenantName = 'Tenant is required'
+    if (!form.floor) errors.floor = 'Floor is required'
+    if (!form.unit) errors.unit = 'Unit is required'
+    if (!form.amount || parseFloat(form.amount) <= 0) errors.amount = 'Valid amount required'
+    if (!form.date) errors.date = 'Date is required'
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
     setSubmitting(true)
+
+    clearTimeout(submitTimeoutRef.current)
+    submitTimeoutRef.current = setTimeout(() => {
+      setSubmitting(false)
+      setSubmitError('Request timed out. Please try again.')
+    }, 15000)
+
     try {
       const result = await addPayment({
         floor: form.floor, unit: form.unit, amount: parseFloat(form.amount) || 0,
@@ -144,12 +162,36 @@ export default function RentCollection() {
           tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid',
           date: new Date().toISOString().slice(0, 10),
         })
+        setFormErrors({})
         setShowModal(false)
       }
     } catch (err) {
       setSubmitError(err?.message || 'An unexpected error occurred while recording payment.')
     } finally {
+      clearTimeout(submitTimeoutRef.current)
       setSubmitting(false)
+    }
+  }
+
+  const handleTenantSelect = (value) => {
+    if (!value || value === '|') {
+      setForm({ tenantName: '', unit: '', floor: '', amount: '', method: 'Cash', status: 'Paid', date: form.date })
+      setFormErrors({})
+      return
+    }
+    const [floor, unit] = value.split('|')
+    const tenant = allTenants.find((t) => t.floor === floor && t.unit === unit)
+    if (tenant) {
+      setForm({
+        tenantName: tenant.name,
+        unit: tenant.unit,
+        floor: tenant.floor,
+        amount: (tenant.monthlyRent || 0).toString(),
+        method: 'Cash',
+        status: 'Paid',
+        date: form.date,
+      })
+      setFormErrors({})
     }
   }
 
@@ -384,71 +426,101 @@ export default function RentCollection() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
-              <div>
-                <h2 className="text-base font-bold text-on-surface">Record Payment</h2>
-                <p className="text-xs text-on-surface-muted mt-0.5">Select tenant and enter amount</p>
-              </div>
-              <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
-                <span className="material-symbols-outlined text-xl">close</span>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-outline">
+              <h2 className="text-sm font-bold text-on-surface">Record Payment</h2>
+              <button onClick={() => setShowModal(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+                <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
-            <form onSubmit={handleRecordPayment} className="p-6 space-y-4">
+            <form onSubmit={handleRecordPayment} className="p-4 space-y-3">
               {form.tenantName && form.date && (
-                <div className="bg-primary-50 border border-primary-100 rounded-lg px-4 py-2.5 text-xs text-primary-800 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">calendar_month</span>
-                  <span>Paying <strong>{paymentMonthLabel(form.date)}</strong> &middot; <strong>{form.tenantName}</strong></span>
+                <div className="bg-primary-50 border border-primary-100 rounded-lg px-3 py-1.5 text-[11px] text-primary-800 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-xs">calendar_month</span>
+                  <span>Paying <strong>{paymentMonthLabel(form.date)}</strong> for <strong>{form.tenantName}</strong></span>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Select Tenant</label>
-                  <select value={`${form.floor}|${form.unit}`} onChange={(e) => {
-                    const [floor, unit] = e.target.value.split('|')
-                    const tenant = allTenants.find((t) => t.floor === floor && t.unit === unit)
-                    setForm(p => ({ ...p, floor, unit, tenantName: tenant?.name || '', amount: tenant ? (tenant.monthlyRent || 0).toString() : p.amount }))
-                  }} className={inputClass}>
-                    <option value="|">Choose a tenant...</option>
-                    {floors.map((f) => {
-                      const ft = allTenants.filter((t) => t.floor === f.name)
-                      if (ft.length === 0) return null
-                      return (
-                        <optgroup key={f.name} label={f.name}>
-                          {ft.map((t) => (
-                            <option key={`${t.floor}|${t.unit}`} value={`${t.floor}|${t.unit}`}>
-                              {t.name} — {t.unit} (UGX {(t.monthlyRent || 0).toLocaleString()})
-                            </option>
-                          ))}
-                        </optgroup>
-                      )
-                    })}
-                  </select>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Tenant</label>
+                <select value={`${form.floor}|${form.unit}`} onChange={(e) => handleTenantSelect(e.target.value)}
+                  className={`w-full h-9 px-3 border rounded-lg text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none bg-no-repeat bg-[length:14px] bg-[right_10px_center] ${formErrors.tenantName ? 'border-red-400 bg-red-50' : 'border-outline'}`}
+                  style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")" }}>
+                  <option value="|">Choose a tenant...</option>
+                  {floors.map((f) => {
+                    const ft = allTenants.filter((t) => t.floor === f.name)
+                    if (ft.length === 0) return null
+                    return (
+                      <optgroup key={f.name} label={f.name}>
+                        {ft.map((t) => (
+                          <option key={`${t.floor}|${t.unit}`} value={`${t.floor}|${t.unit}`}>
+                            {t.name} — {t.unit} (UGX {(t.monthlyRent || 0).toLocaleString()})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )
+                  })}
+                </select>
+                {formErrors.tenantName && <p className="text-[10px] text-red-500 mt-0.5">{formErrors.tenantName}</p>}
+              </div>
+
+              {form.tenantName && (
+                <div className="bg-surface-container rounded-lg border border-outline p-2.5 space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-on-surface-dim">{form.tenantName}</span>
+                    <span className="text-on-surface-muted">{form.floor} &middot; {form.unit}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-on-surface-dim">Monthly Rent</span>
+                    <span className="font-medium text-on-surface">UGX {(() => {
+                      const t = allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)
+                      return t ? (t.monthlyRent || 0).toLocaleString() : '—'
+                    })()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-on-surface-dim">Outstanding</span>
+                    <span className={`font-semibold ${(() => {
+                      const t = allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)
+                      const bal = t?.outstandingBalance || 0
+                      return bal > 0 ? 'text-status-unpaid' : bal < 0 ? 'text-blue-600' : 'text-status-paid'
+                    })()}`}>
+                      {(() => {
+                        const t = allTenants.find((t) => t.floor === form.floor && t.unit === form.unit)
+                        const bal = t?.outstandingBalance || 0
+                        return bal > 0 ? `UGX ${bal.toLocaleString()} due` : bal < 0 ? `UGX ${Math.abs(bal).toLocaleString()} cr` : 'Settled'
+                      })()}
+                    </span>
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Tenant Name</label>
-                  <input value={form.tenantName} onChange={(e) => setForm(p => ({ ...p, tenantName: e.target.value }))} className={inputClass} placeholder="Tenant name" required />
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Amount (UGX)</label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-dim text-xs font-medium">UGX</span>
+                    <input type="number" value={form.amount} onChange={(e) => setForm(p => ({ ...p, amount: e.target.value }))}
+                      className={`w-full h-9 pl-9 pr-2.5 border rounded-lg text-xs text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${formErrors.amount ? 'border-red-400 bg-red-50' : 'border-outline'}`}
+                      placeholder="0" min="0" step="100" required />
+                  </div>
+                  {formErrors.amount && <p className="text-[10px] text-red-500 mt-0.5">{formErrors.amount}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Floor</label>
-                  <input value={form.floor} onChange={(e) => setForm(p => ({ ...p, floor: e.target.value }))} className={inputClass} placeholder="Floor" required />
+                  <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Date</label>
+                  <input type="date" value={form.date} onChange={(e) => setForm(p => ({ ...p, date: e.target.value }))}
+                    className={`w-full h-9 px-2.5 border rounded-lg text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${formErrors.date ? 'border-red-400 bg-red-50' : 'border-outline'}`}
+                    required />
+                  {formErrors.date && <p className="text-[10px] text-red-500 mt-0.5">{formErrors.date}</p>}
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Unit</label>
-                  <input value={form.unit} onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))} className={inputClass} placeholder="Unit" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Amount (UGX)</label>
-                  <input type="number" value={form.amount} onChange={(e) => setForm(p => ({ ...p, amount: e.target.value }))} className={inputClass} placeholder="1000000" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Date</label>
-                  <input type="date" value={form.date} onChange={(e) => setForm(p => ({ ...p, date: e.target.value }))} className={inputClass} required />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Payment Method</label>
-                  <select value={form.method} onChange={(e) => setForm(p => ({ ...p, method: e.target.value }))} className={inputClass}>
+                  <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Method</label>
+                  <select value={form.method} onChange={(e) => setForm(p => ({ ...p, method: e.target.value }))}
+                    className="w-full h-9 px-2.5 border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none bg-no-repeat bg-[length:14px] bg-[right_10px_center]"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")" }}>
                     <option value="Cash">Cash</option>
                     <option value="Mobile Money">Mobile Money</option>
                     <option value="Bank Transfer">Bank Transfer</option>
@@ -456,29 +528,33 @@ export default function RentCollection() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-muted uppercase tracking-wide mb-1.5">Status</label>
-                  <select value={form.status} onChange={(e) => setForm(p => ({ ...p, status: e.target.value }))} className={inputClass}>
+                  <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Status</label>
+                  <select value={form.status} onChange={(e) => setForm(p => ({ ...p, status: e.target.value }))}
+                    className="w-full h-9 px-2.5 border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none bg-no-repeat bg-[length:14px] bg-[right_10px_center]"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")" }}>
                     <option value="Paid">Paid</option>
                     <option value="Partial">Partial</option>
                     <option value="Overdue">Overdue</option>
                   </select>
                 </div>
               </div>
+
               {submitError && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                <div className="flex items-start gap-1.5 p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-700">
+                  <span className="material-symbols-outlined text-sm shrink-0 mt-0.5">error</span>
                   <span>{submitError}</span>
                 </div>
               )}
-              <div className="flex items-center justify-end gap-2 pt-2">
+
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button type="button" onClick={() => setShowModal(false)} disabled={submitting}
-                  className="px-4 py-2.5 text-sm font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors disabled:opacity-50">
+                  className="px-3 py-1.5 text-xs font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors disabled:opacity-50">
                   Cancel
                 </button>
                 <button type="submit" disabled={submitting}
-                  className="px-5 py-2.5 text-sm font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1">
                   {submitting ? (
-                    <><span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                    <><span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
                   ) : 'Record Payment'}
                 </button>
               </div>

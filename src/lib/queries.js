@@ -646,8 +646,8 @@ export async function ensureTenantPeriods(tenantId, monthlyRent) {
     cur.setMonth(cur.getMonth() + 1)
   }
 
-  for (const p of toCreate) {
-    await supabase.from('billing_periods').insert(p)
+  if (toCreate.length > 0) {
+    await supabase.from('billing_periods').insert(toCreate)
   }
 
   return toCreate.length

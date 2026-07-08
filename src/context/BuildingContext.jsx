@@ -265,6 +265,9 @@ export function BuildingProvider({ children }) {
     const tenantId = findTenantId(floorName, unitId)
     if (!tenantId) return
 
+    const oldTenant = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.tenant
+    const unitName = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.name || ''
+
     const { monthlyRent, ...tenantUpdates } = updates
     if (Object.keys(tenantUpdates).length > 0) {
       await q.updateTenant(tenantId, tenantUpdates)
@@ -274,18 +277,21 @@ export function BuildingProvider({ children }) {
     }
     await refreshData()
     logAudit('Tenant updated', `${floorName} / ${unitId}`)
-    const tenant = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.tenant
-    doAnchor(() => canonicalTenantUpdate(tenant, floorName, unitId, Object.keys(updates)), `tenant:${unitId}`, `Tenant updated on ${floorName}`)
+    if (oldTenant) {
+      doAnchor(() => canonicalTenantUpdate(oldTenant, updates, floorName, unitName), `tenant:${unitId}`, `${oldTenant.name} updated on ${floorName}`)
+    }
   }, [findTenantId, refreshData, doAnchor, floors])
 
   const deleteTenant = useCallback(async (floorName, unitId) => {
     const tenantId = findTenantId(floorName, unitId)
     if (!tenantId) return
+
+    const oldTenant = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.tenant
+    const unitName = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.name || ''
+
     await q.deleteTenant(tenantId)
     await refreshData()
     logAudit('Tenant removed', `${floorName} / ${unitId}`)
-    const oldTenant = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.tenant
-    const unitName = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.name || ''
     doAnchor(() => canonicalTenantDelete(oldTenant, floorName, unitName), `tenant:${unitId}`, `${oldTenant?.name || 'Tenant'} removed from ${floorName}`)
   }, [findTenantId, refreshData, doAnchor, floors])
 
@@ -374,18 +380,7 @@ export function BuildingProvider({ children }) {
       await q.ensureTenantPeriods(tenantId, monthlyRent)
     }
 
-    // STEP 2: Capture true balance BEFORE this payment
-    // Balance = period debt + any existing credit (negative cachedBalance)
-    let oldBalance = 0
-    if (tenantId) {
-      const { data: periodBal } = await q.computeTenantBalance(tenantId) || { data: 0 }
-      const periodBalance = Number(periodBal || 0)
-      const cachedBalance = Number(unit.tenant?.outstandingBalance || 0)
-      const existingCredit = cachedBalance < 0 ? cachedBalance : 0
-      oldBalance = periodBalance + existingCredit
-    }
-
-    // STEP 3: Record the payment
+    // STEP 2: Record the payment
     const result = await q.addPayment({
       unitId: unit.id, floorId: floor.id, buildingId: building.id,
       tenantId: tenantId || null,
@@ -397,9 +392,46 @@ export function BuildingProvider({ children }) {
 
     const paymentRecord = result.data
 
-    // STEP 4: Waterfall allocation — batch-optimized (2 queries total vs N+1)
-    if (tenantId) {
-      const { data: periods } = await q.fetchUnpaidPeriodsWithAllocations(tenantId) || { data: [] }
+    // STEP 4: Compute balance from UI cache (no DB round-trip)
+    const cachedBalance = Number(unit.tenant?.outstandingBalance || 0)
+    const newBalance = cachedBalance - cleaned.amount
+    paymentRecord.previousBalance = cachedBalance
+
+    // STEP 5: Update local state immediately
+    setFloors((prev) =>
+      prev.map((f) => {
+        if (f.name !== floorName) return f
+        return {
+          ...f,
+          units: f.units.map((u) => {
+            if (u.name !== unitName) return u
+            return {
+              ...u,
+              tenant: u.tenant
+                ? {
+                    ...u.tenant,
+                    outstandingBalance: newBalance,
+                    paid: newBalance <= 0,
+                    lastPayment: `UGX ${cleaned.amount.toLocaleString()}`,
+                    lastPaymentDate: cleaned.date,
+                  }
+                : null,
+            }
+          }),
+        }
+      }),
+    )
+
+    setPayments((prev) => [paymentRecord, ...prev])
+
+    logAudit('Payment recorded', `${cleaned.tenantName} UGX ${cleaned.amount.toLocaleString()} (${cleaned.status})`)
+
+    // STEP 6–7: Waterfall allocation + DB tenant cache sync (non-blocking — doesn't hold up the return)
+    ;(async () => {
+      if (!tenantId) return
+      const res = await q.fetchUnpaidPeriodsWithAllocations(tenantId)
+      const periods = (res.data || [])
+      if (!periods.length) return
 
       let remaining = cleaned.amount
       const newAllocs = []
@@ -415,57 +447,19 @@ export function BuildingProvider({ children }) {
         statusUpdates.push({ id: period.id, status: toAllocate >= stillOwed ? 'paid' : 'partial' })
       }
 
-      // Batch insert all allocations (1 query)
-      await q.batchInsertAllocations(newAllocs)
+      if (newAllocs.length) await q.batchInsertAllocations(newAllocs)
 
-      // Batch update statuses
       for (const u of statusUpdates) {
         await q.updatePeriodStatus(u.id, u.status)
       }
 
-      // STEP 5: Compute new balance (simple net: oldBalance minus payment)
-      const newBalance = oldBalance - cleaned.amount
-
-      // STEP 6: Sync tenant cache
       await q.updateTenant(tenantId, {
         outstandingBalance: newBalance,
         paid: newBalance <= 0,
         lastPayment: `UGX ${cleaned.amount.toLocaleString()}`,
         lastPaymentDate: cleaned.date,
       })
-
-      // STEP 7: Update local state (no refreshData — we mutate local state directly)
-      setFloors((prev) =>
-        prev.map((f) => {
-          if (f.name !== floorName) return f
-          return {
-            ...f,
-            units: f.units.map((u) => {
-              if (u.name !== unitName) return u
-              return {
-                ...u,
-                tenant: u.tenant
-                  ? {
-                      ...u.tenant,
-                      outstandingBalance: newBalance,
-                      paid: newBalance <= 0,
-                      lastPayment: `UGX ${cleaned.amount.toLocaleString()}`,
-                      lastPaymentDate: cleaned.date,
-                    }
-                  : null,
-              }
-            }),
-          }
-        }),
-      )
-
-      // Attach balance info for receipt
-      paymentRecord.previousBalance = oldBalance
-    }
-
-    setPayments((prev) => [paymentRecord, ...prev])
-
-    logAudit('Payment recorded', `${cleaned.tenantName} UGX ${cleaned.amount.toLocaleString()} (${cleaned.status})`)
+    })()
 
     // Anchor receipt hash on Stellar (fire-and-forget — never blocks the payment flow)
     ;(async () => {

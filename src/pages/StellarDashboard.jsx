@@ -440,6 +440,103 @@ export default function StellarDashboard() {
                   <span className="font-semibold text-on-surface">UGX {Number(activeAnchor.recordSnapshot.monthlyRent).toLocaleString()}</span>
                 </div>
               )}
+
+              {activeAnchor.recordSnapshot?.tenantName && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-on-surface-muted">Tenant</span>
+                  <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.tenantName}</span>
+                </div>
+              )}
+
+              {activeAnchor.recordSnapshot?.floor && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-on-surface-muted">Floor</span>
+                  <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.floor}</span>
+                </div>
+              )}
+
+              {activeAnchor.recordSnapshot?.unit && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-on-surface-muted">Unit</span>
+                  <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.unit}</span>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'tenant_update' && activeAnchor.recordSnapshot?.changes && (
+                <div className="pt-1">
+                  <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1.5">Changes</p>
+                  <div className="bg-surface rounded-lg border border-outline divide-y divide-outline">
+                    {Object.entries(activeAnchor.recordSnapshot.changes).map(([field, c]) => (
+                      <div key={field} className="px-2.5 py-1.5">
+                        <p className="text-[10px] text-on-surface-dim font-semibold uppercase mb-0.5">{field}</p>
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <span className="text-status-unpaid line-through">{String(c.from || '—')}</span>
+                          <span className="material-symbols-outlined text-sm text-on-surface-dim">arrow_forward</span>
+                          <span className="font-medium text-status-paid">{String(c.to || '—')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'tenant_delete' && activeAnchor.recordSnapshot && (
+                <div className="pt-1">
+                  <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1.5">Deleted Tenant Details</p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 space-y-1 text-xs">
+                    {activeAnchor.recordSnapshot.tenantName && (
+                      <div className="flex justify-between">
+                        <span className="text-red-600">Name</span>
+                        <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.tenantName}</span>
+                      </div>
+                    )}
+                    {activeAnchor.recordSnapshot.email && (
+                      <div className="flex justify-between">
+                        <span className="text-red-600">Email</span>
+                        <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.email}</span>
+                      </div>
+                    )}
+                    {activeAnchor.recordSnapshot.phone && (
+                      <div className="flex justify-between">
+                        <span className="text-red-600">Phone</span>
+                        <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.phone}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-red-600">Unit</span>
+                      <span className="font-medium text-red-800">{activeAnchor.recordSnapshot.unit || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'payment' && activeAnchor.recordSnapshot && (
+                <div className="pt-1">
+                  <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1.5">Payment Details</p>
+                  <div className="bg-surface rounded-lg border border-outline p-2.5 space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-dim">Receipt</span>
+                      <span className="font-mono font-semibold text-on-surface">{activeAnchor.recordSnapshot.receiptId || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-dim">Amount</span>
+                      <span className="font-semibold text-on-surface">UGX {Number(activeAnchor.recordSnapshot.amount || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-dim">Method</span>
+                      <span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.method || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-dim">Tenant</span>
+                      <span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.tenantName || '—'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-on-surface-dim">Floor / Unit</span>
+                      <span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.floor || ''} {activeAnchor.recordSnapshot.unit || ''}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {loadingTx ? (

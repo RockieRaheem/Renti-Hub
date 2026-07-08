@@ -181,13 +181,30 @@ export function canonicalTenantDelete(tenant, floorName, unitName) {
   }
 }
 
-export function canonicalTenantUpdate(tenant, floorName, unitName, changedFields) {
+export function canonicalTenantUpdate(oldTenant, updates, floorName, unitName) {
+  const changes = {}
+  const fieldMap = {
+    name: 'name', email: 'email', phone: 'phone',
+    leaseStart: 'lease_start', leaseEnd: 'lease_end', leaseTerm: 'lease_term',
+    paymentStatus: 'payment_status',
+  }
+  for (const [key, dbKey] of Object.entries(fieldMap)) {
+    if (key in updates || dbKey in updates) {
+      const newVal = updates[key] ?? updates[dbKey] ?? ''
+      const oldVal = oldTenant[key] ?? oldTenant[dbKey] ?? ''
+      if (String(newVal) !== String(oldVal)) {
+        changes[key] = { from: oldVal, to: newVal }
+      }
+    }
+  }
   return {
     recordType: 'tenant_update',
-    tenantName: tenant?.name || '',
+    tenantName: oldTenant?.name || '',
+    tenantId: oldTenant?.id || '',
     floor: floorName || '',
     unit: unitName || '',
-    changedFields,
+    changes,
+    changedFields: Object.keys(changes),
   }
 }
 

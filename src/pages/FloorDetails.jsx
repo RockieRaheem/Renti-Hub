@@ -233,71 +233,60 @@ export default function FloorDetails() {
       )}
 
       {paymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) { setPaymentModal(null); setPaymentError(null) } }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
-              <div>
-                <h2 className="text-base font-bold text-on-surface">Record Payment</h2>
-                <p className="text-xs text-on-surface-muted mt-0.5">{paymentModal.tenant.name} &middot; {paymentModal.unit}</p>
-              </div>
-              <button onClick={() => { setPaymentModal(null); setPaymentError(null) }} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
-                <span className="material-symbols-outlined text-xl">close</span>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh] bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) { setPaymentModal(null); setPaymentError(null) } }}>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xs mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-outline">
+              <h2 className="text-sm font-bold text-on-surface">Record Payment</h2>
+              <button onClick={() => { setPaymentModal(null); setPaymentError(null) }} className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
+                <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
-            <form onSubmit={handleFloorPayment} className="p-6 space-y-4">
+            <form onSubmit={handleFloorPayment} className="p-4 space-y-3">
               {paymentForm.date && paymentModal?.tenant?.name && (
-                <div className="bg-primary-50 border border-primary-100 rounded-lg px-4 py-2.5 text-xs text-primary-800 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm">calendar_month</span>
-                  <span>Paying <strong>{paymentMonthLabel(paymentForm.date)}</strong> &middot; <strong>{paymentModal.tenant.name}</strong></span>
+                <div className="bg-primary-50 border border-primary-100 rounded-lg px-3 py-1.5 text-[11px] text-primary-800 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-xs">calendar_month</span>
+                  <span>Paying <strong>{paymentMonthLabel(paymentForm.date)}</strong> for <strong>{paymentModal.tenant.name}</strong></span>
                 </div>
               )}
-              {paymentError && (
-                <div className="bg-status-unpaid/10 border border-status-unpaid/30 rounded-lg px-4 py-3 text-sm text-status-unpaid font-medium flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base">error</span>
-                  {paymentError}
+
+              <div className="bg-surface-container rounded-lg border border-outline p-2.5 space-y-1 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-dim">{paymentModal.tenant.name}</span>
+                  <span className="text-on-surface-muted">{paymentModal.unit}</span>
                 </div>
-              )}
-              <div className="bg-surface-container/50 rounded-lg p-4 text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-on-surface-muted">Tenant</span>
-                  <span className="font-medium text-on-surface">{paymentModal.tenant.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-muted">Unit</span>
-                  <span className="font-medium text-on-surface">{paymentModal.unit}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-muted">Monthly Rent</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-dim">Rent</span>
                   <span className="font-medium text-on-surface">UGX {(paymentModal.monthlyRent || 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-muted">Outstanding</span>
-                  <span className={`font-medium ${
-                    (paymentModal.tenant.outstandingBalance || 0) > 0 ? 'text-status-unpaid' :
-                    (paymentModal.tenant.outstandingBalance || 0) < 0 ? 'text-blue-600' :
-                    'text-status-paid'
-                  }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-dim">Outstanding</span>
+                  <span className={`font-semibold ${(paymentModal.tenant.outstandingBalance || 0) > 0 ? 'text-status-unpaid' : (paymentModal.tenant.outstandingBalance || 0) < 0 ? 'text-blue-600' : 'text-status-paid'}`}>
                     {(paymentModal.tenant.outstandingBalance || 0) > 0
-                      ? <span>UGX {paymentModal.tenant.outstandingBalance.toLocaleString()}{unpaidMonthCount > 0 ? <span className="text-[10px] text-on-surface-dim"> ({unpaidMonthCount} month{unpaidMonthCount > 1 ? 's' : ''})</span> : ''}</span>
+                      ? <>UGX {paymentModal.tenant.outstandingBalance.toLocaleString()}{unpaidMonthCount > 0 ? <span className="text-[10px] text-on-surface-dim font-normal"> ({unpaidMonthCount}mo)</span> : ''}</>
                       : (paymentModal.tenant.outstandingBalance || 0) < 0
-                        ? `UGX ${Math.abs(paymentModal.tenant.outstandingBalance).toLocaleString()} credit`
-                        : 'UGX 0 (Cleared)'}
+                        ? `UGX ${Math.abs(paymentModal.tenant.outstandingBalance).toLocaleString()} cr`
+                        : 'Settled'}
                   </span>
                 </div>
               </div>
+
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Amount (UGX)</label>
-                <input type="number" min="0" step="100" required autoFocus
-                  value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  placeholder="Enter amount"
-                />
+                <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Amount (UGX)</label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-dim text-xs font-medium">UGX</span>
+                  <input type="number" min="0" step="100" required autoFocus
+                    value={paymentForm.amount} onChange={(e) => setPaymentForm((p) => ({ ...p, amount: e.target.value }))}
+                    className="w-full h-9 pl-9 pr-2.5 border border-outline rounded-lg text-xs text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    placeholder="0" />
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Method</label>
+                  <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Method</label>
                   <select value={paymentForm.method} onChange={(e) => setPaymentForm((p) => ({ ...p, method: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                    className="w-full h-9 px-2.5 border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none bg-no-repeat bg-[length:14px] bg-[right_10px_center]"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")" }}>
                     <option value="Cash">Cash</option>
                     <option value="Mobile Money">Mobile Money</option>
                     <option value="Bank Transfer">Bank Transfer</option>
@@ -305,24 +294,31 @@ export default function FloorDetails() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Date</label>
+                  <label className="block text-[10px] font-semibold text-on-surface-muted uppercase tracking-wide mb-1">Date</label>
                   <input type="date" value={paymentForm.date}
                     onChange={(e) => setPaymentForm((p) => ({ ...p, date: e.target.value }))}
-                    className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                  />
+                    className="w-full h-9 px-2.5 border border-outline rounded-lg text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
                 </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
+
+              {paymentError && (
+                <div className="flex items-start gap-1.5 p-2.5 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-700">
+                  <span className="material-symbols-outlined text-sm shrink-0 mt-0.5">error</span>
+                  <span>{paymentError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button type="button" onClick={() => { setPaymentModal(null); setPaymentError(null) }}
-                  className="px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                  className="px-3 py-1.5 text-xs font-medium text-on-surface-muted hover:bg-surface-container rounded-lg transition-colors">
                   Cancel
                 </button>
                 <button type="submit" disabled={paymentSubmitting}
-                  className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-card transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1.5">
+                  className="px-4 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-600 rounded-lg shadow-card transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-1">
                   {paymentSubmitting ? (
-                    <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
+                    <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</>
                   ) : (
-                    <><span className="material-symbols-outlined text-base">payments</span>Record Payment</>
+                    <><span className="material-symbols-outlined text-sm">payments</span> Record</>
                   )}
                 </button>
               </div>
