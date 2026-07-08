@@ -328,6 +328,7 @@ export function BuildingProvider({ children }) {
 
   // ── Unit ──
   const updateUnit = useCallback(async (floorName, unitId, updates) => {
+    const unitName = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.name || unitId
     const result = await q.updateUnit(unitId, updates)
     if (result.error) { setError(result.error); return }
     setFloors((prev) =>
@@ -347,11 +348,12 @@ export function BuildingProvider({ children }) {
         }
       }),
     )
-    logAudit('Unit updated', `${floorName} / ${unitId}`)
-    doAnchor(() => canonicalUnitUpdate(floorName, unitId, updates), unitId, `Unit ${unitId} on ${floorName} updated`)
-  }, [doAnchor])
+    logAudit('Unit updated', `${floorName} / ${unitName}`)
+    doAnchor(() => canonicalUnitUpdate(floorName, unitId, unitName, updates), unitId, `Unit ${unitName} on ${floorName} updated`)
+  }, [floors, doAnchor])
 
   const deleteUnit = useCallback(async (floorName, unitId) => {
+    const unitName = floors.find((f) => f.name === floorName)?.units.find((u) => u.id === unitId)?.name || unitId
     await q.deleteUnit(unitId)
     setFloors((prev) =>
       prev.map((f) => {
@@ -359,9 +361,9 @@ export function BuildingProvider({ children }) {
         return { ...f, units: f.units.filter((u) => u.id !== unitId) }
       }),
     )
-    logAudit('Unit deleted', `${floorName} / ${unitId}`)
-    doAnchor(() => canonicalUnitDelete(floorName, unitId), unitId, `Unit ${unitId} on ${floorName} deleted`)
-  }, [doAnchor])
+    logAudit('Unit deleted', `${floorName} / ${unitName}`)
+    doAnchor(() => canonicalUnitDelete(floorName, unitId, unitName), unitId, `Unit ${unitName} on ${floorName} deleted`)
+  }, [floors, doAnchor])
 
   // ── Payment ──
   const addPayment = useCallback(async ({ floor: floorName, unit: unitName, amount, method, tenantName, status, date }) => {

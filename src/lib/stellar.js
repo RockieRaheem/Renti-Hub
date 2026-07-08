@@ -270,19 +270,21 @@ export function canonicalFloorRename(oldName, newName) {
   }
 }
 
-export function canonicalUnitUpdate(floorName, unitId, updates) {
+export function canonicalUnitUpdate(floorName, unitId, unitName, updates) {
   return {
     recordType: 'unit_update',
     floor: floorName || '',
     unitId: unitId || '',
+    unitName: unitName || '',
     updates,
   }
 }
 
-export function canonicalUnitDelete(floorName, unitId) {
+export function canonicalUnitDelete(floorName, unitId, unitName) {
   return {
     recordType: 'unit_delete',
     floor: floorName || '',
     unitId: unitId || '',
+    unitName: unitName || '',
   }
 }

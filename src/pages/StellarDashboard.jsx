@@ -447,10 +447,28 @@ export default function StellarDashboard() {
                     <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.floor}</span>
                   </div>
                 )}
-                {activeAnchor.recordSnapshot?.unit && (
+                {activeAnchor.recordSnapshot?.unitName && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-dim">Shop</span>
+                    <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.unitName}</span>
+                  </div>
+                )}
+                {activeAnchor.recordSnapshot?.unit && !activeAnchor.recordSnapshot?.unitName && (
                   <div className="flex justify-between">
                     <span className="text-on-surface-dim">Unit</span>
                     <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.unit}</span>
+                  </div>
+                )}
+                {(activeAnchor.recordType === 'floor_add' || activeAnchor.recordType === 'floor_delete') && activeAnchor.recordSnapshot?.name && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-dim">Floor</span>
+                    <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.name}</span>
+                  </div>
+                )}
+                {activeAnchor.recordSnapshot?.title && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-dim">Title</span>
+                    <span className="font-semibold text-on-surface">{activeAnchor.recordSnapshot.title}</span>
                   </div>
                 )}
                 {activeAnchor.recordSnapshot?.monthlyRent !== undefined && (
@@ -498,6 +516,81 @@ export default function StellarDashboard() {
                     <div className="flex justify-between"><span className="text-on-surface-dim">Method</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.method || '—'}</span></div>
                     <div className="flex justify-between"><span className="text-on-surface-dim">Tenant</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.tenantName || '—'}</span></div>
                     <div className="flex justify-between"><span className="text-on-surface-dim">Floor / Unit</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.floor || ''} {activeAnchor.recordSnapshot.unit || ''}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'unit_delete' && activeAnchor.recordSnapshot && (
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-red-600 font-semibold uppercase tracking-wider mb-1">Deleted Unit</p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-[10px] space-y-0.5">
+                    <div className="flex justify-between"><span className="text-red-600">Floor</span><span className="font-medium text-red-800">{activeAnchor.recordSnapshot.floor || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-red-600">Unit</span><span className="font-medium text-red-800">{activeAnchor.recordSnapshot.unitName || activeAnchor.recordSnapshot.unitId || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'unit_update' && activeAnchor.recordSnapshot && (
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1">Unit Changes</p>
+                  <div className="bg-surface rounded-lg border border-outline p-2 text-[10px] space-y-0.5">
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Floor</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.floor || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Unit</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.unitName || activeAnchor.recordSnapshot.unitId || '—'}</span></div>
+                    {activeAnchor.recordSnapshot.updates && Object.entries(activeAnchor.recordSnapshot.updates).map(([k, v]) => (
+                      <div key={k} className="flex justify-between">
+                        <span className="text-on-surface-dim capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
+                        <span className="font-medium text-on-surface">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'floor_delete' && activeAnchor.recordSnapshot && (
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-red-600 font-semibold uppercase tracking-wider mb-1">Deleted Floor</p>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-[10px]">
+                    <div className="flex justify-between"><span className="text-red-600">Floor Name</span><span className="font-medium text-red-800">{activeAnchor.recordSnapshot.name || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'floor_rename' && activeAnchor.recordSnapshot && (
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1">Floor Rename</p>
+                  <div className="bg-surface rounded-lg border border-outline p-2 text-[10px] space-y-0.5">
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Old Name</span><span className="font-medium text-status-unpaid line-through">{activeAnchor.recordSnapshot.oldName || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">New Name</span><span className="font-medium text-status-paid">{activeAnchor.recordSnapshot.newName || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType === 'floor_add' && activeAnchor.recordSnapshot && (
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className="text-[9px] text-on-surface-dim font-semibold uppercase tracking-wider mb-1">Floor Added</p>
+                  <div className="bg-surface rounded-lg border border-outline p-2 text-[10px] space-y-0.5">
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Name</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.name || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Units</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.unitCount || 0}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {activeAnchor.recordType?.startsWith('maintenance') && activeAnchor.recordSnapshot && (
+                <div className="border-t border-outline/50 pt-1.5">
+                  <p className={`text-[9px] font-semibold uppercase tracking-wider mb-1 ${activeAnchor.recordType === 'maintenance_delete' ? 'text-red-600' : 'text-on-surface-dim'}`}>
+                    {activeAnchor.recordType === 'maintenance_add' ? 'Maintenance Created' : activeAnchor.recordType === 'maintenance_update' ? 'Maintenance Updated' : 'Maintenance Deleted'}
+                  </p>
+                  <div className={`rounded-lg border p-2 text-[10px] space-y-0.5 ${activeAnchor.recordType === 'maintenance_delete' ? 'bg-red-50 border-red-200' : 'bg-surface border-outline'}`}>
+                    <div className="flex justify-between"><span className="text-on-surface-dim">Title</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.title || '—'}</span></div>
+                    {activeAnchor.recordSnapshot.floor && <div className="flex justify-between"><span className="text-on-surface-dim">Floor</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.floor}</span></div>}
+                    {activeAnchor.recordSnapshot.unit && <div className="flex justify-between"><span className="text-on-surface-dim">Unit</span><span className="font-medium text-on-surface">{activeAnchor.recordSnapshot.unit}</span></div>}
+                    {activeAnchor.recordSnapshot.priority && <div className="flex justify-between"><span className="text-on-surface-dim">Priority</span><span className="font-medium text-on-surface capitalize">{activeAnchor.recordSnapshot.priority}</span></div>}
+                    {activeAnchor.recordSnapshot.updates && Object.entries(activeAnchor.recordSnapshot.updates).map(([k, v]) => (
+                      <div key={k} className="flex justify-between">
+                        <span className="text-on-surface-dim capitalize">{k.replace(/([A-Z])/g, ' $1')}</span>
+                        <span className="font-medium text-on-surface">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
