@@ -426,7 +426,16 @@ export function BuildingProvider({ children }) {
 
     // Anchor receipt hash on Stellar (fire-and-forget — never blocks the payment flow)
     ;(async () => {
-      const receiptData = { ...paymentRecord, tenantId }
+      const receiptData = {
+        id: paymentRecord.id,
+        receiptId: paymentRecord.receiptId,
+        tenantName: paymentRecord.tenantName,
+        amount: paymentRecord.amount,
+        method: paymentRecord.method,
+        date: paymentRecord.date,
+        floor: paymentRecord.floor,
+        unit: paymentRecord.unit,
+      }
       const { hash, txHash, error } = await anchorHash(receiptData)
       if (hash && !error) {
         paymentRecord.stellarHash = hash

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useCallback, useEffect } from 'react'
 import { useBuilding } from '../context/BuildingContext'
-import { computeReceiptHash, verifyIntegrity, fetchAnchorTransaction, STELLAR_EXPLORER_URL } from '../lib/stellar'
+import { anchorHash, fetchAnchorTransaction, STELLAR_EXPLORER_URL, sha256 } from '../lib/stellar'
+import { updatePaymentStellarHash } from '../lib/queries'
 
 function KpiCard({ icon, label, value, sub, accent }) {
   return (
@@ -88,53 +88,82 @@ function Modal({ title, children, onClose }) {
   )
 }
 
+function buildCanonicalPayment(p) {
+  return {
+    id: p.id,
+    receiptId: p.receiptId,
+    tenantName: p.tenantName,
+    amount: p.amount,
+    date: p.date,
+    method: p.method,
+    floor: p.floor,
+    unit: p.unit,
+  }
+}
+
 export default function StellarDashboard() {
-  const { payments, floors, building } = useBuilding()
-  const [verifying, setVerifying] = useState({})
+  const { payments, floors } = useBuilding()
+  const [reanchoring, setReanchoring] = useState({})
   const [verificationResults, setVerificationResults] = useState({})
+  const [computing, setComputing] = useState(false)
   const [activePayment, setActivePayment] = useState(null)
   const [txDetail, setTxDetail] = useState(null)
   const [loadingTx, setLoadingTx] = useState(false)
+  const [repairMsg, setRepairMsg] = useState(null)
 
   const allPayments = payments || []
 
+  // ── Auto-verify every anchored payment on mount/payments change ──
+  useEffect(() => {
+    const anchored = allPayments.filter((p) => p.stellarTxHash && p.stellarHash)
+    if (anchored.length === 0) return
+    let cancelled = false
+    setComputing(true)
+    ;(async () => {
+      for (const p of anchored) {
+        if (cancelled) break
+        const canonical = buildCanonicalPayment(p)
+        const computedHash = await sha256(canonical)
+        if (cancelled) break
+        const valid = computedHash === p.stellarHash
+        setVerificationResults((prev) => {
+          if (prev[p.id]?.valid === valid) return prev
+          return { ...prev, [p.id]: { valid, computedHash, storedHash: p.stellarHash } }
+        })
+      }
+      if (!cancelled) setComputing(false)
+    })()
+    return () => { cancelled = true }
+  }, [allPayments])
+
   const anchored = allPayments.filter((p) => p.stellarTxHash)
   const unanchored = allPayments.filter((p) => !p.stellarTxHash)
-  const verifiedCount = Object.values(verificationResults).filter((r) => r?.valid).length
-  const tamperedCount = Object.values(verificationResults).filter((r) => r && !r.valid).length
+  const vResults = Object.values(verificationResults)
+  const verifiedCount = vResults.filter((r) => r?.valid).length
+  const tamperedCount = vResults.filter((r) => r && !r.valid).length
 
-  function getTenantInfo(payment) {
-    if (!payment?.floor || !payment?.unit) return null
-    const floor = floors.find((f) => f.name === payment.floor)
-    if (!floor) return null
-    const unit = floor.units.find((u) => u.name === payment.unit)
-    if (!unit) return { floorName: payment.floor, unitName: payment.unit }
-    return {
-      floorName: floor.name,
-      unitName: unit.name,
-      tenant: unit.tenant || null,
-      monthlyRent: unit.monthlyRent,
+  const handleReAnchor = useCallback(async (payment) => {
+    setReanchoring((prev) => ({ ...prev, [payment.id]: true }))
+    setRepairMsg(null)
+    try {
+      const canonical = buildCanonicalPayment(payment)
+      const { hash, txHash, error } = await anchorHash(canonical)
+      if (error) {
+        setRepairMsg({ type: 'error', text: `Re-anchor failed: ${error}` })
+      } else if (hash && txHash) {
+        await updatePaymentStellarHash(payment.id, hash, txHash)
+        payment.stellarHash = hash
+        payment.stellarTxHash = txHash
+        setVerificationResults((prev) => ({
+          ...prev,
+          [payment.id]: { valid: true, computedHash: hash, storedHash: hash },
+        }))
+        setRepairMsg({ type: 'success', text: `Receipt ${payment.receiptId} re-anchored successfully` })
+      }
+    } catch (err) {
+      setRepairMsg({ type: 'error', text: `Re-anchor error: ${err.message}` })
     }
-  }
-
-  const handleVerify = useCallback(async (payment) => {
-    if (!payment.stellarHash) return
-    setVerifying((prev) => ({ ...prev, [payment.id]: true }))
-    const result = await verifyIntegrity(
-      {
-        id: payment.id,
-        receiptId: payment.receiptId,
-        tenantName: payment.tenantName,
-        amount: payment.amount,
-        method: payment.method,
-        date: payment.date,
-        floor: payment.floor,
-        unit: payment.unit,
-      },
-      payment.stellarHash,
-    )
-    setVerificationResults((prev) => ({ ...prev, [payment.id]: result }))
-    setVerifying((prev) => ({ ...prev, [payment.id]: false }))
+    setReanchoring((prev) => ({ ...prev, [payment.id]: false }))
   }, [])
 
   const handleViewTx = useCallback(async (payment) => {
@@ -146,14 +175,15 @@ export default function StellarDashboard() {
     setLoadingTx(false)
   }, [])
 
-  const handleVerifyAll = useCallback(async () => {
-    const toVerify = anchored.filter((p) => p.stellarHash)
-    for (const payment of toVerify) {
-      await handleVerify(payment)
+  const handleReAnchorAll = useCallback(async () => {
+    const toFix = anchored.filter((p) => {
+      const vr = verificationResults[p.id]
+      return vr && !vr.valid
+    })
+    for (const payment of toFix) {
+      await handleReAnchor(payment)
     }
-  }, [anchored, handleVerify])
-
-  const allVerified = anchored.length > 0 && anchored.every((p) => verificationResults[p.id])
+  }, [anchored, verificationResults, handleReAnchor])
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -166,21 +196,36 @@ export default function StellarDashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {anchored.length > 0 && (
-            <button onClick={handleVerifyAll} disabled={allVerified}
-              className="px-3.5 py-2 border border-outline text-on-surface-muted text-xs font-semibold rounded-lg hover:bg-surface-container transition-colors inline-flex items-center gap-1.5 disabled:opacity-50">
-              <span className="material-symbols-outlined text-base">verified</span>
-              {allVerified ? 'All Verified' : `Verify All (${anchored.length})`}
+          {computing && (
+            <span className="text-[10px] text-on-surface-dim flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm animate-spin">sync</span>
+              Verifying...
+            </span>
+          )}
+          {tamperedCount > 0 && (
+            <button onClick={handleReAnchorAll}
+              className="px-3.5 py-2 bg-amber-50 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-100 transition-colors inline-flex items-center gap-1.5 border border-amber-200">
+              <span className="material-symbols-outlined text-base">autorenew</span>
+              Re-anchor All ({tamperedCount})
             </button>
           )}
         </div>
       </div>
 
+      {repairMsg && (
+        <div className={`px-4 py-3 rounded-lg text-xs flex items-center gap-2 ${
+          repairMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          <span className="material-symbols-outlined text-base">{repairMsg.type === 'success' ? 'check_circle' : 'error'}</span>
+          {repairMsg.text}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <KpiCard icon="receipt_long" label="Total Payments" value={allPayments.length} sub="All time" />
         <KpiCard icon="verified" label="Anchored on Stellar" value={anchored.length} sub={`${allPayments.length > 0 ? Math.round((anchored.length / allPayments.length) * 100) : 0}% of payments`} accent={anchored.length > 0 ? 'bg-emerald-50' : 'bg-surface-container'} />
         <KpiCard icon="hourglass_top" label="Pending Anchoring" value={unanchored.length} sub={unanchored.length === 0 ? 'All payments secured' : 'Awaiting notarization'} accent={unanchored.length > 0 ? 'bg-amber-50' : 'bg-emerald-50'} />
-        <KpiCard icon="checklist" label="Integrity Verified" value={verifiedCount} sub={tamperedCount > 0 ? `${tamperedCount} tamper alerts` : 'All records intact'} accent={verifiedCount > 0 ? 'bg-emerald-50' : tamperedCount > 0 ? 'bg-red-50' : 'bg-surface-container'} />
+        <KpiCard icon="checklist" label="Integrity Verified" value={verifiedCount} sub={tamperedCount > 0 ? `${tamperedCount} need re-anchor` : 'All records intact'} accent={verifiedCount > 0 ? 'bg-emerald-50' : tamperedCount > 0 ? 'bg-red-50' : 'bg-surface-container'} />
         <KpiCard icon="security" label="Blockchain Status" value={anchored.length > 0 ? 'Active' : 'Inactive'} sub={anchored.length > 0 ? `${Math.round((verifiedCount / Math.max(anchored.length, 1)) * 100)}% verified` : 'Set VITE_STELLAR_ANCHOR_SECRET'} accent={anchored.length > 0 ? 'bg-emerald-50' : 'bg-amber-50'} />
       </div>
 
@@ -227,7 +272,6 @@ export default function StellarDashboard() {
               </thead>
               <tbody className="divide-y divide-outline">
                 {allPayments.map((p) => {
-                  const info = getTenantInfo(p)
                   const vr = verificationResults[p.id]
                   const integStatus = !p.stellarTxHash ? 'unanchored'
                     : vr === undefined ? 'anchored'
@@ -243,11 +287,6 @@ export default function StellarDashboard() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="font-medium text-on-surface text-xs">{p.tenantName || '—'}</span>
-                        {info?.tenant && (
-                          <span className="text-[10px] text-on-surface-dim block leading-tight">
-                            {info.tenant.phone || info.tenant.email || ''}
-                          </span>
-                        )}
                       </td>
                       <td className="px-4 py-3 text-on-surface-muted text-xs">
                         {p.floor}{p.unit ? ` - ${p.unit}` : ''}
@@ -259,7 +298,14 @@ export default function StellarDashboard() {
                         <StatusBadge status={p.stellarTxHash ? 'anchored' : 'pending'} />
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <StatusBadge status={integStatus} />
+                        {computing && vr === undefined ? (
+                          <span className="text-[10px] text-on-surface-dim flex items-center justify-center gap-1">
+                            <span className="material-symbols-outlined text-xs animate-spin">sync</span>
+                            Checking
+                          </span>
+                        ) : (
+                          <StatusBadge status={integStatus} />
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right text-on-surface-dim text-xs">
                         <span title={fmtDate(p.date)}>{timeAgo(p.date) || fmtDate(p.date)}</span>
@@ -273,14 +319,21 @@ export default function StellarDashboard() {
                                 title="View Stellar Transaction">
                                 <span className="material-symbols-outlined text-sm">open_in_new</span>
                               </button>
-                              <button onClick={() => handleVerify(p)}
-                                disabled={verifying[p.id] || integStatus === 'verified'}
-                                className="w-7 h-7 rounded-md flex items-center justify-center text-on-surface-muted hover:bg-surface-container hover:text-on-surface transition-colors disabled:opacity-40"
-                                title="Verify Integrity">
-                                <span className="material-symbols-outlined text-sm">
-                                  {verifying[p.id] ? 'sync' : integStatus === 'verified' ? 'check_circle' : 'fact_check'}
+                              {integStatus === 'tampered' ? (
+                                <button onClick={() => handleReAnchor(p)}
+                                  disabled={reanchoring[p.id]}
+                                  className="w-7 h-7 rounded-md flex items-center justify-center text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-40"
+                                  title="Re-anchor with correct hash">
+                                  <span className={`material-symbols-outlined text-sm ${reanchoring[p.id] ? 'animate-spin' : ''}`}>
+                                    {reanchoring[p.id] ? 'sync' : 'autorenew'}
+                                  </span>
+                                </button>
+                              ) : integStatus === 'verified' ? (
+                                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+                                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                                  Intact
                                 </span>
-                              </button>
+                              ) : null}
                             </>
                           )}
                           {!p.stellarTxHash && (
