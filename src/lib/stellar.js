@@ -6,6 +6,15 @@ const HORIZON_URL = NETWORK === 'mainnet'
   : 'https://horizon-testnet.stellar.org'
 const PASSPHRASE = NETWORK === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET
 const STELLAR_SECRET = import.meta.env.VITE_STELLAR_ANCHOR_SECRET
+const NETWORK_NAME = NETWORK === 'mainnet' ? 'Mainnet' : 'Testnet'
+
+export function isStellarConfigured() {
+  return !!(STELLAR_SECRET && STELLAR_SECRET.length > 20)
+}
+
+export function getStellarNetwork() {
+  return NETWORK_NAME
+}
 
 let server, keypair
 function init() {

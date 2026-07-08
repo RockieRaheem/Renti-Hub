@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useBuilding } from '../context/BuildingContext'
-import { anchorHash, fetchAnchorTransaction, STELLAR_EXPLORER_URL, sha256 } from '../lib/stellar'
+import { anchorHash, fetchAnchorTransaction, STELLAR_EXPLORER_URL, sha256, isStellarConfigured, getStellarNetwork } from '../lib/stellar'
 
 function KpiCard({ icon, label, value, sub, accent }) {
   return (
@@ -165,6 +165,8 @@ export default function StellarDashboard() {
   const verifiedCount = vResults.filter((r) => r?.valid).length
   const tamperedCount = vResults.filter((r) => r && !r.valid).length
   const unverifiedCount = allAnchors.length - verifiedCount - tamperedCount
+  const stellarConfigured = isStellarConfigured()
+  const stellarNetwork = getStellarNetwork()
 
   const handleReAnchor = useCallback(async (anchor) => {
     if (!anchor.recordSnapshot) return
@@ -264,7 +266,7 @@ export default function StellarDashboard() {
         <KpiCard icon="receipt_long" label="Payments" value={payAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((payAnchors.length / allAnchors.length) * 100) : 0}% of anchors`} accent="bg-emerald-50" />
         <KpiCard icon="settings" label="System Events" value={sysAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((sysAnchors.length / allAnchors.length) * 100) : 0}% of anchors`} accent="bg-blue-50" />
         <KpiCard icon="checklist" label="Integrity Verified" value={verifiedCount} sub={tamperedCount > 0 ? `${tamperedCount} need re-anchor` : 'All records intact'} accent={verifiedCount > 0 ? 'bg-emerald-50' : tamperedCount > 0 ? 'bg-red-50' : 'bg-surface-container'} />
-        <KpiCard icon="security" label="Blockchain" value={allAnchors.length > 0 ? 'Active' : 'Inactive'} sub={allAnchors.length > 0 ? `${Math.round((verifiedCount / Math.max(allAnchors.length, 1)) * 100)}% verified` : 'Set VITE_STELLAR_ANCHOR_SECRET'} accent={allAnchors.length > 0 ? 'bg-emerald-50' : 'bg-amber-50'} />
+        <KpiCard icon="security" label={`Blockchain (${stellarNetwork})`} value={stellarConfigured ? 'Configured' : 'Not Configured'} sub={stellarConfigured ? `${allAnchors.length} records anchored` : 'Set VITE_STELLAR_ANCHOR_SECRET'} accent={stellarConfigured ? 'bg-emerald-50' : 'bg-amber-50'} />
       </div>
 
       <div className="bg-surface rounded-card border border-outline shadow-card overflow-hidden">
