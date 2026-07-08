@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useBuilding } from '../context/BuildingContext'
 import { anchorHash, fetchAnchorTransaction, STELLAR_EXPLORER_URL, sha256 } from '../lib/stellar'
-import { updatePaymentStellarHash } from '../lib/queries'
 
 function KpiCard({ icon, label, value, sub, accent }) {
   return (
@@ -23,6 +22,13 @@ function fmtDate(dateStr) {
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return dateStr
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function fmtDateTime(dateStr) {
+  if (!dateStr) return '—'
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function timeAgo(dateStr) {
@@ -49,6 +55,7 @@ function StatusBadge({ status }) {
     tampered: { label: 'Tampered', class: 'bg-red-50 text-red-700' },
     failed: { label: 'Failed', class: 'bg-red-50 text-red-700' },
     unanchored: { label: 'Not Anchored', class: 'bg-gray-50 text-gray-500' },
+    skipped: { label: 'Skipped', class: 'bg-gray-50 text-gray-500' },
   }
   const s = map[status] || map.unanchored
   return (
@@ -59,15 +66,46 @@ function StatusBadge({ status }) {
   )
 }
 
-function AnchorIcon({ anchored }) {
-  if (anchored) {
-    return (
-      <span className="material-symbols-outlined text-emerald-500 text-sm" title="Anchored to Stellar">verified</span>
-    )
+function RecordTypeIcon({ type }) {
+  const icons = {
+    payment: 'receipt_long',
+    tenant_add: 'person_add',
+    tenant_delete: 'person_remove',
+    tenant_update: 'edit',
+    payment_void: 'block',
+    maintenance_add: 'build',
+    maintenance_update: 'construction',
+    maintenance_move: 'swap_horiz',
+    maintenance_delete: 'delete',
+    floor_add: 'layers',
+    floor_delete: 'layers_clear',
+    floor_rename: 'drive_file_rename_outline',
+    unit_update: 'meeting_room',
+    unit_delete: 'delete_forever',
   }
   return (
-    <span className="material-symbols-outlined text-gray-300 text-sm" title="Not anchored">radio_button_unchecked</span>
+    <span className="material-symbols-outlined text-on-surface-dim text-sm">{icons[type] || 'circle'}</span>
   )
+}
+
+function RecordTypeLabel({ type }) {
+  const labels = {
+    payment: 'Payment',
+    tenant_add: 'Tenant Added',
+    tenant_delete: 'Tenant Removed',
+    tenant_update: 'Tenant Updated',
+    payment_void: 'Payment Voided',
+    maintenance_add: 'Maintenance',
+    maintenance_update: 'Maintenance Updated',
+    maintenance_move: 'Maintenance Moved',
+    maintenance_delete: 'Maintenance Deleted',
+    floor_add: 'Floor Added',
+    floor_delete: 'Floor Deleted',
+    floor_rename: 'Floor Renamed',
+    unit_update: 'Unit Updated',
+    unit_delete: 'Unit Deleted',
+  }
+  return <span className="text-on-surface-muted text-[10px]">{labels[type] || type}</span>
 }
 
 function Modal({ title, children, onClose }) {
@@ -75,9 +113,7 @@ function Modal({ title, children, onClose }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-on-surface">{title}</h2>
-          </div>
+          <h2 className="text-base font-bold text-on-surface">{title}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors">
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
@@ -88,102 +124,102 @@ function Modal({ title, children, onClose }) {
   )
 }
 
-function buildCanonicalPayment(p) {
-  return {
-    id: p.id,
-    receiptId: p.receiptId,
-    tenantName: p.tenantName,
-    amount: p.amount,
-    date: p.date,
-    method: p.method,
-    floor: p.floor,
-    unit: p.unit,
-  }
-}
-
 export default function StellarDashboard() {
-  const { payments, floors } = useBuilding()
+  const { anchors, payments, building, floors } = useBuilding()
   const [reanchoring, setReanchoring] = useState({})
+  const [reanchoringAll, setReanchoringAll] = useState(false)
   const [verificationResults, setVerificationResults] = useState({})
-  const [computing, setComputing] = useState(false)
-  const [activePayment, setActivePayment] = useState(null)
+  const [autoVerifying, setAutoVerifying] = useState(false)
+  const [activeAnchor, setActiveAnchor] = useState(null)
   const [txDetail, setTxDetail] = useState(null)
   const [loadingTx, setLoadingTx] = useState(false)
-  const [repairMsg, setRepairMsg] = useState(null)
+  const [msg, setMsg] = useState(null)
 
-  const allPayments = payments || []
+  const allAnchors = (anchors || []).filter((a) => a.stellarTxHash)
 
-  // ── Auto-verify every anchored payment on mount/payments change ──
+  // ── Auto-verify every anchor on mount ──
   useEffect(() => {
-    const anchored = allPayments.filter((p) => p.stellarTxHash && p.stellarHash)
-    if (anchored.length === 0) return
+    if (allAnchors.length === 0) return
     let cancelled = false
-    setComputing(true)
+    setAutoVerifying(true)
     ;(async () => {
-      for (const p of anchored) {
+      for (const a of allAnchors) {
         if (cancelled) break
-        const canonical = buildCanonicalPayment(p)
-        const computedHash = await sha256(canonical)
+        if (!a.recordSnapshot || !a.sha256Hash) continue
+        const computedHash = await sha256(a.recordSnapshot)
         if (cancelled) break
-        const valid = computedHash === p.stellarHash
+        const valid = computedHash === a.sha256Hash
         setVerificationResults((prev) => {
-          if (prev[p.id]?.valid === valid) return prev
-          return { ...prev, [p.id]: { valid, computedHash, storedHash: p.stellarHash } }
+          if (prev[a.id]?.valid === valid) return prev
+          return { ...prev, [a.id]: { valid, computedHash, storedHash: a.sha256Hash } }
         })
       }
-      if (!cancelled) setComputing(false)
+      if (!cancelled) setAutoVerifying(false)
     })()
     return () => { cancelled = true }
-  }, [allPayments])
+  }, [allAnchors])
 
-  const anchored = allPayments.filter((p) => p.stellarTxHash)
-  const unanchored = allPayments.filter((p) => !p.stellarTxHash)
   const vResults = Object.values(verificationResults)
+  const payAnchors = allAnchors.filter((a) => a.recordType === 'payment')
+  const sysAnchors = allAnchors.filter((a) => a.recordType !== 'payment')
   const verifiedCount = vResults.filter((r) => r?.valid).length
   const tamperedCount = vResults.filter((r) => r && !r.valid).length
+  const unverifiedCount = allAnchors.length - verifiedCount - tamperedCount
 
-  const handleReAnchor = useCallback(async (payment) => {
-    setReanchoring((prev) => ({ ...prev, [payment.id]: true }))
-    setRepairMsg(null)
+  const handleReAnchor = useCallback(async (anchor) => {
+    if (!anchor.recordSnapshot) return
+    setReanchoring((prev) => ({ ...prev, [anchor.id]: true }))
+    setMsg(null)
     try {
-      const canonical = buildCanonicalPayment(payment)
-      const { hash, txHash, error } = await anchorHash(canonical)
+      const { hash, txHash, error } = await anchorHash(anchor.recordSnapshot)
       if (error) {
-        setRepairMsg({ type: 'error', text: `Re-anchor failed: ${error}` })
+        setMsg({ type: 'error', text: `Re-anchor failed: ${error}` })
       } else if (hash && txHash) {
-        await updatePaymentStellarHash(payment.id, hash, txHash)
-        payment.stellarHash = hash
-        payment.stellarTxHash = txHash
         setVerificationResults((prev) => ({
           ...prev,
-          [payment.id]: { valid: true, computedHash: hash, storedHash: hash },
+          [anchor.id]: { valid: true, computedHash: hash, storedHash: hash },
         }))
-        setRepairMsg({ type: 'success', text: `Receipt ${payment.receiptId} re-anchored successfully` })
+        setMsg({ type: 'success', text: `Record re-anchored successfully` })
       }
     } catch (err) {
-      setRepairMsg({ type: 'error', text: `Re-anchor error: ${err.message}` })
+      setMsg({ type: 'error', text: `Re-anchor error: ${err.message}` })
     }
-    setReanchoring((prev) => ({ ...prev, [payment.id]: false }))
-  }, [])
-
-  const handleViewTx = useCallback(async (payment) => {
-    if (!payment.stellarTxHash) return
-    setLoadingTx(true)
-    setActivePayment(payment)
-    const detail = await fetchAnchorTransaction(payment.stellarTxHash)
-    setTxDetail(detail)
-    setLoadingTx(false)
+    setReanchoring((prev) => ({ ...prev, [anchor.id]: false }))
   }, [])
 
   const handleReAnchorAll = useCallback(async () => {
-    const toFix = anchored.filter((p) => {
-      const vr = verificationResults[p.id]
-      return vr && !vr.valid
+    const toFix = allAnchors.filter((a) => {
+      const vr = verificationResults[a.id]
+      return vr && !vr.valid && a.recordSnapshot
     })
-    for (const payment of toFix) {
-      await handleReAnchor(payment)
+    if (toFix.length === 0) return
+    setReanchoringAll(true)
+    setMsg(null)
+    for (const anchor of toFix) {
+      setReanchoring((prev) => ({ ...prev, [anchor.id]: true }))
+      try {
+        const { hash, txHash, error } = await anchorHash(anchor.recordSnapshot)
+        if (!error && hash && txHash) {
+          setVerificationResults((prev) => ({
+            ...prev,
+            [anchor.id]: { valid: true, computedHash: hash, storedHash: hash },
+          }))
+        }
+      } catch (_) {}
+      setReanchoring((prev) => ({ ...prev, [anchor.id]: false }))
     }
-  }, [anchored, verificationResults, handleReAnchor])
+    setReanchoringAll(false)
+    setMsg({ type: 'success', text: `Re-anchored ${toFix.length} record(s)` })
+  }, [allAnchors, verificationResults])
+
+  const handleViewTx = useCallback(async (anchor) => {
+    if (!anchor.stellarTxHash) return
+    setLoadingTx(true)
+    setActiveAnchor(anchor)
+    const detail = await fetchAnchorTransaction(anchor.stellarTxHash)
+    setTxDetail(detail)
+    setLoadingTx(false)
+  }, [])
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -192,153 +228,120 @@ export default function StellarDashboard() {
           <span className="material-symbols-outlined text-on-surface-dim text-lg">verified</span>
           <div>
             <h2 className="text-base font-bold text-on-surface">Stellar Notary Dashboard</h2>
-            <p className="text-[11px] text-on-surface-muted mt-px">Cryptographic proof of payment integrity on the Stellar blockchain</p>
+            <p className="text-[11px] text-on-surface-muted mt-px">Cryptographic integrity ledger for every data mutation</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {computing && (
+          {autoVerifying && (
             <span className="text-[10px] text-on-surface-dim flex items-center gap-1">
               <span className="material-symbols-outlined text-sm animate-spin">sync</span>
-              Verifying...
+              Verifying {allAnchors.length} anchors...
             </span>
           )}
           {tamperedCount > 0 && (
-            <button onClick={handleReAnchorAll}
-              className="px-3.5 py-2 bg-amber-50 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-100 transition-colors inline-flex items-center gap-1.5 border border-amber-200">
-              <span className="material-symbols-outlined text-base">autorenew</span>
-              Re-anchor All ({tamperedCount})
+            <button onClick={handleReAnchorAll} disabled={reanchoringAll}
+              className="px-3.5 py-2 bg-amber-50 text-amber-700 text-xs font-semibold rounded-lg hover:bg-amber-100 transition-colors inline-flex items-center gap-1.5 border border-amber-200 disabled:opacity-50 disabled:cursor-not-allowed">
+              <span className={`material-symbols-outlined text-base ${reanchoringAll ? 'animate-spin' : ''}`}>
+                {reanchoringAll ? 'sync' : 'autorenew'}
+              </span>
+              {reanchoringAll ? `Re-anchoring... (${Object.values(reanchoring).filter(Boolean).length}/${tamperedCount})` : `Re-anchor All (${tamperedCount})`}
             </button>
           )}
         </div>
       </div>
 
-      {repairMsg && (
+      {msg && (
         <div className={`px-4 py-3 rounded-lg text-xs flex items-center gap-2 ${
-          repairMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+          msg.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
         }`}>
-          <span className="material-symbols-outlined text-base">{repairMsg.type === 'success' ? 'check_circle' : 'error'}</span>
-          {repairMsg.text}
+          <span className="material-symbols-outlined text-base">{msg.type === 'success' ? 'check_circle' : 'error'}</span>
+          {msg.text}
         </div>
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <KpiCard icon="receipt_long" label="Total Payments" value={allPayments.length} sub="All time" />
-        <KpiCard icon="verified" label="Anchored on Stellar" value={anchored.length} sub={`${allPayments.length > 0 ? Math.round((anchored.length / allPayments.length) * 100) : 0}% of payments`} accent={anchored.length > 0 ? 'bg-emerald-50' : 'bg-surface-container'} />
-        <KpiCard icon="hourglass_top" label="Pending Anchoring" value={unanchored.length} sub={unanchored.length === 0 ? 'All payments secured' : 'Awaiting notarization'} accent={unanchored.length > 0 ? 'bg-amber-50' : 'bg-emerald-50'} />
+        <KpiCard icon="verified" label="Total Anchored" value={allAnchors.length} sub="All record types" accent="bg-primary-50" />
+        <KpiCard icon="receipt_long" label="Payments" value={payAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((payAnchors.length / allAnchors.length) * 100) : 0}% of anchors`} accent="bg-emerald-50" />
+        <KpiCard icon="settings" label="System Events" value={sysAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((sysAnchors.length / allAnchors.length) * 100) : 0}% of anchors`} accent="bg-blue-50" />
         <KpiCard icon="checklist" label="Integrity Verified" value={verifiedCount} sub={tamperedCount > 0 ? `${tamperedCount} need re-anchor` : 'All records intact'} accent={verifiedCount > 0 ? 'bg-emerald-50' : tamperedCount > 0 ? 'bg-red-50' : 'bg-surface-container'} />
-        <KpiCard icon="security" label="Blockchain Status" value={anchored.length > 0 ? 'Active' : 'Inactive'} sub={anchored.length > 0 ? `${Math.round((verifiedCount / Math.max(anchored.length, 1)) * 100)}% verified` : 'Set VITE_STELLAR_ANCHOR_SECRET'} accent={anchored.length > 0 ? 'bg-emerald-50' : 'bg-amber-50'} />
+        <KpiCard icon="security" label="Blockchain" value={allAnchors.length > 0 ? 'Active' : 'Inactive'} sub={allAnchors.length > 0 ? `${Math.round((verifiedCount / Math.max(allAnchors.length, 1)) * 100)}% verified` : 'Set VITE_STELLAR_ANCHOR_SECRET'} accent={allAnchors.length > 0 ? 'bg-emerald-50' : 'bg-amber-50'} />
       </div>
 
       <div className="bg-surface rounded-card border border-outline shadow-card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-on-surface-dim text-base">receipt_long</span>
-            <h3 className="text-sm font-semibold text-on-surface">Payment Ledger</h3>
-            <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{allPayments.length}</span>
+            <h3 className="text-sm font-semibold text-on-surface">Integrity Ledger</h3>
+            <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{allAnchors.length}</span>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-on-surface-dim">
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              Anchored
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-gray-300" />
-              Pending
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Verified
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              Alert
-            </div>
+            <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Verified</div>
+            <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Anchored</div>
+            <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Alert</div>
           </div>
         </div>
-        {allPayments.length > 0 ? (
+        {allAnchors.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-outline bg-surface-container/50">
-                  <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Receipt</th>
-                  <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Tenant</th>
-                  <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Location</th>
-                  <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Amount</th>
-                  <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Stellar</th>
+                  <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Event</th>
+                  <th className="text-left px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Description</th>
                   <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Integrity</th>
-                  <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Date</th>
+                  <th className="text-center px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Anchored</th>
+                  <th className="text-right px-4 py-3 text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider">Timestamp</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline">
-                {allPayments.map((p) => {
-                  const vr = verificationResults[p.id]
-                  const integStatus = !p.stellarTxHash ? 'unanchored'
-                    : vr === undefined ? 'anchored'
-                    : vr.valid ? 'verified'
-                    : 'tampered'
+                {allAnchors.map((a) => {
+                  const vr = verificationResults[a.id]
+                  const integStatus = vr === undefined ? 'anchored' : vr.valid ? 'verified' : 'tampered'
                   return (
-                    <tr key={p.id} className="hover:bg-surface-container/50 transition-colors group">
+                    <tr key={a.id} className="hover:bg-surface-container/50 transition-colors group">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <AnchorIcon anchored={!!p.stellarTxHash} />
-                          <span className="font-mono text-[11px] text-on-surface-muted">{p.receiptId || '—'}</span>
+                          <RecordTypeIcon type={a.recordType} />
+                          <RecordTypeLabel type={a.recordType} />
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-on-surface text-xs">{p.tenantName || '—'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-on-surface-muted text-xs">
-                        {p.floor}{p.unit ? ` - ${p.unit}` : ''}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold text-on-surface text-xs">
-                        UGX {(p.amount || 0).toLocaleString()}
+                      <td className="px-4 py-3 text-xs text-on-surface-muted max-w-[200px] truncate">
+                        {a.recordLabel || a.recordId || '—'}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <StatusBadge status={p.stellarTxHash ? 'anchored' : 'pending'} />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {computing && vr === undefined ? (
-                          <span className="text-[10px] text-on-surface-dim flex items-center justify-center gap-1">
-                            <span className="material-symbols-outlined text-xs animate-spin">sync</span>
-                            Checking
-                          </span>
+                        {autoVerifying && vr === undefined ? (
+                          <span className="material-symbols-outlined text-sm text-on-surface-dim animate-spin">sync</span>
                         ) : (
                           <StatusBadge status={integStatus} />
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right text-on-surface-dim text-xs">
-                        <span title={fmtDate(p.date)}>{timeAgo(p.date) || fmtDate(p.date)}</span>
+                      <td className="px-4 py-3 text-center">
+                        <StatusBadge status={a.stellarTxHash ? 'anchored' : 'skipped'} />
+                      </td>
+                      <td className="px-4 py-3 text-right text-on-surface-dim text-xs whitespace-nowrap">
+                        <span title={fmtDateTime(a.anchoredAt || a.createdAt)}>{timeAgo(a.anchoredAt || a.createdAt) || fmtDateTime(a.anchoredAt || a.createdAt)}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {p.stellarTxHash && (
-                            <>
-                              <button onClick={() => handleViewTx(p)}
-                                className="w-7 h-7 rounded-md flex items-center justify-center text-on-surface-muted hover:bg-surface-container hover:text-on-surface transition-colors"
-                                title="View Stellar Transaction">
-                                <span className="material-symbols-outlined text-sm">open_in_new</span>
-                              </button>
-                              {integStatus === 'tampered' ? (
-                                <button onClick={() => handleReAnchor(p)}
-                                  disabled={reanchoring[p.id]}
-                                  className="w-7 h-7 rounded-md flex items-center justify-center text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-40"
-                                  title="Re-anchor with correct hash">
-                                  <span className={`material-symbols-outlined text-sm ${reanchoring[p.id] ? 'animate-spin' : ''}`}>
-                                    {reanchoring[p.id] ? 'sync' : 'autorenew'}
-                                  </span>
-                                </button>
-                              ) : integStatus === 'verified' ? (
-                                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
-                                  <span className="material-symbols-outlined text-sm">check_circle</span>
-                                  Intact
-                                </span>
-                              ) : null}
-                            </>
-                          )}
-                          {!p.stellarTxHash && (
-                            <span className="text-[10px] text-on-surface-dim italic">pending</span>
-                          )}
+                          <button onClick={() => handleViewTx(a)}
+                            className="w-7 h-7 rounded-md flex items-center justify-center text-on-surface-muted hover:bg-surface-container hover:text-on-surface transition-colors"
+                            title="View Stellar Transaction">
+                            <span className="material-symbols-outlined text-sm">open_in_new</span>
+                          </button>
+                          {integStatus === 'tampered' ? (
+                            <button onClick={() => handleReAnchor(a)}
+                              disabled={reanchoring[a.id]}
+                              className="w-7 h-7 rounded-md flex items-center justify-center text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-40"
+                              title="Re-anchor with correct hash">
+                              <span className={`material-symbols-outlined text-sm ${reanchoring[a.id] ? 'animate-spin' : ''}`}>
+                                {reanchoring[a.id] ? 'sync' : 'autorenew'}
+                              </span>
+                            </button>
+                          ) : integStatus === 'verified' ? (
+                            <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-sm">check_circle</span>
+                            </span>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -349,28 +352,28 @@ export default function StellarDashboard() {
           </div>
         ) : (
           <div className="text-center py-12 px-5">
-            <span className="material-symbols-outlined text-3xl text-on-surface-dim mb-2">receipt_long</span>
-            <p className="text-sm text-on-surface-muted">No payments recorded yet</p>
-            <p className="text-xs text-on-surface-dim mt-1">Record a payment to see it anchored on Stellar</p>
+            <span className="material-symbols-outlined text-3xl text-on-surface-dim mb-2">verified</span>
+            <p className="text-sm text-on-surface-muted">No records anchored yet</p>
+            <p className="text-xs text-on-surface-dim mt-1">Record a payment, add a tenant, or perform any action to see it anchored on Stellar</p>
           </div>
         )}
       </div>
 
-      {activePayment && (
-        <Modal title="Stellar Transaction Detail" onClose={() => { setActivePayment(null); setTxDetail(null) }}>
+      {activeAnchor && (
+        <Modal title="Stellar Transaction Detail" onClose={() => { setActiveAnchor(null); setTxDetail(null) }}>
           <div className="space-y-4">
             <div className="bg-surface-container rounded-lg p-3 space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Receipt</span>
-                <span className="font-mono font-semibold text-on-surface">{activePayment.receiptId}</span>
+                <span className="text-on-surface-muted">Event</span>
+                <span className="font-mono font-semibold text-on-surface"><RecordTypeLabel type={activeAnchor.recordType} /></span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Tenant</span>
-                <span className="font-medium text-on-surface">{activePayment.tenantName || '—'}</span>
+                <span className="text-on-surface-muted">Description</span>
+                <span className="font-medium text-on-surface">{activeAnchor.recordLabel || '—'}</span>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-on-surface-muted">Amount</span>
-                <span className="font-semibold text-on-surface">UGX {(activePayment.amount || 0).toLocaleString()}</span>
+                <span className="text-on-surface-muted">Anchored At</span>
+                <span className="font-semibold text-on-surface">{fmtDateTime(activeAnchor.anchoredAt || activeAnchor.createdAt)}</span>
               </div>
             </div>
 
@@ -400,8 +403,8 @@ export default function StellarDashboard() {
                       <p className="text-xs font-mono text-on-surface">{txDetail.ledger || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Timestamp</p>
-                      <p className="text-xs text-on-surface">{txDetail.timestamp ? fmtDate(txDetail.timestamp) : '—'}</p>
+                      <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">On-Chain Timestamp</p>
+                      <p className="text-xs text-on-surface">{txDetail.timestamp ? fmtDateTime(txDetail.timestamp) : '—'}</p>
                     </div>
                   </div>
                   <div>
@@ -414,7 +417,7 @@ export default function StellarDashboard() {
                   <span className="material-symbols-outlined text-emerald-600 text-base">check_circle</span>
                   <div>
                     <p className="text-xs font-semibold text-emerald-800">Transaction Found on Stellar</p>
-                    <p className="text-[10px] text-emerald-600">This receipt hash exists in the Stellar ledger — immutable proof of data integrity.</p>
+                    <p className="text-[10px] text-emerald-600">This hash exists in the Stellar ledger — immutable proof of integrity.</p>
                   </div>
                 </div>
 
