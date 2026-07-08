@@ -2,6 +2,20 @@ import { useState, useCallback, useEffect } from 'react'
 import { useBuilding } from '../context/BuildingContext'
 import { anchorHash, fetchAnchorTransaction, STELLAR_EXPLORER_URL, sha256, isStellarConfigured, getStellarNetwork } from '../lib/stellar'
 
+const PAYMENT_TYPES = new Set(['payment', 'payment_void'])
+const SYSTEM_TYPES = new Set([
+  'tenant_add', 'tenant_delete', 'tenant_update',
+  'floor_add', 'floor_delete', 'floor_rename',
+  'unit_update', 'unit_delete',
+  'maintenance_add', 'maintenance_update', 'maintenance_move', 'maintenance_delete',
+])
+
+const TABS = [
+  { key: 'payments', icon: 'receipt_long', label: 'Payments' },
+  { key: 'system', icon: 'settings_suggest', label: 'System Events' },
+  { key: 'all', icon: 'database', label: 'All Records' },
+]
+
 function KpiCard({ icon, label, value, sub, accent }) {
   return (
     <div className="bg-surface rounded-card border border-outline p-4 shadow-card">
@@ -66,46 +80,48 @@ function StatusBadge({ status }) {
   )
 }
 
+const RECORD_ICONS = {
+  payment: 'receipt_long',
+  payment_void: 'block',
+  tenant_add: 'person_add',
+  tenant_delete: 'person_remove',
+  tenant_update: 'edit',
+  floor_add: 'layers',
+  floor_delete: 'layers_clear',
+  floor_rename: 'drive_file_rename_outline',
+  unit_update: 'meeting_room',
+  unit_delete: 'delete_forever',
+  maintenance_add: 'build',
+  maintenance_update: 'construction',
+  maintenance_move: 'swap_horiz',
+  maintenance_delete: 'delete',
+}
+
+const RECORD_LABELS = {
+  payment: 'Payment Received',
+  payment_void: 'Payment Voided',
+  tenant_add: 'Tenant Added',
+  tenant_delete: 'Tenant Removed',
+  tenant_update: 'Tenant Updated',
+  floor_add: 'Floor Added',
+  floor_delete: 'Floor Deleted',
+  floor_rename: 'Floor Renamed',
+  unit_update: 'Unit Updated',
+  unit_delete: 'Unit Deleted',
+  maintenance_add: 'Maintenance Created',
+  maintenance_update: 'Maintenance Updated',
+  maintenance_move: 'Maintenance Moved',
+  maintenance_delete: 'Maintenance Deleted',
+}
+
 function RecordTypeIcon({ type }) {
-  const icons = {
-    payment: 'receipt_long',
-    tenant_add: 'person_add',
-    tenant_delete: 'person_remove',
-    tenant_update: 'edit',
-    payment_void: 'block',
-    maintenance_add: 'build',
-    maintenance_update: 'construction',
-    maintenance_move: 'swap_horiz',
-    maintenance_delete: 'delete',
-    floor_add: 'layers',
-    floor_delete: 'layers_clear',
-    floor_rename: 'drive_file_rename_outline',
-    unit_update: 'meeting_room',
-    unit_delete: 'delete_forever',
-  }
   return (
-    <span className="material-symbols-outlined text-on-surface-dim text-sm">{icons[type] || 'circle'}</span>
+    <span className="material-symbols-outlined text-on-surface-dim text-sm">{RECORD_ICONS[type] || 'circle'}</span>
   )
 }
 
 function RecordTypeLabel({ type }) {
-  const labels = {
-    payment: 'Payment',
-    tenant_add: 'Tenant Added',
-    tenant_delete: 'Tenant Removed',
-    tenant_update: 'Tenant Updated',
-    payment_void: 'Payment Voided',
-    maintenance_add: 'Maintenance',
-    maintenance_update: 'Maintenance Updated',
-    maintenance_move: 'Maintenance Moved',
-    maintenance_delete: 'Maintenance Deleted',
-    floor_add: 'Floor Added',
-    floor_delete: 'Floor Deleted',
-    floor_rename: 'Floor Renamed',
-    unit_update: 'Unit Updated',
-    unit_delete: 'Unit Deleted',
-  }
-  return <span className="text-on-surface-muted text-[10px]">{labels[type] || type}</span>
+  return <span className="text-on-surface-muted text-[10px]">{RECORD_LABELS[type] || type}</span>
 }
 
 function Modal({ title, children, onClose }) {
@@ -125,7 +141,8 @@ function Modal({ title, children, onClose }) {
 }
 
 export default function StellarDashboard() {
-  const { anchors, payments, building, floors } = useBuilding()
+  const { anchors, building } = useBuilding()
+  const [tab, setTab] = useState('payments')
   const [reanchoring, setReanchoring] = useState({})
   const [reanchoringAll, setReanchoringAll] = useState(false)
   const [verificationResults, setVerificationResults] = useState({})
@@ -136,6 +153,9 @@ export default function StellarDashboard() {
   const [msg, setMsg] = useState(null)
 
   const allAnchors = (anchors || []).filter((a) => a.stellarTxHash)
+  const payAnchors = allAnchors.filter((a) => PAYMENT_TYPES.has(a.recordType))
+  const sysAnchors = allAnchors.filter((a) => SYSTEM_TYPES.has(a.recordType))
+  const displayed = tab === 'payments' ? payAnchors : tab === 'system' ? sysAnchors : allAnchors
 
   // ── Auto-verify every anchor on mount ──
   useEffect(() => {
@@ -160,13 +180,8 @@ export default function StellarDashboard() {
   }, [allAnchors])
 
   const vResults = Object.values(verificationResults)
-  const payAnchors = allAnchors.filter((a) => a.recordType === 'payment')
-  const sysAnchors = allAnchors.filter((a) => a.recordType !== 'payment')
   const verifiedCount = vResults.filter((r) => r?.valid).length
   const tamperedCount = vResults.filter((r) => r && !r.valid).length
-  const unverifiedCount = allAnchors.length - verifiedCount - tamperedCount
-  const stellarConfigured = isStellarConfigured()
-  const stellarNetwork = getStellarNetwork()
 
   const handleReAnchor = useCallback(async (anchor) => {
     if (!anchor.recordSnapshot) return
@@ -223,6 +238,9 @@ export default function StellarDashboard() {
     setLoadingTx(false)
   }, [])
 
+  const stellarConfigured = isStellarConfigured()
+  const stellarNetwork = getStellarNetwork()
+
   return (
     <div className="p-6 md:p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -246,7 +264,7 @@ export default function StellarDashboard() {
               <span className={`material-symbols-outlined text-base ${reanchoringAll ? 'animate-spin' : ''}`}>
                 {reanchoringAll ? 'sync' : 'autorenew'}
               </span>
-              {reanchoringAll ? `Re-anchoring... (${Object.values(reanchoring).filter(Boolean).length}/${tamperedCount})` : `Re-anchor All (${tamperedCount})`}
+              {reanchoringAll ? `Re-anchoring...` : `Re-anchor All (${tamperedCount})`}
             </button>
           )}
         </div>
@@ -263,18 +281,43 @@ export default function StellarDashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <KpiCard icon="verified" label="Total Anchored" value={allAnchors.length} sub="All record types" accent="bg-primary-50" />
-        <KpiCard icon="receipt_long" label="Payments" value={payAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((payAnchors.length / allAnchors.length) * 100) : 0}% of anchors`} accent="bg-emerald-50" />
-        <KpiCard icon="settings" label="System Events" value={sysAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((sysAnchors.length / allAnchors.length) * 100) : 0}% of anchors`} accent="bg-blue-50" />
+        <KpiCard icon="receipt_long" label="Payments" value={payAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((payAnchors.length / allAnchors.length) * 100) : 0}% of all`} accent="bg-emerald-50" />
+        <KpiCard icon="settings_suggest" label="System Events" value={sysAnchors.length} sub={`${allAnchors.length > 0 ? Math.round((sysAnchors.length / allAnchors.length) * 100) : 0}% of all`} accent="bg-blue-50" />
         <KpiCard icon="checklist" label="Integrity Verified" value={verifiedCount} sub={tamperedCount > 0 ? `${tamperedCount} need re-anchor` : 'All records intact'} accent={verifiedCount > 0 ? 'bg-emerald-50' : tamperedCount > 0 ? 'bg-red-50' : 'bg-surface-container'} />
         <KpiCard icon="security" label={`Blockchain (${stellarNetwork})`} value={stellarConfigured ? 'Configured' : 'Not Configured'} sub={stellarConfigured ? `${allAnchors.length} records anchored` : 'Set VITE_STELLAR_ANCHOR_SECRET'} accent={stellarConfigured ? 'bg-emerald-50' : 'bg-amber-50'} />
       </div>
 
+      {/* ── Tab Navigation ── */}
+      <div className="flex items-center gap-1 bg-surface-container rounded-xl p-1 border border-outline w-fit">
+        {TABS.map((t) => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+              tab === t.key ? 'bg-surface text-on-surface shadow-card' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-container-high'
+            }`}>
+            <span className="material-symbols-outlined text-base">{t.icon}</span>
+            {t.label}
+            <span className={`text-[10px] ml-0.5 ${
+              tab === t.key
+                ? t.key === 'payments' ? 'bg-emerald-50 text-emerald-700' : t.key === 'system' ? 'bg-blue-50 text-blue-700' : 'bg-primary-50 text-primary'
+                : 'text-on-surface-dim bg-surface-container-highest'
+            } px-1.5 py-0.5 rounded-full`}>
+              {t.key === 'payments' ? payAnchors.length : t.key === 'system' ? sysAnchors.length : allAnchors.length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Table ── */}
       <div className="bg-surface rounded-card border border-outline shadow-card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-on-surface-dim text-base">receipt_long</span>
-            <h3 className="text-sm font-semibold text-on-surface">Integrity Ledger</h3>
-            <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{allAnchors.length}</span>
+            <span className="material-symbols-outlined text-on-surface-dim text-base">
+              {tab === 'payments' ? 'receipt_long' : tab === 'system' ? 'settings_suggest' : 'database'}
+            </span>
+            <h3 className="text-sm font-semibold text-on-surface">
+              {tab === 'payments' ? 'Payment Integrity Ledger' : tab === 'system' ? 'System Event Integrity Ledger' : 'Complete Integrity Ledger'}
+            </h3>
+            <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{displayed.length}</span>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-on-surface-dim">
             <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Verified</div>
@@ -282,7 +325,7 @@ export default function StellarDashboard() {
             <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Alert</div>
           </div>
         </div>
-        {allAnchors.length > 0 ? (
+        {displayed.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -296,7 +339,7 @@ export default function StellarDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline">
-                {allAnchors.map((a) => {
+                {displayed.map((a) => {
                   const vr = verificationResults[a.id]
                   const integStatus = vr === undefined ? 'anchored' : vr.valid ? 'verified' : 'tampered'
                   return (
@@ -307,7 +350,7 @@ export default function StellarDashboard() {
                           <RecordTypeLabel type={a.recordType} />
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-on-surface-muted max-w-[200px] truncate">
+                      <td className="px-4 py-3 text-xs text-on-surface-muted max-w-[220px] truncate">
                         {a.recordLabel || a.recordId || '—'}
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -354,9 +397,23 @@ export default function StellarDashboard() {
           </div>
         ) : (
           <div className="text-center py-12 px-5">
-            <span className="material-symbols-outlined text-3xl text-on-surface-dim mb-2">verified</span>
-            <p className="text-sm text-on-surface-muted">No records anchored yet</p>
-            <p className="text-xs text-on-surface-dim mt-1">Record a payment, add a tenant, or perform any action to see it anchored on Stellar</p>
+            <span className="material-symbols-outlined text-3xl text-on-surface-dim mb-2">
+              {tab === 'payments' ? 'receipt_long' : tab === 'system' ? 'settings_suggest' : 'verified'}
+            </span>
+            <p className="text-sm text-on-surface-muted">
+              {tab === 'payments'
+                ? 'No payment records anchored yet'
+                : tab === 'system'
+                  ? 'No system events anchored yet'
+                  : 'No records anchored yet'}
+            </p>
+            <p className="text-xs text-on-surface-dim mt-1">
+              {tab === 'payments'
+                ? 'Record a payment to see it cryptographically verified'
+                : tab === 'system'
+                  ? 'Add, edit, or delete tenants, floors, or maintenance to see events here'
+                  : 'Perform any action to see it anchored on Stellar'}
+            </p>
           </div>
         )}
       </div>
@@ -371,12 +428,18 @@ export default function StellarDashboard() {
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-on-surface-muted">Description</span>
-                <span className="font-medium text-on-surface">{activeAnchor.recordLabel || '—'}</span>
+                <span className="font-medium text-on-surface text-right">{activeAnchor.recordLabel || '—'}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-on-surface-muted">Anchored At</span>
                 <span className="font-semibold text-on-surface">{fmtDateTime(activeAnchor.anchoredAt || activeAnchor.createdAt)}</span>
               </div>
+              {activeAnchor.recordSnapshot?.monthlyRent !== undefined && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-on-surface-muted">Monthly Rent</span>
+                  <span className="font-semibold text-on-surface">UGX {Number(activeAnchor.recordSnapshot.monthlyRent).toLocaleString()}</span>
+                </div>
+              )}
             </div>
 
             {loadingTx ? (
@@ -410,7 +473,7 @@ export default function StellarDashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Receipt Hash (Memo)</p>
+                    <p className="text-[10px] text-on-surface-dim font-semibold uppercase tracking-wider mb-0.5">Record Hash (Memo)</p>
                     <p className="font-mono text-[10px] text-on-surface break-all bg-surface px-2 py-1.5 rounded border border-outline">{txDetail.memoHash || '—'}</p>
                   </div>
                 </div>
