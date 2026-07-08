@@ -151,11 +151,51 @@ export default function StellarDashboard() {
   const [txDetail, setTxDetail] = useState(null)
   const [loadingTx, setLoadingTx] = useState(false)
   const [msg, setMsg] = useState(null)
+  const [datePreset, setDatePreset] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
 
   const allAnchors = (anchors || []).filter((a) => a.stellarTxHash)
   const payAnchors = allAnchors.filter((a) => PAYMENT_TYPES.has(a.recordType))
   const sysAnchors = allAnchors.filter((a) => SYSTEM_TYPES.has(a.recordType))
-  const displayed = tab === 'payments' ? payAnchors : tab === 'system' ? sysAnchors : allAnchors
+  const tabAnchors = tab === 'payments' ? payAnchors : tab === 'system' ? sysAnchors : allAnchors
+
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const todayEnd = new Date(todayStart.getTime() + 86400000)
+  const weekStart = new Date(todayStart)
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekStart.getDay() === 0 ? -6 : 1))
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const yearStart = new Date(now.getFullYear(), 0, 1)
+
+  function getDateRange(preset) {
+    switch (preset) {
+      case 'today': return { from: todayStart, to: todayEnd }
+      case 'week': return { from: weekStart, to: todayEnd }
+      case 'month': return { from: monthStart, to: todayEnd }
+      case 'year': return { from: yearStart, to: todayEnd }
+      default: return { from: null, to: null }
+    }
+  }
+
+  function passesDateFilter(anchor) {
+    const ts = anchor.anchoredAt || anchor.createdAt
+    if (!ts) return true
+    const d = new Date(ts)
+    if (isNaN(d.getTime())) return true
+    const range = getDateRange(datePreset)
+    if (range.from && d < range.from) return false
+    if (range.to && d >= range.to) return false
+    if (dateFrom && d < new Date(dateFrom)) return false
+    if (dateTo && d >= new Date(new Date(dateTo).getTime() + 86400000)) return false
+    return true
+  }
+
+  const filtered = tabAnchors.filter((a) => {
+    if (typeFilter && a.recordType !== typeFilter) return false
+    return passesDateFilter(a)
+  })
 
   // ── Auto-verify every anchor on mount ──
   useEffect(() => {
@@ -307,17 +347,66 @@ export default function StellarDashboard() {
         ))}
       </div>
 
+      {/* ── Filter Bar ── */}
+      <div className="bg-surface rounded-card border border-outline shadow-card">
+        <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-outline">
+          <span className="text-[10px] font-semibold text-on-surface-dim uppercase tracking-wider">Date</span>
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'today', label: 'Today' },
+            { key: 'week', label: 'This Week' },
+            { key: 'month', label: 'This Month' },
+            { key: 'year', label: 'This Year' },
+          ].map((p) => (
+            <button key={p.key} onClick={() => { setDatePreset(p.key); setDateFrom(''); setDateTo('') }}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                datePreset === p.key
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-container'
+              }`}>
+              {p.label}
+            </button>
+          ))}
+          <div className="w-px h-5 bg-outline/50 mx-1" />
+          <div className="flex items-center gap-1.5">
+            <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setDatePreset('') }}
+              className="h-7 px-2 border border-outline rounded-lg text-[10px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary" />
+            <span className="text-[10px] text-on-surface-dim">to</span>
+            <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setDatePreset('') }}
+              className="h-7 px-2 border border-outline rounded-lg text-[10px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary" />
+          </div>
+          <div className="w-px h-5 bg-outline/50 mx-1" />
+          <span className="text-[10px] font-semibold text-on-surface-dim uppercase tracking-wider">Type</span>
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}
+            className="h-7 px-2 border border-outline rounded-lg text-[10px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary bg-white appearance-none"
+            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center', paddingRight: '22px' }}>
+            <option value="">All Types</option>
+            {Object.entries(RECORD_LABELS)
+              .filter(([key]) => tab === 'all' || (tab === 'payments' ? PAYMENT_TYPES.has(key) : SYSTEM_TYPES.has(key)))
+              .map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+          </select>
+          {datePreset !== 'all' || typeFilter || dateFrom || dateTo ? (
+            <button onClick={() => { setDatePreset('all'); setDateFrom(''); setDateTo(''); setTypeFilter('') }}
+              className="ml-auto text-[10px] text-status-unpaid hover:underline inline-flex items-center gap-0.5">
+              <span className="material-symbols-outlined text-[12px]">close</span>
+              Clear filters
+            </button>
+          ) : null}
+          <span className="ml-auto text-[10px] text-on-surface-dim">{filtered.length} of {tabAnchors.length} records</span>
+        </div>
+
       {/* ── Table ── */}
-      <div className="bg-surface rounded-card border border-outline shadow-card overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-outline">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-on-surface-dim text-base">
               {tab === 'payments' ? 'receipt_long' : tab === 'system' ? 'settings_suggest' : 'database'}
             </span>
             <h3 className="text-sm font-semibold text-on-surface">
-              {tab === 'payments' ? 'Payment Integrity Ledger' : tab === 'system' ? 'System Event Integrity Ledger' : 'Complete Integrity Ledger'}
+              {tab === 'payments' ? 'Ledger' : tab === 'system' ? 'Event Log' : 'All Records'}
             </h3>
-            <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{displayed.length}</span>
+            <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{filtered.length}</span>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-on-surface-dim">
             <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Verified</div>
@@ -325,7 +414,7 @@ export default function StellarDashboard() {
             <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Alert</div>
           </div>
         </div>
-        {displayed.length > 0 ? (
+        {filtered.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -339,7 +428,7 @@ export default function StellarDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline">
-                {displayed.map((a) => {
+                {filtered.map((a) => {
                   const vr = verificationResults[a.id]
                   const integStatus = vr === undefined ? 'anchored' : vr.valid ? 'verified' : 'tampered'
                   return (
@@ -401,18 +490,22 @@ export default function StellarDashboard() {
               {tab === 'payments' ? 'receipt_long' : tab === 'system' ? 'settings_suggest' : 'verified'}
             </span>
             <p className="text-sm text-on-surface-muted">
-              {tab === 'payments'
-                ? 'No payment records anchored yet'
-                : tab === 'system'
-                  ? 'No system events anchored yet'
-                  : 'No records anchored yet'}
+              {filtered.length === 0 && tabAnchors.length > 0
+                ? 'No records match the current filters'
+                : tab === 'payments'
+                  ? 'No payment records anchored yet'
+                  : tab === 'system'
+                    ? 'No system events anchored yet'
+                    : 'No records anchored yet'}
             </p>
             <p className="text-xs text-on-surface-dim mt-1">
-              {tab === 'payments'
-                ? 'Record a payment to see it cryptographically verified'
-                : tab === 'system'
-                  ? 'Add, edit, or delete tenants, floors, or maintenance to see events here'
-                  : 'Perform any action to see it anchored on Stellar'}
+              {filtered.length === 0 && tabAnchors.length > 0
+                ? 'Try adjusting your date or type filters'
+                : tab === 'payments'
+                  ? 'Record a payment to see it cryptographically verified'
+                  : tab === 'system'
+                    ? 'Add, edit, or delete tenants, floors, or maintenance to see events here'
+                    : 'Perform any action to see it anchored on Stellar'}
             </p>
           </div>
         )}
