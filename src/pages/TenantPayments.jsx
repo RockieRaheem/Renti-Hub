@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useBuilding } from '../context/BuildingContext'
 import { fetchPaymentsByTenant, fetchAllPeriods, fetchPeriodAllocations } from '../lib/queries'
@@ -26,6 +26,10 @@ export default function TenantPayments() {
   const [periods, setPeriods] = useState([])
   const [loading, setLoading] = useState(true)
   const [receipt, setReceipt] = useState(null)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [methodFilter, setMethodFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
     if (!tenant?.id) { setLoading(false); return }
@@ -66,6 +70,18 @@ export default function TenantPayments() {
   const credit = Math.max(0, -currentBalance)
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0)
   const hasCredit = credit > 0
+
+  const filteredPayments = payments.filter((p) => {
+    if (methodFilter && p.method !== methodFilter) return false
+    if (statusFilter && p.status !== statusFilter) return false
+    if (dateFrom && new Date(p.date) < new Date(dateFrom)) return false
+    if (dateTo) {
+      const end = new Date(dateTo)
+      end.setDate(end.getDate() + 1)
+      if (new Date(p.date) >= end) return false
+    }
+    return true
+  })
 
   // Build period-based ledger: merge periods with their allocations
   const [ledgerData, setLedgerData] = useState([])
@@ -226,7 +242,40 @@ export default function TenantPayments() {
               )}
 
               {/* Payment details table */}
-              <h4 className="text-xs font-semibold text-on-surface uppercase tracking-wider mb-3">Payment Transactions</h4>
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <h4 className="text-xs font-semibold text-on-surface uppercase tracking-wider">Payment Transactions</h4>
+                <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{filteredPayments.length}</span>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                    className="h-7 px-2 border border-outline rounded-lg text-[10px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary w-[130px]" />
+                  <span className="text-[10px] text-on-surface-dim">to</span>
+                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                    className="h-7 px-2 border border-outline rounded-lg text-[10px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary w-[130px]" />
+                  <div className="w-px h-5 bg-outline/50 mx-0.5" />
+                  <select value={methodFilter} onChange={(e) => setMethodFilter(e.target.value)}
+                    className="h-7 px-2 border border-outline rounded-lg text-[10px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary appearance-none bg-white"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center', paddingRight: '20px' }}>
+                    <option value="">All Methods</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Mobile Money">Mobile Money</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cheque">Cheque</option>
+                  </select>
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+                    className="h-7 px-2 border border-outline rounded-lg text-[10px] text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary appearance-none bg-white"
+                    style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center', paddingRight: '20px' }}>
+                    <option value="">All Statuses</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Partial">Partial</option>
+                  </select>
+                  {(dateFrom || dateTo || methodFilter || statusFilter) && (
+                    <button onClick={() => { setDateFrom(''); setDateTo(''); setMethodFilter(''); setStatusFilter('') }}
+                      className="text-[10px] text-status-unpaid hover:underline inline-flex items-center gap-0.5">
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -243,7 +292,8 @@ export default function TenantPayments() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline">
-                    {payments.map((p, i) => (
+                    {filteredPayments.length > 0 ? (
+                      filteredPayments.map((p, i) => (
                       <tr key={p.id} className="hover:bg-surface-container/50 transition-colors">
                         <td className="px-4 py-3 text-[11px] text-on-surface-dim font-mono">{i + 1}</td>
                         <td className="px-4 py-3 font-mono text-[11px] text-on-surface-muted">{p.receiptId}</td>
@@ -264,12 +314,20 @@ export default function TenantPayments() {
                           </button>
                         </td>
                       </tr>
-                    ))}
+                    ))) : (
+                      <tr>
+                        <td colSpan={9} className="px-4 py-8 text-center text-xs text-on-surface-muted">No payments match the current filters</td>
+                      </tr>
+                    )}
                   </tbody>
                   <tfoot>
                     <tr className="bg-surface-container/30 font-medium text-sm border-t-2 border-outline">
-                      <td colSpan={6} className="px-4 py-3 text-on-surface font-semibold">Total</td>
-                      <td className="px-4 py-3 text-right font-bold text-on-surface">UGX {totalPaid.toLocaleString()}</td>
+                      <td colSpan={6} className="px-4 py-3 text-on-surface font-semibold">
+                        {filteredPayments.length > 0
+                          ? `Total (${filteredPayments.length} payment${filteredPayments.length !== 1 ? 's' : ''})`
+                          : `${payments.length} total payment${payments.length !== 1 ? 's' : ''}`}
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-on-surface">UGX {filteredPayments.reduce((s, p) => s + (p.amount || 0), 0).toLocaleString()}</td>
                       <td colSpan={2}></td>
                     </tr>
                     {hasCredit && (

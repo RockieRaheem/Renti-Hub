@@ -70,11 +70,20 @@ export default function Dashboard() {
   const { building, floors, floorSlug, maintenanceStats, monthlyRevenue, totalOutstanding, payments } = useBuilding()
   const [receipt, setReceipt] = useState(null)
   const [search, setSearch] = useState('')
+  const [paySearch, setPaySearch] = useState('')
 
   const totalUnits = floors.reduce((s, f) => s + f.units.length, 0)
   const occupiedUnits = floors.reduce((s, f) => s + f.units.filter(u => u.status === 'occupied').length, 0)
   const occupancyPct = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0
   const recentPayments = [...payments].reverse().slice(0, 8)
+  const filteredRecentPayments = paySearch
+    ? recentPayments.filter((p) =>
+        (p.tenantName || '').toLowerCase().includes(paySearch.toLowerCase()) ||
+        (p.receiptId || '').toLowerCase().includes(paySearch.toLowerCase()) ||
+        (p.method || '').toLowerCase().includes(paySearch.toLowerCase()) ||
+        (p.unit || '').toLowerCase().includes(paySearch.toLowerCase())
+      )
+    : recentPayments
   const pendingMaint = maintenanceStats.pending + maintenanceStats.inProgress
   const totalCredit = floors.reduce((s, f) => s + f.units.reduce((us, u) => us + Math.max(0, -(u.tenant?.outstandingBalance || 0)), 0), 0)
   const tenantsWithCredit = floors.reduce((s, f) => s + f.units.filter(u => (u.tenant?.outstandingBalance || 0) < 0).length, 0)
@@ -157,12 +166,22 @@ export default function Dashboard() {
               <h3 className="text-sm font-semibold text-on-surface">Recent Payments</h3>
               <span className="text-[10px] text-on-surface-dim bg-surface-container px-1.5 py-0.5 rounded-full">{recentPayments.length}</span>
             </div>
-            <Link to="/rent-collection" className="text-xs font-medium text-primary hover:text-primary-600 transition-colors inline-flex items-center gap-1">
-              View all
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-dim text-[12px] pointer-events-none">search</span>
+                <input value={paySearch} onChange={(e) => setPaySearch(e.target.value)} placeholder="Search payments..."
+                  className="w-40 h-7 pl-6 pr-2 border border-outline rounded-lg text-[10px] text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary transition-all" />
+              </div>
+              {paySearch && (
+                <button onClick={() => setPaySearch('')} className="text-[10px] text-status-unpaid hover:underline">Clear</button>
+              )}
+              <Link to="/rent-collection" className="text-xs font-medium text-primary hover:text-primary-600 transition-colors inline-flex items-center gap-1">
+                View all
+                <span className="material-symbols-outlined text-sm">chevron_right</span>
+              </Link>
+            </div>
           </div>
-          {recentPayments.length > 0 ? (
+          {filteredRecentPayments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -176,7 +195,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline">
-                  {recentPayments.map((p) => {
+                  {filteredRecentPayments.map((p) => {
                     const link = paymentLink(p)
                     const hlink = historyLink(p)
                     return (
@@ -224,8 +243,14 @@ export default function Dashboard() {
           ) : (
             <div className="text-center py-10 px-5">
               <span className="material-symbols-outlined text-3xl text-on-surface-dim mb-2">payments</span>
-              <p className="text-sm text-on-surface-muted">No payments recorded yet</p>
-              <Link to="/rent-collection" className="text-xs font-medium text-primary hover:underline mt-1 inline-block">Record your first payment</Link>
+              <p className="text-sm text-on-surface-muted">
+                {paySearch ? 'No payments match your search' : 'No payments recorded yet'}
+              </p>
+              {paySearch && recentPayments.length > 0 ? (
+                <button onClick={() => setPaySearch('')} className="text-xs font-medium text-primary hover:underline mt-1 inline-block">Clear search</button>
+              ) : !paySearch ? (
+                <Link to="/rent-collection" className="text-xs font-medium text-primary hover:underline mt-1 inline-block">Record your first payment</Link>
+              ) : null}
             </div>
           )}
         </div>

@@ -27,6 +27,7 @@ export default function Properties() {
   const [tenantModal, setTenantModal] = useState(null)
   const [search, setSearch] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [occupancyFilter, setOccupancyFilter] = useState('all')
 
   const hasData = floors.length > 0
 
@@ -67,11 +68,15 @@ export default function Properties() {
     )
   }
 
-  const filteredFloors = floors.filter((f) =>
-    !search ||
-    f.name.toLowerCase().includes(search.toLowerCase()) ||
-    f.units.some((u) => u.tenant?.name?.toLowerCase().includes(search.toLowerCase()))
-  )
+  const filteredFloors = floors.filter((f) => {
+    if (search && !f.name.toLowerCase().includes(search.toLowerCase()) &&
+      !f.units.some((u) => u.tenant?.name?.toLowerCase().includes(search.toLowerCase()))) return false
+    if (occupancyFilter === 'occupied') return f.units.some((u) => u.status === 'occupied')
+    if (occupancyFilter === 'vacant') return f.units.some((u) => u.status === 'vacant')
+    if (occupancyFilter === 'full') return f.units.every((u) => u.status === 'occupied')
+    if (occupancyFilter === 'debt') return f.units.some((u) => (u.tenant?.outstandingBalance || 0) > 0)
+    return true
+  })
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -93,6 +98,23 @@ export default function Properties() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search floor or tenant..."
               className="w-48 h-8 pl-7 pr-2.5 border border-outline rounded-lg text-xs text-on-surface placeholder:text-on-surface-dim focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" />
           </div>
+          <div className="w-px h-5 bg-outline/50" />
+          {[
+            { key: 'all', label: 'All' },
+            { key: 'occupied', label: 'Occupied' },
+            { key: 'vacant', label: 'Vacant' },
+            { key: 'full', label: 'Full' },
+            { key: 'debt', label: 'Has Debt' },
+          ].map((c) => (
+            <button key={c.key} onClick={() => setOccupancyFilter(c.key)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                occupancyFilter === c.key
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-container'
+              }`}>
+              {c.label}
+            </button>
+          ))}
         </div>
         <button onClick={() => setFloorModal({ mode: 'add' })}
           className="px-3.5 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-600 transition-colors shadow-card inline-flex items-center gap-1.5">
